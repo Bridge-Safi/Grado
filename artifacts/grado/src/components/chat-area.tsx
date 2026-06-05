@@ -36,6 +36,9 @@ interface MediaJob {
   prompt: string;
   mediaId: number;
   type: "music" | "video";
+  title?: string;
+  genre?: string;
+  lyrics?: string;
 }
 
 type AgentMode = "general" | "dev" | "design" | "analyse" | "tutor";
@@ -188,7 +191,10 @@ export function ChatArea({
   const triggerMediaGeneration = async (
     currentId: number,
     type: "music" | "video",
-    prompt: string
+    prompt: string,
+    title?: string,
+    genre?: string,
+    lyrics?: string
   ) => {
     if (mediaJobs.find((j) => j.prompt === prompt)) return;
     try {
@@ -204,11 +210,11 @@ export function ChatArea({
       });
       if (res.ok) {
         const data = await res.json();
-        setMediaJobs((prev) => [...prev, { prompt, mediaId: data.id, type }]);
+        setMediaJobs((prev) => [...prev, { prompt, mediaId: data.id, type, title, genre, lyrics }]);
       } else {
         const err = await res.json();
         if (err.error === "ELEVENLABS_API_KEY not configured" || err.error === "FAL_KEY not configured") {
-          setMediaJobs((prev) => [...prev, { prompt, mediaId: -1, type }]);
+          setMediaJobs((prev) => [...prev, { prompt, mediaId: -1, type, title, genre, lyrics }]);
         }
       }
     } catch {
@@ -309,7 +315,7 @@ export function ChatArea({
 
         const mediaTag = extractMediaTag(fullText);
         if (mediaTag && currentId) {
-          await triggerMediaGeneration(currentId, mediaTag.type, mediaTag.prompt);
+          await triggerMediaGeneration(currentId, mediaTag.type, mediaTag.prompt, mediaTag.title, mediaTag.genre, mediaTag.lyrics);
         }
       }
     } catch (error) {
@@ -448,6 +454,9 @@ export function ChatArea({
                             type={mediaJob.type}
                             mediaId={mediaJob.mediaId}
                             prompt={mediaJob.prompt}
+                            title={mediaJob.title}
+                            genre={mediaJob.genre}
+                            lyrics={mediaJob.lyrics}
                           />
                         )}
 
