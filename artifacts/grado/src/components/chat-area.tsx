@@ -39,13 +39,13 @@ interface MediaJob {
 }
 
 const CATEGORIES = [
-  { label: "Website",            icon: Globe,             prompt: "Build a website for " },
-  { label: "Design",             icon: Palette,           prompt: "Design a beautiful landing page for " },
-  { label: "Slides",             icon: GalleryHorizontal, prompt: "Create a slide presentation about " },
-  { label: "Animation",          icon: Sparkles,          prompt: "Build a stunning animation showing " },
-  { label: "Data Visualization", icon: BarChart3,         prompt: "Create a data visualization dashboard showing " },
-  { label: "3D Game",            icon: Gamepad2,          prompt: "Build a 3D game where " },
-  { label: "Document",           icon: FileText,          prompt: "Write a professional document about " },
+  { label: "App web",       icon: Globe,             prompt: "Crée une app web " },
+  { label: "Mini-jeu",      icon: Gamepad2,          prompt: "Crée un mini-jeu " },
+  { label: "Présentation",  icon: GalleryHorizontal, prompt: "Crée une présentation sur " },
+  { label: "Dashboard",     icon: BarChart3,         prompt: "Crée un dashboard avec des graphiques pour " },
+  { label: "Animation",     icon: Sparkles,          prompt: "Crée une animation visuelle " },
+  { label: "Landing page",  icon: Palette,           prompt: "Crée une landing page moderne pour " },
+  { label: "Rapport",       icon: FileText,          prompt: "Rédige un rapport professionnel sur " },
 ];
 
 function WelcomeInner({ setInput, focusInput }: { setInput: (v: string) => void; focusInput: () => void }) {
