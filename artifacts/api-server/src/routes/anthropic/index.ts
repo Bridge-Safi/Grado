@@ -352,6 +352,30 @@ router.post("/conversations/:id/messages", async (req, res) => {
 
   const conversationId = paramsParsed.data.id;
   const userContent = bodyParsed.data.content;
+  const imageData = bodyParsed.data.imageData;
+  const imageMimeType = (bodyParsed.data.imageMimeType ?? "image/jpeg") as
+    | "image/jpeg"
+    | "image/png"
+    | "image/gif"
+    | "image/webp";
+  const modelChoice = bodyParsed.data.model ?? "haiku";
+  const agentMode = bodyParsed.data.agentMode;
+
+  const MODEL_MAP: Record<string, string> = {
+    haiku: "claude-haiku-4-5",
+    sonnet: "claude-sonnet-4-5",
+  };
+  const selectedModel = MODEL_MAP[modelChoice] ?? "claude-haiku-4-5";
+
+  const AGENT_PREFIXES: Record<string, string> = {
+    dev: "Tu es un agent de développement expert. Priorité absolue: générer du code complet, fonctionnel et optimisé.\n\n",
+    design: "Tu es un agent de design UI/UX expert. Priorité absolue: créer des interfaces belles, modernes et professionnelles avec des animations soignées.\n\n",
+    analyse: "Tu es un agent d'analyse de données expert. Priorité absolue: analyser, visualiser et expliquer les données clairement avec Chart.js ou D3.\n\n",
+    tutor: "Tu es un tuteur pédagogique expert. Priorité absolue: expliquer clairement, donner des exemples concrets et créer des supports éducatifs interactifs.\n\n",
+    general: "",
+  };
+  const systemPrefix = agentMode ? (AGENT_PREFIXES[agentMode] ?? "") : "";
+  const effectiveSystem = systemPrefix + SYSTEM_PROMPT;
 
   try {
     // Verify conversation exists
@@ -378,10 +402,27 @@ router.post("/conversations/:id/messages", async (req, res) => {
       .where(eq(messages.conversationId, conversationId))
       .orderBy(messages.createdAt);
 
-    const chatMessages = history.map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    }));
+    const chatMessages: Array<{ role: "user" | "assistant"; content: any }> =
+      history.slice(0, -1).map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }));
+
+    // Build last user message – include image if provided
+    if (imageData) {
+      chatMessages.push({
+        role: "user",
+        content: [
+          {
+            type: "image",
+            source: { type: "base64", media_type: imageMimeType, data: imageData },
+          },
+          { type: "text", text: userContent },
+        ],
+      });
+    } else {
+      chatMessages.push({ role: "user", content: userContent });
+    }
 
     // Set up SSE
     res.setHeader("Content-Type", "text/event-stream");
@@ -392,9 +433,9 @@ router.post("/conversations/:id/messages", async (req, res) => {
     let fullResponse = "";
 
     const stream = anthropic.messages.stream({
-      model: "claude-haiku-4-5",
+      model: selectedModel,
       max_tokens: 8192,
-      system: SYSTEM_PROMPT,
+      system: effectiveSystem,
       messages: chatMessages,
     });
 

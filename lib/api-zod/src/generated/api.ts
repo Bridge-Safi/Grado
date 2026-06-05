@@ -90,7 +90,11 @@ export const SendAnthropicMessageParams = zod.object({
 })
 
 export const SendAnthropicMessageBody = zod.object({
-  "content": zod.string()
+  "content": zod.string(),
+  "imageData": zod.string().optional(),
+  "imageMimeType": zod.string().optional(),
+  "model": zod.enum(["haiku", "sonnet"]).optional(),
+  "agentMode": zod.string().optional(),
 })
 
 

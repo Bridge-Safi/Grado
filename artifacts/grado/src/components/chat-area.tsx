@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Paperclip, SendHorizonal, Globe, Palette, GalleryHorizontal, Sparkles, BarChart3, Gamepad2, FileText } from "lucide-react";
+import { Paperclip, SendHorizonal, Globe, Palette, GalleryHorizontal, Sparkles, BarChart3, Gamepad2, FileText, X, Zap, Brain, Code2, Lightbulb, BarChart2 } from "lucide-react";
 import { AnthropicMessage } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,6 +37,17 @@ interface MediaJob {
   mediaId: number;
   type: "music" | "video";
 }
+
+type AgentMode = "general" | "dev" | "design" | "analyse" | "tutor";
+type ModelChoice = "haiku" | "sonnet";
+
+const AGENTS: { id: AgentMode; label: string; icon: React.ElementType; desc: string }[] = [
+  { id: "general", label: "Général",  icon: Sparkles, desc: "Agent polyvalent" },
+  { id: "dev",     label: "Dev",      icon: Code2,    desc: "Code & applications" },
+  { id: "design",  label: "Design",   icon: Palette,  desc: "UI/UX & animations" },
+  { id: "analyse", label: "Analyse",  icon: BarChart2, desc: "Données & rapports" },
+  { id: "tutor",   label: "Tuteur",   icon: Lightbulb, desc: "Explications & cours" },
+];
 
 const CATEGORIES = [
   { label: "App web",       icon: Globe,             prompt: "Crée une app web " },
@@ -109,6 +120,18 @@ export function ChatArea({
   const [localMessages, setLocalMessages] = useState<AnthropicMessage[]>([]);
   const [activeId, setActiveId] = useState<number | null>(null);
   const [mediaJobs, setMediaJobs] = useState<MediaJob[]>([]);
+
+  // Image upload state
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [imageMime, setImageMime] = useState<string>("image/jpeg");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Model & agent
+  const [model, setModel] = useState<ModelChoice>("haiku");
+  const [agentMode, setAgentMode] = useState<AgentMode>("general");
+  const [showAgents, setShowAgents] = useState(false);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
@@ -134,14 +157,38 @@ export function ChatArea({
     }
   };
 
+  // File / image picker
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const mime = file.type;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      // dataUrl = "data:<mime>;base64,<data>"
+      const base64 = dataUrl.split(",")[1];
+      setImageBase64(base64);
+      setImageMime(mime);
+      setImagePreview(dataUrl);
+    };
+    reader.readAsDataURL(file);
+    // Reset so same file can be re-selected
+    e.target.value = "";
+  };
+
+  const clearImage = () => {
+    setImagePreview(null);
+    setImageBase64(null);
+    setImageMime("image/jpeg");
+  };
+
   const triggerMediaGeneration = async (
     currentId: number,
     type: "music" | "video",
     prompt: string
   ) => {
-    // Don't trigger if already in progress/done for this prompt
     if (mediaJobs.find((j) => j.prompt === prompt)) return;
-
     try {
       const endpoint = type === "music" ? "/api/media/music" : "/api/media/video";
       const res = await fetch(endpoint, {
@@ -176,6 +223,12 @@ export function ChatArea({
       textareaRef.current.style.height = "auto";
     }
 
+    // Snapshot & clear image
+    const sentImageBase64 = imageBase64;
+    const sentImageMime = imageMime;
+    const sentImagePreview = imagePreview;
+    clearImage();
+
     let currentId = activeId;
     if (!currentId) {
       const title = content.length > 40 ? content.substring(0, 40) + "..." : content;
@@ -185,21 +238,32 @@ export function ChatArea({
       setConversationId(newId);
     }
 
-    const userMsg: AnthropicMessage = {
+    const userMsg: AnthropicMessage & { imagePreview?: string } = {
       id: Date.now(),
       conversationId: currentId,
       role: "user",
       content,
       createdAt: new Date().toISOString(),
-    };
+      imagePreview: sentImagePreview ?? undefined,
+    } as any;
     setLocalMessages((prev) => [...prev, userMsg]);
     onRunStart();
 
     try {
+      const body: Record<string, any> = { content, model, agentMode };
+      if (sentImageBase64) {
+        body.imageData = sentImageBase64;
+        body.imageMimeType = sentImageMime;
+      }
+
+      const token = localStorage.getItem("grado_token");
       const res = await fetch(`/api/anthropic/conversations/${currentId}/messages`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -236,7 +300,6 @@ export function ChatArea({
         };
         setLocalMessages((prev) => [...prev, newMsg]);
 
-        // Detect and trigger media generation
         const mediaTag = extractMediaTag(fullText);
         if (mediaTag && currentId) {
           await triggerMediaGeneration(currentId, mediaTag.type, mediaTag.prompt);
@@ -268,6 +331,7 @@ export function ChatArea({
   };
 
   const showWelcome = !activeId && localMessages.length === 0 && !isRunning;
+  const activeAgent = AGENTS.find((a) => a.id === agentMode)!;
 
   return (
     <div className="flex flex-col h-full bg-[#0D0D12]">
@@ -302,6 +366,7 @@ export function ChatArea({
                   const mediaTag = msg.role === "assistant" ? extractMediaTag(msg.content) : null;
                   const displayContent = mediaTag ? stripMediaTag(msg.content) : msg.content;
                   const mediaJob = mediaTag ? mediaJobs.find((j) => j.prompt === mediaTag.prompt) : undefined;
+                  const msgImagePreview = (msg as any).imagePreview as string | undefined;
 
                   return (
                     <motion.div
@@ -321,8 +386,19 @@ export function ChatArea({
                         </div>
                       )}
 
-                      <div className={cn("flex flex-col", msg.role === "assistant" ? "flex-1 min-w-0" : "max-w-[80%]")}>
-                        {/* Show text bubble if there's non-media content */}
+                      <div className={cn("flex flex-col gap-2", msg.role === "assistant" ? "flex-1 min-w-0" : "max-w-[80%]")}>
+                        {/* Image attachment preview */}
+                        {msg.role === "user" && msgImagePreview && (
+                          <div className="flex justify-end">
+                            <img
+                              src={msgImagePreview}
+                              alt="Pièce jointe"
+                              className="max-w-[200px] max-h-[160px] rounded-xl border border-[#2a2a38] object-cover"
+                            />
+                          </div>
+                        )}
+
+                        {/* Text bubble */}
                         {(!mediaTag || displayContent) && (
                           <div
                             className={cn(
@@ -354,7 +430,7 @@ export function ChatArea({
                           />
                         )}
 
-                        {/* API key not configured warning */}
+                        {/* API key warning */}
                         {mediaJob && mediaJob.mediaId === -1 && (
                           <div className="mt-3 rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-3 text-xs text-yellow-400/80">
                             {mediaJob.type === "music"
@@ -392,49 +468,175 @@ export function ChatArea({
       </div>
 
       {/* Input bar */}
-      <div className="border-t border-[#2a2a38] bg-[#111118] px-4 py-3">
-        <div className="max-w-2xl mx-auto flex items-end gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 text-[#8888A8] shrink-0 rounded-lg hover:text-white"
-            data-testid="button-attachment"
-          >
-            <Paperclip className="w-4 h-4" />
-          </Button>
+      <div className="border-t border-[#2a2a38] bg-[#111118] px-4 pt-2 pb-3">
+        <div className="max-w-2xl mx-auto">
 
-          <div className="flex-1 bg-[#18181f] border border-[#2a2a38] rounded-xl focus-within:border-[#5B5BD6]/60 transition-colors">
-            <Textarea
-              ref={textareaRef}
-              value={input}
-              onChange={handleInput}
-              onKeyDown={handleKeyDown}
-              placeholder="Build an app, generate a song, create a video..."
-              className="min-h-[40px] max-h-[160px] border-0 focus-visible:ring-0 resize-none bg-transparent px-4 py-2.5 text-[#E8E8F0] text-sm placeholder:text-[#8888A8]"
-              rows={1}
-              disabled={isRunning}
-              data-testid="input-message"
-            />
+          {/* Toolbar: agents + model */}
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            {/* Agent selector */}
+            <div className="relative">
+              <button
+                onClick={() => setShowAgents((v) => !v)}
+                className={cn(
+                  "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all",
+                  showAgents
+                    ? "bg-[#5B5BD6]/15 border-[#5B5BD6]/40 text-white"
+                    : "bg-[#18181f] border-[#2a2a38] text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/30"
+                )}
+              >
+                <activeAgent.icon className="w-3 h-3" />
+                {activeAgent.label}
+              </button>
+
+              <AnimatePresence>
+                {showAgents && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 4, scale: 0.97 }}
+                    transition={{ duration: 0.12 }}
+                    className="absolute bottom-full mb-2 left-0 bg-[#1a1a24] border border-[#2a2a38] rounded-xl p-1.5 z-50 min-w-[160px] shadow-xl"
+                  >
+                    {AGENTS.map((ag) => {
+                      const Icon = ag.icon;
+                      return (
+                        <button
+                          key={ag.id}
+                          onClick={() => { setAgentMode(ag.id); setShowAgents(false); }}
+                          className={cn(
+                            "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all text-left",
+                            agentMode === ag.id
+                              ? "bg-[#5B5BD6]/15 text-white"
+                              : "text-[#8888A8] hover:text-white hover:bg-[#ffffff08]"
+                          )}
+                        >
+                          <Icon className="w-3.5 h-3.5 shrink-0" />
+                          <div>
+                            <div className="font-medium">{ag.label}</div>
+                            <div className="text-[10px] opacity-60">{ag.desc}</div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Model toggle */}
+            <div className="flex items-center bg-[#18181f] border border-[#2a2a38] rounded-lg p-0.5">
+              <button
+                onClick={() => setModel("haiku")}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all",
+                  model === "haiku"
+                    ? "bg-[#5B5BD6]/20 text-white"
+                    : "text-[#8888A8] hover:text-white"
+                )}
+              >
+                <Zap className="w-3 h-3" />
+                Rapide
+              </button>
+              <button
+                onClick={() => setModel("sonnet")}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all",
+                  model === "sonnet"
+                    ? "bg-[#5B5BD6]/20 text-white"
+                    : "text-[#8888A8] hover:text-white"
+                )}
+              >
+                <Brain className="w-3 h-3" />
+                Intelligent
+              </button>
+            </div>
           </div>
 
-          <Button
-            size="icon"
-            className={cn(
-              "h-9 w-9 shrink-0 rounded-lg transition-all duration-150",
-              input.trim() && !isRunning
-                ? "bg-[#5B5BD6] hover:bg-[#4a4ac4] text-white shadow-[0_0_14px_rgba(91,91,214,0.5)]"
-                : "bg-[#1e1e2a] text-[#8888A8] cursor-not-allowed"
+          {/* Image preview */}
+          <AnimatePresence>
+            {imagePreview && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-2"
+              >
+                <div className="relative inline-block">
+                  <img
+                    src={imagePreview}
+                    alt="Pièce jointe"
+                    className="max-h-[120px] max-w-[180px] rounded-xl border border-[#2a2a38] object-cover"
+                  />
+                  <button
+                    onClick={clearImage}
+                    className="absolute -top-1.5 -right-1.5 bg-[#1a1a24] border border-[#2a2a38] rounded-full p-0.5 text-[#8888A8] hover:text-white transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              </motion.div>
             )}
-            disabled={!input.trim() || isRunning}
-            onClick={handleSend}
-            data-testid="button-send"
-          >
-            <SendHorizonal className="w-4 h-4" />
-          </Button>
+          </AnimatePresence>
+
+          {/* Main input row */}
+          <div className="flex items-end gap-2">
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-9 w-9 shrink-0 rounded-lg transition-colors",
+                imagePreview
+                  ? "text-[#5B5BD6] hover:text-[#7B7BFF]"
+                  : "text-[#8888A8] hover:text-white"
+              )}
+              onClick={() => fileInputRef.current?.click()}
+              data-testid="button-attachment"
+            >
+              <Paperclip className="w-4 h-4" />
+            </Button>
+
+            <div className="flex-1 bg-[#18181f] border border-[#2a2a38] rounded-xl focus-within:border-[#5B5BD6]/60 transition-colors">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={handleInput}
+                onKeyDown={handleKeyDown}
+                placeholder="Décris ce que tu veux créer..."
+                className="min-h-[40px] max-h-[160px] border-0 focus-visible:ring-0 resize-none bg-transparent px-4 py-2.5 text-[#E8E8F0] text-sm placeholder:text-[#8888A8]"
+                rows={1}
+                disabled={isRunning}
+                data-testid="input-message"
+              />
+            </div>
+
+            <Button
+              size="icon"
+              className={cn(
+                "h-9 w-9 shrink-0 rounded-lg transition-all duration-150",
+                input.trim() && !isRunning
+                  ? "bg-[#5B5BD6] hover:bg-[#4a4ac4] text-white shadow-[0_0_14px_rgba(91,91,214,0.5)]"
+                  : "bg-[#1e1e2a] text-[#8888A8] cursor-not-allowed"
+              )}
+              disabled={!input.trim() || isRunning}
+              onClick={handleSend}
+              data-testid="button-send"
+            >
+              <SendHorizonal className="w-4 h-4" />
+            </Button>
+          </div>
+          <p className="text-center text-[10px] text-[#8888A8]/60 mt-2">
+            Grado peut créer des apps, composer de la musique et générer des vidéos.
+          </p>
         </div>
-        <p className="text-center text-[10px] text-[#8888A8]/60 mt-2">
-          Grado can build apps, compose music, and generate videos.
-        </p>
       </div>
     </div>
   );
