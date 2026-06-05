@@ -164,4 +164,14 @@ router.put("/admin/user/:userId/plan", async (req, res) => {
   res.json({ ok: true });
 });
 
+// GET /payments/config — returns payment details (IBAN, holder, etc.) for display
+router.get("/config", (_req, res) => {
+  res.json({
+    iban: process.env.PAYMENT_IBAN || "",
+    holder: process.env.PAYMENT_HOLDER || "Grado",
+    phone: process.env.PAYMENT_PHONE || "",
+    bank: process.env.PAYMENT_BANK || "",
+  });
+});
+
 export default router;

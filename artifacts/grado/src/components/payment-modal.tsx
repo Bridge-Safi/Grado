@@ -11,44 +11,50 @@ interface Plan {
   price: number;
 }
 
+interface PaymentConfig {
+  iban: string;
+  holder: string;
+  phone: string;
+  bank: string;
+}
+
 interface PaymentModalProps {
   plan: Plan;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-const BANK_IBAN = import.meta.env.VITE_PAYMENT_IBAN || "À configurer par l'admin";
-const BANK_HOLDER = import.meta.env.VITE_PAYMENT_HOLDER || "Grado";
-const BANK_PHONE = import.meta.env.VITE_PAYMENT_PHONE || "";
-
 export function PaymentModal({ plan, onClose, onSuccess }: PaymentModalProps) {
   const { token } = useAuth();
   const [tab, setTab] = useState<"qr" | "virement">("qr");
   const [reference, setReference] = useState<string>("");
+  const [config, setConfig] = useState<PaymentConfig>({ iban: "", holder: "Grado", phone: "", bank: "" });
   const [copied, setCopied] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    createRequest();
+    init();
   }, []);
 
-  const createRequest = async () => {
+  const init = async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/payments/request", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ plan: plan.id }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Erreur");
-      setReference(data.reference);
+      const [reqRes, cfgRes] = await Promise.all([
+        fetch("/api/payments/request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ plan: plan.id }),
+        }),
+        fetch("/api/payments/config"),
+      ]);
+      const reqData = await reqRes.json();
+      if (!reqRes.ok) throw new Error(reqData.error || "Erreur lors de la création de la demande");
+      const cfgData = await cfgRes.json();
+      setReference(reqData.reference);
+      setConfig(cfgData);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -62,11 +68,12 @@ export function PaymentModal({ plan, onClose, onSuccess }: PaymentModalProps) {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const qrData = [
-    `GRADO PAYMENT`,
-    `Bénéficiaire: ${BANK_HOLDER}`,
-    `IBAN/RIB: ${BANK_IBAN}`,
-    BANK_PHONE ? `Mobile: ${BANK_PHONE}` : "",
+  const qrLines = [
+    `PAIEMENT GRADO`,
+    config.holder ? `Bénéficiaire: ${config.holder}` : null,
+    config.bank ? `Banque: ${config.bank}` : null,
+    config.iban ? `IBAN/RIB: ${config.iban}` : null,
+    config.phone ? `Mobile: ${config.phone}` : null,
     `Montant: ${plan.price} DH`,
     `Référence: ${reference}`,
     `Plan: ${plan.name}`,
@@ -76,6 +83,8 @@ export function PaymentModal({ plan, onClose, onSuccess }: PaymentModalProps) {
     setSubmitted(true);
     onSuccess();
   };
+
+  const ibanConfigured = config.iban || config.phone;
 
   return (
     <AnimatePresence>
@@ -99,7 +108,7 @@ export function PaymentModal({ plan, onClose, onSuccess }: PaymentModalProps) {
           <div className="flex items-center justify-between px-5 py-4 border-b border-[#1e1e2a]">
             <div>
               <h2 className="font-bold text-white text-base">Paiement — Plan {plan.name}</h2>
-              <p className="text-xs text-[#8888A8] mt-0.5">{plan.price} Dh/mois</p>
+              <p className="text-xs text-[#8888A8] mt-0.5">{plan.price} Dh/mois · Activation sous 24h</p>
             </div>
             <button onClick={onClose} className="text-[#8888A8] hover:text-white transition-colors p-1 rounded-lg hover:bg-white/5">
               <X className="w-4 h-4" />
@@ -109,7 +118,7 @@ export function PaymentModal({ plan, onClose, onSuccess }: PaymentModalProps) {
           {loading ? (
             <div className="flex items-center justify-center py-16 gap-3 text-[#8888A8]">
               <Loader2 className="w-5 h-5 animate-spin text-[#5B5BD6]" />
-              <span className="text-sm">Génération de votre référence…</span>
+              <span className="text-sm">Préparation du paiement…</span>
             </div>
           ) : error ? (
             <div className="p-5">
@@ -117,21 +126,24 @@ export function PaymentModal({ plan, onClose, onSuccess }: PaymentModalProps) {
                 <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
                 <p className="text-sm text-red-400">{error}</p>
               </div>
+              <button onClick={init} className="mt-3 w-full py-2 rounded-xl bg-[#1e1e2e] border border-[#3a3a50] text-white text-sm font-semibold hover:bg-[#2a2a3e] transition-all">
+                Réessayer
+              </button>
             </div>
           ) : submitted ? (
             <div className="p-5 text-center">
-              <div className="w-14 h-14 rounded-full bg-[#5B5BD6]/15 border border-[#5B5BD6]/30 flex items-center justify-center mx-auto mb-4">
+              <div className="w-14 h-14 rounded-full bg-[#5B5BD6]/15 border border-[#5B5BD6]/30 flex items-center justify-center mx-auto mb-4 shadow-[0_0_24px_rgba(91,91,214,0.2)]">
                 <Clock className="w-7 h-7 text-[#5B5BD6]" />
               </div>
               <h3 className="font-bold text-white text-lg mb-2">Demande envoyée !</h3>
               <p className="text-sm text-[#8888A8] leading-relaxed mb-4">
-                Votre demande de paiement est en cours de vérification. Votre plan sera activé dans les <strong className="text-white">2 à 24 heures</strong> après confirmation du virement.
+                Votre plan sera activé dans les <strong className="text-white">2 à 24 heures</strong> après vérification du virement par notre équipe.
               </p>
-              <div className="bg-[#0D0D12] border border-[#2a2a38] rounded-xl p-3 mb-4">
-                <p className="text-xs text-[#8888A8] mb-1">Votre référence</p>
+              <div className="bg-[#0D0D12] border border-[#2a2a38] rounded-xl p-3 mb-5">
+                <p className="text-xs text-[#8888A8] mb-1">Votre référence de paiement</p>
                 <p className="font-mono text-sm font-bold text-[#7B7BFF]">{reference}</p>
               </div>
-              <button onClick={onClose} className="w-full py-2.5 rounded-xl bg-[#5B5BD6] hover:bg-[#4a4ac4] text-white text-sm font-semibold transition-all">
+              <button onClick={onClose} className="w-full py-2.5 rounded-xl bg-[#5B5BD6] hover:bg-[#4a4ac4] text-white text-sm font-semibold transition-all shadow-[0_0_16px_rgba(91,91,214,0.35)]">
                 Fermer
               </button>
             </div>
@@ -143,9 +155,7 @@ export function PaymentModal({ plan, onClose, onSuccess }: PaymentModalProps) {
                   onClick={() => setTab("qr")}
                   className={cn(
                     "flex-1 flex items-center justify-center gap-2 py-3 text-xs font-semibold transition-colors",
-                    tab === "qr"
-                      ? "text-[#7B7BFF] border-b-2 border-[#5B5BD6]"
-                      : "text-[#8888A8] hover:text-white"
+                    tab === "qr" ? "text-[#7B7BFF] border-b-2 border-[#5B5BD6]" : "text-[#8888A8] hover:text-white"
                   )}
                 >
                   <CreditCard className="w-3.5 h-3.5" />
@@ -155,9 +165,7 @@ export function PaymentModal({ plan, onClose, onSuccess }: PaymentModalProps) {
                   onClick={() => setTab("virement")}
                   className={cn(
                     "flex-1 flex items-center justify-center gap-2 py-3 text-xs font-semibold transition-colors",
-                    tab === "virement"
-                      ? "text-[#7B7BFF] border-b-2 border-[#5B5BD6]"
-                      : "text-[#8888A8] hover:text-white"
+                    tab === "virement" ? "text-[#7B7BFF] border-b-2 border-[#5B5BD6]" : "text-[#8888A8] hover:text-white"
                   )}
                 >
                   <Building2 className="w-3.5 h-3.5" />
@@ -168,48 +176,53 @@ export function PaymentModal({ plan, onClose, onSuccess }: PaymentModalProps) {
               <div className="p-5">
                 {tab === "qr" ? (
                   <div className="flex flex-col items-center gap-4">
-                    <p className="text-xs text-[#8888A8] text-center">
-                      Scannez ce QR code avec votre application bancaire pour effectuer le paiement automatiquement.
-                    </p>
-                    <div className="bg-white p-4 rounded-2xl shadow-[0_0_30px_rgba(91,91,214,0.2)]">
-                      <QRCodeSVG
-                        value={qrData}
-                        size={200}
-                        level="M"
-                        includeMargin={false}
-                      />
-                    </div>
+                    {ibanConfigured ? (
+                      <>
+                        <p className="text-xs text-[#8888A8] text-center">
+                          Scannez ce QR code avec votre application bancaire. Il contient toutes les informations du virement.
+                        </p>
+                        <div className="bg-white p-4 rounded-2xl shadow-[0_0_30px_rgba(91,91,214,0.2)]">
+                          <QRCodeSVG value={qrLines} size={200} level="M" includeMargin={false} />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center gap-3 py-4">
+                        <div className="w-12 h-12 rounded-xl bg-[#5B5BD6]/10 border border-[#5B5BD6]/20 flex items-center justify-center">
+                          <AlertCircle className="w-6 h-6 text-[#7B7BFF]" />
+                        </div>
+                        <p className="text-sm text-white font-semibold text-center">Coordonnées bancaires non configurées</p>
+                        <p className="text-xs text-[#8888A8] text-center leading-relaxed max-w-xs">
+                          L'administrateur doit configurer les variables <code className="text-[#7B7BFF]">PAYMENT_IBAN</code> ou <code className="text-[#7B7BFF]">PAYMENT_PHONE</code> dans les secrets Replit.
+                        </p>
+                      </div>
+                    )}
                     <div className="w-full bg-[#0D0D12] border border-[#2a2a38] rounded-xl p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-[#8888A8]">Montant</span>
                         <span className="text-sm font-bold text-white">{plan.price} Dh</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-[#8888A8]">Référence</span>
+                        <span className="text-xs text-[#8888A8]">Référence (obligatoire)</span>
                         <div className="flex items-center gap-1.5">
                           <span className="font-mono text-xs text-[#7B7BFF]">{reference}</span>
-                          <button onClick={() => copy(reference, "ref")} className="text-[#8888A8] hover:text-white transition-colors">
-                            {copied === "ref" ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                          <button onClick={() => copy(reference, "ref-qr")} className="text-[#8888A8] hover:text-white transition-colors">
+                            {copied === "ref-qr" ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
                           </button>
                         </div>
                       </div>
                     </div>
-                    <p className="text-[10px] text-[#5555A8] text-center">
-                      Assurez-vous d'inclure la référence dans le commentaire du virement
-                    </p>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <p className="text-xs text-[#8888A8]">
-                      Effectuez un virement bancaire avec les informations suivantes :
-                    </p>
+                    <p className="text-xs text-[#8888A8]">Effectuez un virement avec les informations suivantes :</p>
                     {[
-                      { label: "Bénéficiaire", value: BANK_HOLDER, key: "holder" },
-                      { label: "IBAN / RIB", value: BANK_IBAN, key: "iban" },
-                      ...(BANK_PHONE ? [{ label: "Paiement mobile", value: BANK_PHONE, key: "phone" }] : []),
-                      { label: "Montant", value: `${plan.price} Dh`, key: "amount" },
-                      { label: "Référence (obligatoire)", value: reference, key: "ref2" },
-                    ].map(({ label, value, key }) => (
+                      { label: "Bénéficiaire", value: config.holder, key: "holder", show: !!config.holder },
+                      { label: "Banque", value: config.bank, key: "bank", show: !!config.bank },
+                      { label: "IBAN / RIB", value: config.iban, key: "iban", show: !!config.iban },
+                      { label: "Paiement mobile", value: config.phone, key: "phone", show: !!config.phone },
+                      { label: "Montant", value: `${plan.price} Dh`, key: "amount", show: true },
+                      { label: "Référence (obligatoire)", value: reference, key: "ref2", show: true },
+                    ].filter(f => f.show).map(({ label, value, key }) => (
                       <div key={key} className="bg-[#0D0D12] border border-[#2a2a38] rounded-xl p-3">
                         <p className="text-[10px] text-[#8888A8] mb-1">{label}</p>
                         <div className="flex items-center justify-between gap-2">
@@ -225,10 +238,18 @@ export function PaymentModal({ plan, onClose, onSuccess }: PaymentModalProps) {
                         </div>
                       </div>
                     ))}
-                    <div className="flex items-start gap-2 bg-[#5B5BD6]/10 border border-[#5B5BD6]/20 rounded-xl p-3 mt-1">
+                    {!ibanConfigured && (
+                      <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3">
+                        <AlertCircle className="w-3.5 h-3.5 text-yellow-400 shrink-0 mt-0.5" />
+                        <p className="text-[11px] text-yellow-300 leading-relaxed">
+                          Configurez <code>PAYMENT_IBAN</code> ou <code>PAYMENT_PHONE</code> dans les secrets Replit pour afficher vos coordonnées bancaires.
+                        </p>
+                      </div>
+                    )}
+                    <div className="flex items-start gap-2 bg-[#5B5BD6]/10 border border-[#5B5BD6]/20 rounded-xl p-3">
                       <AlertCircle className="w-3.5 h-3.5 text-[#7B7BFF] shrink-0 mt-0.5" />
                       <p className="text-[11px] text-[#9B9BFF] leading-relaxed">
-                        La référence est <strong>obligatoire</strong> dans le motif du virement pour que votre plan soit activé automatiquement.
+                        La <strong>référence est obligatoire</strong> dans le motif du virement pour que votre plan soit activé.
                       </p>
                     </div>
                   </div>
@@ -242,7 +263,7 @@ export function PaymentModal({ plan, onClose, onSuccess }: PaymentModalProps) {
                   J'ai effectué le virement
                 </button>
                 <p className="text-center text-[10px] text-[#5555A8] mt-2">
-                  Activation sous 2 à 24h après vérification
+                  Activation sous 2 à 24h après vérification par notre équipe
                 </p>
               </div>
             </>

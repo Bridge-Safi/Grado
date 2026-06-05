@@ -117,23 +117,30 @@ router.post("/change-password", async (req, res) => {
   res.json({ ok: true });
 });
 
-// PUT /api/auth/plan
+// PUT /api/auth/plan — only allows downgrade to free plan; paid plans require approved payment
 router.put("/plan", async (req, res) => {
   const auth = req.headers.authorization;
   if (!auth?.startsWith("Bearer ")) { res.status(401).json({ error: "Non authentifié" }); return; }
   let userId: number;
+  let userEmail: string;
   try {
-    const decoded = jwt.verify(auth.slice(7), JWT_SECRET) as { userId: number };
+    const decoded = jwt.verify(auth.slice(7), JWT_SECRET) as { userId: number; email: string };
     userId = decoded.userId;
+    userEmail = decoded.email;
   } catch { res.status(401).json({ error: "Token invalide" }); return; }
 
   const { plan } = req.body;
   const allowed = ["gratuit", "essentiel", "createur", "fusion", "elite"];
   if (!plan || !allowed.includes(plan)) { res.status(400).json({ error: "Plan invalide" }); return; }
 
-  // 48h trial for paid plans, immediate for free
-  const trialEndsAt = plan !== "gratuit" ? new Date(Date.now() + 48 * 60 * 60 * 1000) : null;
+  // Only admins or downgrade to free is allowed without payment
+  const adminAllowed = isAdmin(userEmail);
+  if (!adminAllowed && plan !== "gratuit") {
+    res.status(403).json({ error: "Paiement requis. Utilisez le système de paiement pour souscrire à un plan payant." });
+    return;
+  }
 
+  const trialEndsAt = null;
   const [updated] = await db.update(users)
     .set({ plan, trialEndsAt })
     .where(eq(users.id, userId))

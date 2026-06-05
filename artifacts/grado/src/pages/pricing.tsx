@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Check, Zap, Loader2, ArrowRight, Star } from "lucide-react";
+import { Check, Zap, Loader2, ArrowRight, Star, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
 import { GradoLogo } from "@/components/grado-logo";
 import { LangSwitcher } from "@/components/lang-switcher";
+import { PaymentModal } from "@/components/payment-modal";
 
 const PLANS = [
   {
@@ -37,7 +38,7 @@ const PLANS = [
       "Téléchargement du code",
       "Support standard",
     ],
-    cta: "Essayer 48h gratuit",
+    cta: "Souscrire",
     popular: false,
     paid: true,
     highlight: false,
@@ -54,7 +55,7 @@ const PLANS = [
       "Domaine personnalisé",
       "Support prioritaire",
     ],
-    cta: "Essayer 48h gratuit",
+    cta: "Souscrire",
     popular: true,
     paid: true,
     highlight: true,
@@ -71,7 +72,7 @@ const PLANS = [
       "Accès API Grado",
       "Tout du plan Créateur",
     ],
-    cta: "Essayer 48h gratuit",
+    cta: "Souscrire",
     popular: false,
     paid: true,
     highlight: false,
@@ -88,7 +89,7 @@ const PLANS = [
       "Support dédié 24/7",
       "Accès anticipé nouveautés",
     ],
-    cta: "Essayer 48h gratuit",
+    cta: "Souscrire",
     popular: false,
     paid: true,
     highlight: false,
@@ -99,31 +100,51 @@ export default function PricingPage() {
   const { user, updatePlan } = useAuth();
   const [, navigate] = useLocation();
   const [loading, setLoading] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [paymentPlan, setPaymentPlan] = useState<typeof PLANS[0] | null>(null);
+  const [pendingPlans, setPendingPlans] = useState<Set<string>>(new Set());
 
   const isOnboarding =
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).get("onboard") === "1";
 
-  const handleSelect = async (planId: string) => {
+  const handleSelect = async (plan: typeof PLANS[0]) => {
     if (!user) { navigate("/register"); return; }
-    if (user.plan === planId) { navigate("/chat"); return; }
+    if (user.plan === plan.id) { navigate("/chat"); return; }
     setError("");
-    setLoading(planId);
-    try {
-      await updatePlan(planId);
-      setSuccess(planId);
-      setTimeout(() => navigate("/chat"), 1200);
-    } catch (e: any) {
-      setError(e.message || "Une erreur est survenue");
-    } finally {
-      setLoading(null);
+
+    if (!plan.paid) {
+      setLoading(plan.id);
+      try {
+        await updatePlan(plan.id);
+        navigate("/chat");
+      } catch (e: any) {
+        setError(e.message || "Une erreur est survenue");
+      } finally {
+        setLoading(null);
+      }
+      return;
     }
+
+    setPaymentPlan(plan);
+  };
+
+  const handlePaymentSuccess = (planId: string) => {
+    setPendingPlans(prev => new Set([...prev, planId]));
+    setPaymentPlan(null);
   };
 
   return (
     <div className="min-h-screen bg-[#0D0D12] flex flex-col">
+      {/* Payment Modal */}
+      {paymentPlan && (
+        <PaymentModal
+          plan={paymentPlan}
+          onClose={() => setPaymentPlan(null)}
+          onSuccess={() => handlePaymentSuccess(paymentPlan.id)}
+        />
+      )}
+
       {/* Navbar */}
       <header className="h-12 border-b border-[#2a2a38] bg-[#111118] flex items-center px-5 gap-3 shrink-0">
         <a href="/" className="flex items-center gap-2">
@@ -181,7 +202,7 @@ export default function PricingPage() {
           transition={{ delay: 0.1 }}
           className="text-sm text-[#8888A8] text-center mb-12 max-w-md"
         >
-          Essai gratuit 48h sur tous les plans payants — aucune carte bancaire requise
+          Paiement par virement bancaire ou QR code — Activation sous 24h
         </motion.p>
 
         {error && (
@@ -195,7 +216,7 @@ export default function PricingPage() {
           {PLANS.map((plan, i) => {
             const isCurrent = user?.plan === plan.id;
             const isLoading = loading === plan.id;
-            const isDone = success === plan.id;
+            const isPending = pendingPlans.has(plan.id);
 
             return (
               <motion.div
@@ -229,6 +250,15 @@ export default function PricingPage() {
                   </div>
                 )}
 
+                {/* Pending badge */}
+                {isPending && !isCurrent && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="bg-yellow-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
+                      <Clock className="w-2.5 h-2.5" /> En attente
+                    </span>
+                  </div>
+                )}
+
                 {/* Header */}
                 <div>
                   <p className={cn(
@@ -256,7 +286,7 @@ export default function PricingPage() {
                   )}
                 </div>
 
-                {/* Trial badge */}
+                {/* Payment badge */}
                 {plan.paid && (
                   <div className={cn(
                     "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5",
@@ -264,7 +294,7 @@ export default function PricingPage() {
                       ? "bg-[#5B5BD6]/20 border border-[#5B5BD6]/30"
                       : "bg-[#1e1e2a] border border-[#2a2a38]"
                   )}>
-                    <span className="text-[10px] text-[#7B7BFF] font-medium">⏱ 48h gratuit · 0 carte requise</span>
+                    <span className="text-[10px] text-[#7B7BFF] font-medium">💳 QR code · Virement bancaire</span>
                   </div>
                 )}
 
@@ -282,9 +312,9 @@ export default function PricingPage() {
                 </ul>
 
                 {/* CTA */}
-                {isDone ? (
-                  <button disabled className="w-full py-2 rounded-xl bg-green-600 text-white text-xs font-semibold flex items-center justify-center gap-1.5">
-                    <Check className="w-3.5 h-3.5" /> Activé !
+                {isPending && !isCurrent ? (
+                  <button disabled className="w-full py-2 rounded-xl bg-yellow-600/20 border border-yellow-600/30 text-yellow-400 text-xs font-semibold flex items-center justify-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5" /> Vérification en cours…
                   </button>
                 ) : isCurrent ? (
                   <button
@@ -295,7 +325,7 @@ export default function PricingPage() {
                   </button>
                 ) : (
                   <button
-                    onClick={() => handleSelect(plan.id)}
+                    onClick={() => handleSelect(plan)}
                     disabled={isLoading}
                     className={cn(
                       "w-full py-2 rounded-xl text-xs font-semibold transition-all duration-150 flex items-center justify-center gap-1.5",
@@ -306,8 +336,6 @@ export default function PricingPage() {
                   >
                     {isLoading ? (
                       <><Loader2 className="w-3 h-3 animate-spin" /> Activation...</>
-                    ) : plan.price === 0 ? (
-                      plan.cta
                     ) : (
                       plan.cta
                     )}
@@ -370,7 +398,7 @@ export default function PricingPage() {
         </motion.div>
 
         <p className="mt-8 text-xs text-[#8888A8] text-center max-w-sm">
-          Paiement sécurisé · Annulation à tout moment · Prix en dirhams marocains (DH)
+          Paiement sécurisé par virement bancaire · Activation sous 24h · Prix en dirhams marocains (DH)
         </p>
       </div>
     </div>
