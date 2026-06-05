@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { Paperclip, SendHorizonal, Globe, Palette, GalleryHorizontal, Sparkles, BarChart3, Gamepad2, FileText, X, Zap, Brain, Code2, Lightbulb, BarChart2 } from "lucide-react";
+import { Paperclip, SendHorizonal, Globe, Palette, GalleryHorizontal, Sparkles, BarChart3, Gamepad2, FileText, X, Zap, Brain, Code2, Lightbulb, BarChart2, Users } from "lucide-react";
+import { AgentOrchestrator } from "./agent-orchestrator";
 import { AnthropicMessage } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -136,6 +137,10 @@ export function ChatArea({
   const [model, setModel] = useState<ModelChoice>("haiku");
   const [agentMode, setAgentMode] = useState<AgentMode>("general");
   const [showAgents, setShowAgents] = useState(false);
+
+  // Multi-agent mode
+  const [isMultiAgent, setIsMultiAgent] = useState(false);
+  const [multiAgentPrompt, setMultiAgentPrompt] = useState("");
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -339,6 +344,39 @@ export function ChatArea({
     }
   };
 
+  const handleMultiAgent = async () => {
+    const content = input.trim();
+    if (!content || isRunning) return;
+
+    setInput("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
+
+    let currentId = activeId;
+    if (!currentId) {
+      const title = content.length > 40 ? content.substring(0, 40) + "..." : content;
+      const newId = await onTitleCreate(title);
+      currentId = newId;
+      setActiveId(newId);
+      setConversationId(newId);
+    }
+
+    const userMsgId = Date.now();
+    setLocalMessages((prev) => [
+      ...prev,
+      {
+        id: userMsgId,
+        conversationId: currentId!,
+        role: "user",
+        content,
+        createdAt: new Date().toISOString(),
+      } as AnthropicMessage,
+    ]);
+
+    setMultiAgentPrompt(content);
+    setIsMultiAgent(true);
+    onRunStart();
+  };
+
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
     e.target.style.height = "auto";
@@ -477,7 +515,28 @@ export function ChatArea({
               </AnimatePresence>
 
               <AnimatePresence>
-                {isRunning && (
+                {isRunning && isMultiAgent && (
+                  <motion.div
+                    key="multi-agent"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="flex justify-start"
+                  >
+                    <div className="w-7 h-7 rounded-full bg-[#0e0e16] border border-[#5B5BD6]/30 flex items-center justify-center mr-2 mt-1 shrink-0 shadow-[0_0_8px_rgba(91,91,214,0.2)]">
+                      <GradoLogo size={20} />
+                    </div>
+                    <AgentOrchestrator
+                      prompt={multiAgentPrompt}
+                      token={localStorage.getItem("grado_token")}
+                      onDone={() => {
+                        setIsMultiAgent(false);
+                        onRunEnd();
+                      }}
+                    />
+                  </motion.div>
+                )}
+                {isRunning && !isMultiAgent && (
                   <motion.div
                     key="shark"
                     initial={{ opacity: 0, y: 10 }}
@@ -582,6 +641,22 @@ export function ChatArea({
                 Intelligent
               </button>
             </div>
+
+            {/* Multi-Agent button */}
+            <button
+              onClick={handleMultiAgent}
+              disabled={!input.trim() || isRunning}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border transition-all ml-auto",
+                input.trim() && !isRunning
+                  ? "bg-gradient-to-r from-[#8B5CF6]/20 to-[#5B5BD6]/20 border-[#7B5CF6]/50 text-white hover:from-[#8B5CF6]/30 hover:to-[#5B5BD6]/30 shadow-[0_0_12px_rgba(139,92,246,0.2)]"
+                  : "bg-[#18181f] border-[#2a2a38] text-[#8888A8]/50 cursor-not-allowed"
+              )}
+              title="Lancer 4 agents IA spécialisés pour construire ton projet"
+            >
+              <Users className="w-3 h-3" />
+              ⚡ Multi-Agents
+            </button>
           </div>
 
           {/* Image preview */}
