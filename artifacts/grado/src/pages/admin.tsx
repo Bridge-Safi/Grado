@@ -15,7 +15,7 @@ interface UserRow {
 
 export default function AdminPage() {
   const [, navigate] = useLocation();
-  const { token } = useAuth();
+  const { token, user: authUser } = useAuth();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -28,6 +28,7 @@ export default function AdminPage() {
       const res = await fetch("/api/admin/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (res.status === 403) throw new Error("403");
       if (!res.ok) throw new Error("Erreur de chargement");
       const data = await res.json();
       setUsers(data.users);
@@ -40,6 +41,24 @@ export default function AdminPage() {
   };
 
   useEffect(() => { load(); }, []);
+
+  if (!loading && error === "403") {
+    return (
+      <div className="min-h-screen bg-[#0D0D12] flex flex-col items-center justify-center gap-4 text-center px-4">
+        <div className="text-5xl">🔒</div>
+        <h1 className="text-2xl font-bold text-white">Accès refusé</h1>
+        <p className="text-sm text-[#8888A8] max-w-sm">
+          Cette page est réservée au gérant de Grado. Si c'est toi, configure ton email admin dans les secrets Replit.
+        </p>
+        <button
+          onClick={() => navigate("/chat")}
+          className="mt-2 px-5 py-2.5 rounded-xl bg-[#5B5BD6] text-white text-sm font-medium hover:bg-[#4a4ac4] transition-colors"
+        >
+          Retour au chat
+        </button>
+      </div>
+    );
+  }
 
   const fmt = (d: string) =>
     new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });

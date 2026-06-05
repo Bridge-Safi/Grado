@@ -6,6 +6,7 @@ export interface AuthUser {
   email: string;
   plan: string;
   trialEndsAt: string | null;
+  isAdmin: boolean;
 }
 
 interface AuthContextType {

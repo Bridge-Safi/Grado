@@ -42,3 +42,4 @@ externalPort = 3000
 
 [userenv.shared]
 JWT_SECRET = "3ab959d6fca30fe373b72bb80fb19634fedc700f668a2a1e6bb2b68568abc024"
+ADMIN_EMAIL = "khalidou54@icloud.com"

@@ -7,6 +7,8 @@ import { eq } from "drizzle-orm";
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-change-me";
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
+const isAdmin = (email: string) => !!ADMIN_EMAIL && email.toLowerCase() === ADMIN_EMAIL;
 
 // POST /auth/register
 router.post("/register", async (req, res) => {
@@ -42,7 +44,7 @@ router.post("/register", async (req, res) => {
 
   res.status(201).json({
     token,
-    user: { id: user.id, name: user.name, email: user.email, plan: user.plan, trialEndsAt: user.trialEndsAt },
+    user: { id: user.id, name: user.name, email: user.email, plan: user.plan, trialEndsAt: user.trialEndsAt, isAdmin: isAdmin(user.email) },
   });
 });
 
@@ -70,7 +72,7 @@ router.post("/login", async (req, res) => {
 
   res.json({
     token,
-    user: { id: user.id, name: user.name, email: user.email, plan: user.plan, trialEndsAt: user.trialEndsAt },
+    user: { id: user.id, name: user.name, email: user.email, plan: user.plan, trialEndsAt: user.trialEndsAt, isAdmin: isAdmin(user.email) },
   });
 });
 
@@ -137,7 +139,7 @@ router.put("/plan", async (req, res) => {
     .where(eq(users.id, userId))
     .returning();
 
-  res.json({ id: updated.id, name: updated.name, email: updated.email, plan: updated.plan, trialEndsAt: updated.trialEndsAt });
+  res.json({ id: updated.id, name: updated.name, email: updated.email, plan: updated.plan, trialEndsAt: updated.trialEndsAt, isAdmin: isAdmin(updated.email) });
 });
 
 // GET /auth/me
@@ -151,7 +153,7 @@ router.get("/me", async (req, res) => {
     const decoded = jwt.verify(auth.slice(7), JWT_SECRET) as { userId: number };
     const [user] = await db.select().from(users).where(eq(users.id, decoded.userId)).limit(1);
     if (!user) { res.status(404).json({ error: "Utilisateur introuvable" }); return; }
-    res.json({ id: user.id, name: user.name, email: user.email, plan: user.plan, trialEndsAt: user.trialEndsAt });
+    res.json({ id: user.id, name: user.name, email: user.email, plan: user.plan, trialEndsAt: user.trialEndsAt, isAdmin: isAdmin(user.email) });
   } catch {
     res.status(401).json({ error: "Token invalide" });
   }

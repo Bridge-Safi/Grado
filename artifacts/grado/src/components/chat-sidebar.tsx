@@ -113,13 +113,15 @@ export function Sidebar({
           <Settings className="w-3.5 h-3.5" />
           <span>{t.settings}</span>
         </button>
-        <button
-          onClick={() => navigate("/admin")}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-[#8888A8] hover:text-white hover:bg-[#1a1a28] transition-colors"
-        >
-          <Shield className="w-3.5 h-3.5" />
-          <span>{t.admin}</span>
-        </button>
+        {user?.isAdmin && (
+          <button
+            onClick={() => navigate("/admin")}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-[#8888A8] hover:text-white hover:bg-[#1a1a28] transition-colors"
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span>{t.admin}</span>
+          </button>
+        )}
         {user && (
           <div className="px-3 py-2 text-xs text-[#5555A8] truncate">{user.email}</div>
         )}
