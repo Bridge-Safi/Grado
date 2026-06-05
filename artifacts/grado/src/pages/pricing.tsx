@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Zap, Loader2, ArrowRight } from "lucide-react";
+import { Check, Zap, Loader2, ArrowRight, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
@@ -11,32 +11,87 @@ const PLANS = [
   {
     id: "gratuit",
     name: "Gratuit",
+    tagline: "Pour explorer",
     price: 0,
-    period: "Pour commencer",
-    features: ["Agent IA de base", "10 générations / mois", "Support communautaire"],
-    cta: "Choisir ce plan",
+    features: [
+      "5 créations / mois",
+      "Aperçu en direct",
+      "App web, jeux, dashboards",
+      "Hébergement 1 site",
+      "Support communauté",
+    ],
+    cta: "Commencer gratuitement",
     popular: false,
     paid: false,
+    highlight: false,
   },
   {
-    id: "hacker",
-    name: "Hacker",
-    price: 80,
-    period: "Pour les passionnés",
-    features: ["Agent IA avancé", "Générations illimitées", "Vidéos & Musique IA", "Support prioritaire"],
-    cta: "Commencer l'essai gratuit",
-    popular: true,
-    paid: true,
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    price: 199,
-    period: "Pour les experts",
-    features: ["Modèles IA personnalisés", "Accès API complet", "Support dédié 24/7", "Tout du plan Hacker"],
-    cta: "Commencer l'essai gratuit",
+    id: "essentiel",
+    name: "Essentiel",
+    tagline: "Pour démarrer",
+    price: 39,
+    features: [
+      "30 créations / mois",
+      "Tous les types de projets",
+      "Hébergement 5 sites",
+      "Téléchargement du code",
+      "Support standard",
+    ],
+    cta: "Essayer 48h gratuit",
     popular: false,
     paid: true,
+    highlight: false,
+  },
+  {
+    id: "createur",
+    name: "Créateur",
+    tagline: "Le plus populaire",
+    price: 99,
+    features: [
+      "150 créations / mois",
+      "Génération musicale IA",
+      "Hébergement illimité",
+      "Domaine personnalisé",
+      "Support prioritaire",
+    ],
+    cta: "Essayer 48h gratuit",
+    popular: true,
+    paid: true,
+    highlight: true,
+  },
+  {
+    id: "fusion",
+    name: "Fusion",
+    tagline: "Pour les pros",
+    price: 189,
+    features: [
+      "500 créations / mois",
+      "Génération vidéo IA",
+      "Modèles IA avancés",
+      "Accès API Grado",
+      "Tout du plan Créateur",
+    ],
+    cta: "Essayer 48h gratuit",
+    popular: false,
+    paid: true,
+    highlight: false,
+  },
+  {
+    id: "elite",
+    name: "Élite",
+    tagline: "Sans limites",
+    price: 359,
+    features: [
+      "Créations illimitées",
+      "Vidéo + Musique illimités",
+      "Modèles IA premium",
+      "Support dédié 24/7",
+      "Accès anticipé nouveautés",
+    ],
+    cta: "Essayer 48h gratuit",
+    popular: false,
+    paid: true,
+    highlight: false,
   },
 ];
 
@@ -47,12 +102,13 @@ export default function PricingPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState("");
 
-  const isOnboarding = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("onboard") === "1";
+  const isOnboarding =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("onboard") === "1";
 
   const handleSelect = async (planId: string) => {
     if (!user) { navigate("/register"); return; }
     if (user.plan === planId) { navigate("/chat"); return; }
-
     setError("");
     setLoading(planId);
     try {
@@ -83,9 +139,8 @@ export default function PricingPage() {
         )}
       </header>
 
-      {/* Hero */}
       <div className="flex-1 flex flex-col items-center px-4 py-14">
-        {/* Onboarding header */}
+        {/* Onboarding banner */}
         {isOnboarding && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
@@ -118,7 +173,7 @@ export default function PricingPage() {
           transition={{ delay: 0.05 }}
           className="text-3xl md:text-4xl font-bold text-white text-center mb-3"
         >
-          {isOnboarding ? "Quel plan te correspond ?" : "Choisissez Votre Plan de Puissance"}
+          {isOnboarding ? "Quel plan te correspond ?" : "Choisissez votre niveau"}
         </motion.h1>
         <motion.p
           initial={{ opacity: 0 }}
@@ -129,15 +184,14 @@ export default function PricingPage() {
           Essai gratuit 48h sur tous les plans payants — aucune carte bancaire requise
         </motion.p>
 
-        {/* Error */}
         {error && (
           <div className="mb-6 px-4 py-2.5 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400">
             {error}
           </div>
         )}
 
-        {/* Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl">
+        {/* Cards grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 w-full max-w-6xl">
           {PLANS.map((plan, i) => {
             const isCurrent = user?.plan === plan.id;
             const isLoading = loading === plan.id;
@@ -148,70 +202,80 @@ export default function PricingPage() {
                 key={plan.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + i * 0.07 }}
+                transition={{ delay: 0.08 + i * 0.06 }}
                 className={cn(
-                  "relative rounded-2xl border p-7 flex flex-col gap-5",
-                  plan.popular
-                    ? "border-[#5B5BD6] bg-[#111118] shadow-[0_0_40px_rgba(91,91,214,0.2)]"
+                  "relative rounded-2xl border p-5 flex flex-col gap-4",
+                  plan.highlight
+                    ? "border-[#5B5BD6] bg-gradient-to-b from-[#18183a] to-[#111118] shadow-[0_0_50px_rgba(91,91,214,0.25)]"
                     : "border-[#2a2a38] bg-[#111118]",
-                  isCurrent && "ring-2 ring-[#5B5BD6]/40"
+                  isCurrent && "ring-2 ring-[#5B5BD6]/50"
                 )}
               >
                 {/* Popular badge */}
                 {plan.popular && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                    <span className="bg-[#5B5BD6] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                      Populaire
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="bg-[#5B5BD6] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
+                      <Star className="w-2.5 h-2.5" /> Populaire
                     </span>
                   </div>
                 )}
 
                 {/* Current plan badge */}
-                {isCurrent && (
-                  <div className="absolute -top-3.5 right-5">
+                {isCurrent && !plan.popular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <span className="bg-green-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                      Plan actuel
+                      Actuel
                     </span>
                   </div>
                 )}
 
-                {/* Plan name */}
+                {/* Header */}
                 <div>
-                  <p className="text-sm text-[#8888A8] mb-1">{plan.name}</p>
-                  <div className="flex items-end gap-1">
-                    <span className="text-5xl font-bold text-white">{plan.price}</span>
+                  <p className={cn(
+                    "text-xs font-semibold mb-1",
+                    plan.highlight ? "text-[#9B9BFF]" : "text-[#8888A8]"
+                  )}>
+                    {plan.tagline}
+                  </p>
+                  <p className="text-base font-bold text-white">{plan.name}</p>
+                  <div className="flex items-end gap-1 mt-2">
+                    <span className="text-3xl font-bold text-white">{plan.price}</span>
                     {plan.price > 0 ? (
                       <>
-                        <span className="text-xl font-semibold text-white mb-1.5">Dh</span>
-                        <span className="text-[#8888A8] text-sm mb-2">/mois</span>
+                        <span className="text-sm font-semibold text-white mb-0.5">Dh</span>
+                        <span className="text-[#8888A8] text-xs mb-1">/mois</span>
                       </>
                     ) : (
-                      <span className="text-xl font-semibold text-white mb-1.5">Dh</span>
+                      <span className="text-sm font-semibold text-[#8888A8] mb-0.5">Dh</span>
                     )}
                   </div>
                   {plan.price > 0 && (
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span className="line-through text-[#8888A8] text-sm">{plan.price} Dh/mois</span>
-                      <span className="bg-green-500/15 text-green-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                        -{Math.round(plan.price * 0.5)} Dh · 3 mois
-                      </span>
-                    </div>
+                    <p className="text-[10px] text-green-400 mt-0.5">
+                      → {Math.round(plan.price * 0.5)} Dh/mois · 3 mois offerts
+                    </p>
                   )}
-                  <p className="text-xs text-[#8888A8] mt-1">{plan.period}</p>
                 </div>
 
-                {/* 48h trial badge for paid plans */}
+                {/* Trial badge */}
                 {plan.paid && (
-                  <div className="flex items-center gap-1.5 bg-[#5B5BD6]/10 border border-[#5B5BD6]/20 rounded-lg px-3 py-2">
-                    <span className="text-xs text-[#5B5BD6] font-medium">⏱ Accès gratuit 48h · Aucune carte</span>
+                  <div className={cn(
+                    "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5",
+                    plan.highlight
+                      ? "bg-[#5B5BD6]/20 border border-[#5B5BD6]/30"
+                      : "bg-[#1e1e2a] border border-[#2a2a38]"
+                  )}>
+                    <span className="text-[10px] text-[#7B7BFF] font-medium">⏱ 48h gratuit · 0 carte requise</span>
                   </div>
                 )}
 
                 {/* Features */}
-                <ul className="flex flex-col gap-2.5 flex-1">
+                <ul className="flex flex-col gap-2 flex-1">
                   {plan.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-sm text-[#C8C8E8]">
-                      <Check className="w-4 h-4 text-[#5B5BD6] shrink-0" />
+                    <li key={f} className="flex items-start gap-2 text-xs text-[#C8C8E8]">
+                      <Check className={cn(
+                        "w-3.5 h-3.5 shrink-0 mt-0.5",
+                        plan.highlight ? "text-[#7B7BFF]" : "text-[#5B5BD6]"
+                      )} />
                       {f}
                     </li>
                   ))}
@@ -219,32 +283,31 @@ export default function PricingPage() {
 
                 {/* CTA */}
                 {isDone ? (
-                  <button
-                    disabled
-                    className="w-full py-2.5 rounded-xl bg-green-600 text-white text-sm font-medium flex items-center justify-center gap-2"
-                  >
-                    <Check className="w-4 h-4" /> Plan activé — redirection...
+                  <button disabled className="w-full py-2 rounded-xl bg-green-600 text-white text-xs font-semibold flex items-center justify-center gap-1.5">
+                    <Check className="w-3.5 h-3.5" /> Activé !
                   </button>
                 ) : isCurrent ? (
                   <button
                     onClick={() => navigate("/chat")}
-                    className="w-full py-2.5 rounded-xl border border-[#5B5BD6]/30 text-[#7B7BFF] text-sm font-medium hover:bg-[#5B5BD6]/10 transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-2 rounded-xl border border-[#5B5BD6]/30 text-[#7B7BFF] text-xs font-semibold hover:bg-[#5B5BD6]/10 transition-colors flex items-center justify-center gap-1.5"
                   >
-                    Continuer <ArrowRight className="w-3.5 h-3.5" />
+                    Continuer <ArrowRight className="w-3 h-3" />
                   </button>
                 ) : (
                   <button
                     onClick={() => handleSelect(plan.id)}
                     disabled={isLoading}
                     className={cn(
-                      "w-full py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 flex items-center justify-center gap-2",
-                      plan.popular
-                        ? "bg-[#5B5BD6] hover:bg-[#4a4ac4] text-white shadow-[0_0_16px_rgba(91,91,214,0.4)] disabled:opacity-60"
-                        : "bg-[#1e1e2e] hover:bg-[#2a2a3e] text-white border border-[#5B5BD6]/40 disabled:opacity-60"
+                      "w-full py-2 rounded-xl text-xs font-semibold transition-all duration-150 flex items-center justify-center gap-1.5",
+                      plan.highlight
+                        ? "bg-[#5B5BD6] hover:bg-[#4a4ac4] text-white shadow-[0_0_14px_rgba(91,91,214,0.4)] disabled:opacity-60"
+                        : "bg-[#1e1e2e] hover:bg-[#2a2a3e] text-white border border-[#3a3a50] disabled:opacity-60"
                     )}
                   >
                     {isLoading ? (
-                      <><Loader2 className="w-4 h-4 animate-spin" /> Activation...</>
+                      <><Loader2 className="w-3 h-3 animate-spin" /> Activation...</>
+                    ) : plan.price === 0 ? (
+                      plan.cta
                     ) : (
                       plan.cta
                     )}
@@ -255,9 +318,59 @@ export default function PricingPage() {
           })}
         </div>
 
-        {/* Footer note */}
-        <p className="mt-10 text-xs text-[#8888A8] text-center max-w-sm">
-          Paiement sécurisé · Annulation à tout moment · Les prix sont en dirhams marocains (DH)
+        {/* Comparison table */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="mt-14 w-full max-w-6xl"
+        >
+          <h2 className="text-lg font-bold text-white text-center mb-6">Comparaison des plans</h2>
+          <div className="overflow-x-auto rounded-2xl border border-[#2a2a38]">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[#2a2a38] bg-[#111118]">
+                  <th className="text-left px-5 py-3 text-[#8888A8] font-medium">Fonctionnalité</th>
+                  {PLANS.map(p => (
+                    <th key={p.id} className={cn(
+                      "px-4 py-3 text-center font-semibold text-xs",
+                      p.highlight ? "text-[#9B9BFF]" : "text-white"
+                    )}>{p.name}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#1e1e2a] bg-[#0D0D12]">
+                {[
+                  { label: "Créations / mois",       vals: ["5", "30", "150", "500", "∞"] },
+                  { label: "Hébergement de sites",    vals: ["1 site", "5 sites", "∞", "∞", "∞"] },
+                  { label: "Génération musicale IA",  vals: ["✗", "✗", "✓", "✓", "✓"] },
+                  { label: "Génération vidéo IA",     vals: ["✗", "✗", "✗", "✓", "✓"] },
+                  { label: "Domaine personnalisé",    vals: ["✗", "✗", "✓", "✓", "✓"] },
+                  { label: "Accès API Grado",         vals: ["✗", "✗", "✗", "✓", "✓"] },
+                  { label: "Modèles IA premium",      vals: ["✗", "✗", "✗", "✗", "✓"] },
+                  { label: "Support",                 vals: ["Communauté", "Standard", "Prioritaire", "Prioritaire", "Dédié 24/7"] },
+                ].map(({ label, vals }) => (
+                  <tr key={label} className="hover:bg-[#111118]/60 transition-colors">
+                    <td className="px-5 py-3 text-[#C8C8E8]">{label}</td>
+                    {vals.map((v, i) => (
+                      <td key={i} className={cn(
+                        "px-4 py-3 text-center text-xs",
+                        v === "✓" ? "text-green-400 font-bold" :
+                        v === "✗" ? "text-[#555568]" :
+                        PLANS[i].highlight ? "text-[#9B9BFF] font-semibold" : "text-[#C8C8E8]"
+                      )}>
+                        {v}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </motion.div>
+
+        <p className="mt-8 text-xs text-[#8888A8] text-center max-w-sm">
+          Paiement sécurisé · Annulation à tout moment · Prix en dirhams marocains (DH)
         </p>
       </div>
     </div>
