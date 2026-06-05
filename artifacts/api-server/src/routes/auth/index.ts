@@ -128,7 +128,7 @@ router.put("/plan", async (req, res) => {
   } catch { res.status(401).json({ error: "Token invalide" }); return; }
 
   const { plan } = req.body;
-  const allowed = ["gratuit", "hacker", "pro"];
+  const allowed = ["gratuit", "essentiel", "createur", "fusion", "elite"];
   if (!plan || !allowed.includes(plan)) { res.status(400).json({ error: "Plan invalide" }); return; }
 
   // 48h trial for paid plans, immediate for free
