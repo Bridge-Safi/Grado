@@ -12,10 +12,10 @@ import { Sidebar } from "@/components/chat-sidebar";
 import { ChatArea } from "@/components/chat-area";
 import { Play, PanelLeftOpen, Zap, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import logoUrl from "@assets/D589D749-E25A-4876-ACE2-D9DFD1C31E5C_1780620985737.png";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
+import { GradoLogo } from "@/components/grado-logo";
 
 export default function ChatPage() {
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
@@ -71,7 +71,7 @@ export default function ChatPage() {
 
         {/* Logo */}
         <div className="flex items-center gap-2">
-          <img src={logoUrl} alt="Grado" className="w-5 h-5 object-contain" />
+          <GradoLogo size={26} />
           <span className="text-sm font-semibold text-white tracking-tight">Grado</span>
         </div>
 
@@ -127,7 +127,6 @@ export default function ChatPage() {
           onSelect={setActiveConversationId}
           onDelete={handleDeleteConversation}
           onNew={() => setActiveConversationId(null)}
-          logoUrl={logoUrl}
         />
 
         <main className="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden">
@@ -136,7 +135,6 @@ export default function ChatPage() {
             setConversationId={setActiveConversationId}
             messages={messages}
             onTitleCreate={handleCreateConversation}
-            logoUrl={logoUrl}
             toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             isSidebarOpen={isSidebarOpen}
             onRunStart={() => setIsRunning(true)}

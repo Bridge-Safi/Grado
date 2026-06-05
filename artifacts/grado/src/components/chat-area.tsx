@@ -13,6 +13,7 @@ import { MarkdownRenderer } from "./markdown";
 import { SharkCoding } from "./shark-coding";
 import { ProjectPreview } from "./project-preview";
 import { MediaPlayer } from "./media-player";
+import { GradoLogo } from "./grado-logo";
 import { extractHtml } from "@/lib/extract-html";
 import { extractMediaTag, stripMediaTag } from "@/lib/extract-media";
 import { cn } from "@/lib/utils";
@@ -22,7 +23,6 @@ interface ChatAreaProps {
   setConversationId: (id: number) => void;
   messages: AnthropicMessage[];
   onTitleCreate: (title: string) => Promise<number>;
-  logoUrl: string;
   toggleSidebar: () => void;
   isSidebarOpen: boolean;
   onRunStart: () => void;
@@ -41,7 +41,6 @@ export function ChatArea({
   setConversationId,
   messages,
   onTitleCreate,
-  logoUrl,
   toggleSidebar,
   isSidebarOpen,
   onRunStart,
@@ -223,16 +222,17 @@ export function ChatArea({
                 initial={{ scale: 0.85, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.35 }}
-                className="w-16 h-16 rounded-2xl bg-[#18181f] border border-[#2a2a38] flex items-center justify-center shadow-xl shadow-primary/10"
+                className="relative"
               >
-                <img src={logoUrl} alt="Grado" className="w-9 h-9 object-contain" />
+                <div className="absolute inset-0 bg-[#5B5BD6]/30 rounded-2xl blur-2xl scale-150" />
+                <GradoLogo size={64} className="relative" />
               </motion.div>
               <div>
                 <h1 className="text-2xl font-semibold text-white mb-1">
-                  Hi, what do you want to build?
+                  Qu'est-ce qu'on crée aujourd'hui ?
                 </h1>
                 <p className="text-sm text-[#8888A8]">
-                  Describe your idea — Grado builds it, composes it, or films it live.
+                  Décris ton idée — Grado la construit, la compose ou la filme en direct.
                 </p>
               </div>
               <div className="flex gap-3 flex-wrap justify-center mt-2">
@@ -273,8 +273,8 @@ export function ChatArea({
                       data-testid={`message-${msg.role}-${msg.id}`}
                     >
                       {msg.role === "assistant" && (
-                        <div className="w-7 h-7 rounded-full bg-[#18181f] border border-[#2a2a38] flex items-center justify-center mr-2 mt-1 shrink-0">
-                          <img src={logoUrl} alt="G" className="w-4 h-4 object-contain" />
+                        <div className="w-7 h-7 rounded-full bg-[#0e0e16] border border-[#5B5BD6]/30 flex items-center justify-center mr-2 mt-1 shrink-0 shadow-[0_0_8px_rgba(91,91,214,0.2)]">
+                          <GradoLogo size={20} />
                         </div>
                       )}
 
@@ -334,8 +334,8 @@ export function ChatArea({
                     exit={{ opacity: 0 }}
                     className="flex justify-start"
                   >
-                    <div className="w-7 h-7 rounded-full bg-[#18181f] border border-[#2a2a38] flex items-center justify-center mr-2 mt-1 shrink-0">
-                      <img src={logoUrl} alt="G" className="w-4 h-4 object-contain" />
+                    <div className="w-7 h-7 rounded-full bg-[#0e0e16] border border-[#5B5BD6]/30 flex items-center justify-center mr-2 mt-1 shrink-0 shadow-[0_0_8px_rgba(91,91,214,0.2)]">
+                      <GradoLogo size={20} />
                     </div>
                     <div className="bg-[#18181f] border border-[#2a2a38] rounded-2xl rounded-bl-sm px-5 py-3">
                       <SharkCoding />

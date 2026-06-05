@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
-import logoUrl from "@assets/D589D749-E25A-4876-ACE2-D9DFD1C31E5C_1780620985737.png";
+import { GradoLogo } from "@/components/grado-logo";
 
 export default function LoginPage() {
   const [, navigate] = useLocation();
@@ -29,8 +29,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0D0D12] flex flex-col items-center justify-center px-4 relative">
-      <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-[#5B5BD6]/8 rounded-full blur-[100px] pointer-events-none" />
+    <div className="min-h-screen bg-[#0D0D12] flex flex-col items-center justify-center px-4 relative overflow-hidden">
+      {/* Background glows */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#5B5BD6]/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-0 left-10 w-[300px] h-[300px] bg-[#8B5CF6]/8 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-0 right-10 w-[300px] h-[300px] bg-[#6366f1]/8 rounded-full blur-[100px] pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -44,9 +47,12 @@ export default function LoginPage() {
           <ArrowLeft className="w-4 h-4" /> Retour
         </button>
 
-        <div className="bg-[#111118] border border-[#2a2a38] rounded-2xl p-8 shadow-2xl">
-          <div className="flex items-center gap-2.5 mb-8">
-            <img src={logoUrl} alt="Grado" className="w-8 h-8 object-contain" />
+        <div className="bg-[#111118] border border-[#5B5BD6]/20 rounded-2xl p-8 shadow-[0_0_60px_rgba(91,91,214,0.1)]">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="relative">
+              <div className="absolute inset-0 bg-[#5B5BD6]/30 rounded-xl blur-lg" />
+              <GradoLogo size={40} className="relative" />
+            </div>
             <div>
               <h1 className="text-xl font-bold text-white">Connexion</h1>
               <p className="text-xs text-[#8888A8]">Accède à ton espace Grado</p>
@@ -62,7 +68,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="ton@email.com"
                 required
-                className="w-full bg-[#0D0D12] border border-[#2a2a38] rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#4a4a5a] focus:outline-none focus:border-[#5B5BD6]/60 transition-colors"
+                className="w-full bg-[#0D0D12] border border-[#2a2a38] rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#4a4a5a] focus:outline-none focus:border-[#5B5BD6]/70 focus:shadow-[0_0_0_3px_rgba(91,91,214,0.1)] transition-all"
               />
             </div>
 
@@ -75,7 +81,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  className="w-full bg-[#0D0D12] border border-[#2a2a38] rounded-xl px-4 py-3 pr-11 text-sm text-white placeholder:text-[#4a4a5a] focus:outline-none focus:border-[#5B5BD6]/60 transition-colors"
+                  className="w-full bg-[#0D0D12] border border-[#2a2a38] rounded-xl px-4 py-3 pr-11 text-sm text-white placeholder:text-[#4a4a5a] focus:outline-none focus:border-[#5B5BD6]/70 focus:shadow-[0_0_0_3px_rgba(91,91,214,0.1)] transition-all"
                 />
                 <button
                   type="button"
@@ -94,7 +100,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#5B5BD6] hover:bg-[#4a4ac4] disabled:opacity-60 text-white py-3 rounded-xl font-semibold text-sm transition-all shadow-[0_0_16px_rgba(91,91,214,0.35)] flex items-center justify-center gap-2"
+              className="w-full bg-[#5B5BD6] hover:bg-[#4a4ac4] disabled:opacity-60 text-white py-3 rounded-xl font-semibold text-sm transition-all shadow-[0_0_20px_rgba(91,91,214,0.4)] hover:shadow-[0_0_30px_rgba(91,91,214,0.6)] flex items-center justify-center gap-2"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               Se connecter
@@ -103,7 +109,7 @@ export default function LoginPage() {
 
           <p className="text-center text-sm text-[#8888A8] mt-6">
             Pas encore de compte ?{" "}
-            <button onClick={() => navigate("/register")} className="text-[#5B5BD6] hover:text-[#8B8BFF] font-medium transition-colors">
+            <button onClick={() => navigate("/register")} className="text-[#7B7BFF] hover:text-[#a0a0ff] font-medium transition-colors">
               S'inscrire
             </button>
           </p>
