@@ -31,10 +31,9 @@ interface ChatAreaProps {
 }
 
 interface MediaJob {
-  messageId: number;
+  prompt: string;
   mediaId: number;
   type: "music" | "video";
-  prompt: string;
 }
 
 export function ChatArea({
@@ -79,11 +78,13 @@ export function ChatArea({
   };
 
   const triggerMediaGeneration = async (
-    messageId: number,
     currentId: number,
     type: "music" | "video",
     prompt: string
   ) => {
+    // Don't trigger if already in progress/done for this prompt
+    if (mediaJobs.find((j) => j.prompt === prompt)) return;
+
     try {
       const endpoint = type === "music" ? "/api/media/music" : "/api/media/video";
       const res = await fetch(endpoint, {
@@ -92,22 +93,16 @@ export function ChatArea({
         body: JSON.stringify({
           conversationId: currentId,
           prompt,
-          durationSeconds: 30,
+          durationSeconds: 22,
         }),
       });
       if (res.ok) {
         const data = await res.json();
-        setMediaJobs((prev) => [
-          ...prev,
-          { messageId, mediaId: data.id, type, prompt },
-        ]);
+        setMediaJobs((prev) => [...prev, { prompt, mediaId: data.id, type }]);
       } else {
         const err = await res.json();
         if (err.error === "ELEVENLABS_API_KEY not configured" || err.error === "FAL_KEY not configured") {
-          setMediaJobs((prev) => [
-            ...prev,
-            { messageId, mediaId: -1, type, prompt },
-          ]);
+          setMediaJobs((prev) => [...prev, { prompt, mediaId: -1, type }]);
         }
       }
     } catch {
@@ -187,7 +182,7 @@ export function ChatArea({
         // Detect and trigger media generation
         const mediaTag = extractMediaTag(fullText);
         if (mediaTag && currentId) {
-          await triggerMediaGeneration(newMsgId, currentId, mediaTag.type, mediaTag.prompt);
+          await triggerMediaGeneration(currentId, mediaTag.type, mediaTag.prompt);
         }
       }
     } catch (error) {
@@ -263,7 +258,7 @@ export function ChatArea({
                   const html = msg.role === "assistant" ? extractHtml(msg.content) : null;
                   const mediaTag = msg.role === "assistant" ? extractMediaTag(msg.content) : null;
                   const displayContent = mediaTag ? stripMediaTag(msg.content) : msg.content;
-                  const mediaJob = mediaJobs.find((j) => j.messageId === msg.id);
+                  const mediaJob = mediaTag ? mediaJobs.find((j) => j.prompt === mediaTag.prompt) : undefined;
 
                   return (
                     <motion.div
