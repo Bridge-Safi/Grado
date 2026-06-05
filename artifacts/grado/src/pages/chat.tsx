@@ -10,16 +10,18 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { Sidebar } from "@/components/chat-sidebar";
 import { ChatArea } from "@/components/chat-area";
-import { Play, PanelLeftOpen } from "lucide-react";
+import { Play, PanelLeftOpen, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logoUrl from "@assets/D589D749-E25A-4876-ACE2-D9DFD1C31E5C_1780620985737.png";
 import { cn } from "@/lib/utils";
+import { useLocation } from "wouter";
 
 export default function ChatPage() {
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
 
   const { data: conversations = [] } = useListAnthropicConversations();
   const createConv = useCreateAnthropicConversation();
@@ -72,6 +74,15 @@ export default function ChatPage() {
         </div>
 
         <div className="flex-1" />
+
+        {/* Pricing button */}
+        <button
+          onClick={() => navigate("/pricing")}
+          className="flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-medium text-[#8888A8] hover:text-white hover:bg-[#1e1e2a] transition-all border border-[#2a2a38] hover:border-[#5B5BD6]/40"
+        >
+          <Zap className="w-3 h-3 text-[#5B5BD6]" />
+          Tarifs
+        </button>
 
         {/* Red Run button */}
         <button
