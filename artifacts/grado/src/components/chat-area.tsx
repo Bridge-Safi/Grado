@@ -12,7 +12,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MarkdownRenderer } from "./markdown";
 import { SharkCoding } from "./shark-coding";
 import { ProjectPreview } from "./project-preview";
+import { MediaPlayer } from "./media-player";
 import { extractHtml } from "@/lib/extract-html";
+import { extractMediaTag, stripMediaTag } from "@/lib/extract-media";
 import { cn } from "@/lib/utils";
 
 interface ChatAreaProps {
@@ -26,6 +28,13 @@ interface ChatAreaProps {
   onRunStart: () => void;
   onRunEnd: () => void;
   isRunning: boolean;
+}
+
+interface MediaJob {
+  messageId: number;
+  mediaId: number;
+  type: "music" | "video";
+  prompt: string;
 }
 
 export function ChatArea({
@@ -43,6 +52,7 @@ export function ChatArea({
   const [input, setInput] = useState("");
   const [localMessages, setLocalMessages] = useState<AnthropicMessage[]>([]);
   const [activeId, setActiveId] = useState<number | null>(null);
+  const [mediaJobs, setMediaJobs] = useState<MediaJob[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
@@ -65,6 +75,43 @@ export function ChatArea({
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+  };
+
+  const triggerMediaGeneration = async (
+    messageId: number,
+    currentId: number,
+    type: "music" | "video",
+    prompt: string
+  ) => {
+    try {
+      const endpoint = type === "music" ? "/api/media/music" : "/api/media/video";
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId: currentId,
+          prompt,
+          durationSeconds: 30,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMediaJobs((prev) => [
+          ...prev,
+          { messageId, mediaId: data.id, type, prompt },
+        ]);
+      } else {
+        const err = await res.json();
+        if (err.error === "ELEVENLABS_API_KEY not configured" || err.error === "FAL_KEY not configured") {
+          setMediaJobs((prev) => [
+            ...prev,
+            { messageId, mediaId: -1, type, prompt },
+          ]);
+        }
+      }
+    } catch {
+      // ignore
     }
   };
 
@@ -127,16 +174,21 @@ export function ChatArea({
       }
 
       if (fullText) {
-        setLocalMessages((prev) => [
-          ...prev,
-          {
-            id: Date.now() + 1,
-            conversationId: currentId!,
-            role: "assistant",
-            content: fullText,
-            createdAt: new Date().toISOString(),
-          },
-        ]);
+        const newMsgId = Date.now() + 1;
+        const newMsg: AnthropicMessage = {
+          id: newMsgId,
+          conversationId: currentId!,
+          role: "assistant",
+          content: fullText,
+          createdAt: new Date().toISOString(),
+        };
+        setLocalMessages((prev) => [...prev, newMsg]);
+
+        // Detect and trigger media generation
+        const mediaTag = extractMediaTag(fullText);
+        if (mediaTag && currentId) {
+          await triggerMediaGeneration(newMsgId, currentId, mediaTag.type, mediaTag.prompt);
+        }
       }
     } catch (error) {
       console.error("Streaming error:", error);
@@ -185,8 +237,23 @@ export function ChatArea({
                   Hi, what do you want to build?
                 </h1>
                 <p className="text-sm text-[#8888A8]">
-                  Describe your idea — Grado builds it live for you.
+                  Describe your idea — Grado builds it, composes it, or films it live.
                 </p>
+              </div>
+              <div className="flex gap-3 flex-wrap justify-center mt-2">
+                {[
+                  { label: "🎵 Make a lo-fi beat", value: "make me a chill lo-fi beat" },
+                  { label: "🎬 Ocean at sunset video", value: "generate a video of an ocean at sunset" },
+                  { label: "💻 Build a todo app", value: "build me a beautiful todo app" },
+                ].map((chip) => (
+                  <button
+                    key={chip.value}
+                    onClick={() => setInput(chip.value)}
+                    className="text-xs px-3 py-1.5 rounded-full bg-[#18181f] border border-[#2a2a38] text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/40 transition-colors"
+                  >
+                    {chip.label}
+                  </button>
+                ))}
               </div>
             </div>
           ) : (
@@ -194,6 +261,9 @@ export function ChatArea({
               <AnimatePresence initial={false}>
                 {localMessages.map((msg) => {
                   const html = msg.role === "assistant" ? extractHtml(msg.content) : null;
+                  const mediaTag = msg.role === "assistant" ? extractMediaTag(msg.content) : null;
+                  const displayContent = mediaTag ? stripMediaTag(msg.content) : msg.content;
+                  const mediaJob = mediaJobs.find((j) => j.messageId === msg.id);
 
                   return (
                     <motion.div
@@ -214,24 +284,45 @@ export function ChatArea({
                       )}
 
                       <div className={cn("flex flex-col", msg.role === "assistant" ? "flex-1 min-w-0" : "max-w-[80%]")}>
-                        <div
-                          className={cn(
-                            "rounded-2xl px-4 py-3 text-sm",
-                            msg.role === "user"
-                              ? "bg-[#5B5BD6] text-white rounded-br-sm"
-                              : "bg-[#18181f] border border-[#2a2a38] text-[#E8E8F0] rounded-bl-sm"
-                          )}
-                        >
-                          {msg.role === "user" ? (
-                            <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
-                          ) : (
-                            <MarkdownRenderer content={msg.content} />
-                          )}
-                        </div>
+                        {/* Show text bubble if there's non-media content */}
+                        {(!mediaTag || displayContent) && (
+                          <div
+                            className={cn(
+                              "rounded-2xl px-4 py-3 text-sm",
+                              msg.role === "user"
+                                ? "bg-[#5B5BD6] text-white rounded-br-sm"
+                                : "bg-[#18181f] border border-[#2a2a38] text-[#E8E8F0] rounded-bl-sm"
+                            )}
+                          >
+                            {msg.role === "user" ? (
+                              <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                            ) : (
+                              <MarkdownRenderer content={displayContent} />
+                            )}
+                          </div>
+                        )}
 
-                        {/* Live project preview below agent message */}
+                        {/* Live project preview */}
                         {html && activeId && (
                           <ProjectPreview html={html} conversationId={activeId} />
+                        )}
+
+                        {/* Media player */}
+                        {mediaJob && mediaJob.mediaId > 0 && (
+                          <MediaPlayer
+                            type={mediaJob.type}
+                            mediaId={mediaJob.mediaId}
+                            prompt={mediaJob.prompt}
+                          />
+                        )}
+
+                        {/* API key not configured warning */}
+                        {mediaJob && mediaJob.mediaId === -1 && (
+                          <div className="mt-3 rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-3 text-xs text-yellow-400/80">
+                            {mediaJob.type === "music"
+                              ? "⚠️ Clé API ElevenLabs manquante. Ajoute ELEVENLABS_API_KEY dans les secrets."
+                              : "⚠️ Clé API FAL manquante. Ajoute FAL_KEY dans les secrets."}
+                          </div>
                         )}
                       </div>
                     </motion.div>
@@ -280,7 +371,7 @@ export function ChatArea({
               value={input}
               onChange={handleInput}
               onKeyDown={handleKeyDown}
-              placeholder="Describe what you want to build..."
+              placeholder="Build an app, generate a song, create a video..."
               className="min-h-[40px] max-h-[160px] border-0 focus-visible:ring-0 resize-none bg-transparent px-4 py-2.5 text-[#E8E8F0] text-sm placeholder:text-[#8888A8]"
               rows={1}
               disabled={isRunning}
@@ -304,7 +395,7 @@ export function ChatArea({
           </Button>
         </div>
         <p className="text-center text-[10px] text-[#8888A8]/60 mt-2">
-          Grado can make mistakes. Consider verifying critical code.
+          Grado can build apps, compose music, and generate videos.
         </p>
       </div>
     </div>
