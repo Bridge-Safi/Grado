@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect } from "react";
-import { Play, Paperclip, PanelLeftOpen } from "lucide-react";
+import { Paperclip, SendHorizonal } from "lucide-react";
 import { AnthropicMessage } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
-import { getListAnthropicMessagesQueryKey, getListAnthropicConversationsQueryKey } from "@workspace/api-client-react";
+import {
+  getListAnthropicMessagesQueryKey,
+  getListAnthropicConversationsQueryKey,
+} from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MarkdownRenderer } from "./markdown";
 import { SharkCoding } from "./shark-coding";
@@ -18,6 +21,9 @@ interface ChatAreaProps {
   logoUrl: string;
   toggleSidebar: () => void;
   isSidebarOpen: boolean;
+  onRunStart: () => void;
+  onRunEnd: () => void;
+  isRunning: boolean;
 }
 
 export function ChatArea({
@@ -28,34 +34,30 @@ export function ChatArea({
   logoUrl,
   toggleSidebar,
   isSidebarOpen,
+  onRunStart,
+  onRunEnd,
+  isRunning,
 }: ChatAreaProps) {
   const [input, setInput] = useState("");
-  const [isStreaming, setIsStreaming] = useState(false);
   const [localMessages, setLocalMessages] = useState<AnthropicMessage[]>([]);
   const [activeId, setActiveId] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
 
-  // Sync activeId with parent conversationId when parent changes (e.g. sidebar click)
   useEffect(() => {
     setActiveId(conversationId);
   }, [conversationId]);
 
-  // Sync messages from parent into local when switching conversations
   useEffect(() => {
     setLocalMessages(messages);
   }, [messages]);
 
-  const scrollToBottom = () => {
+  useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [localMessages, isStreaming]);
+  }, [localMessages, isRunning]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -66,14 +68,13 @@ export function ChatArea({
 
   const handleSend = async () => {
     const content = input.trim();
-    if (!content || isStreaming) return;
+    if (!content || isRunning) return;
 
     setInput("");
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
     }
 
-    // Determine or create conversation
     let currentId = activeId;
     if (!currentId) {
       const title = content.length > 40 ? content.substring(0, 40) + "..." : content;
@@ -83,7 +84,6 @@ export function ChatArea({
       setConversationId(newId);
     }
 
-    // Optimistically add user message to local state immediately
     const userMsg: AnthropicMessage = {
       id: Date.now(),
       conversationId: currentId,
@@ -92,7 +92,7 @@ export function ChatArea({
       createdAt: new Date().toISOString(),
     };
     setLocalMessages((prev) => [...prev, userMsg]);
-    setIsStreaming(true);
+    onRunStart();
 
     try {
       const res = await fetch(`/api/anthropic/conversations/${currentId}/messages`, {
@@ -111,18 +111,12 @@ export function ChatArea({
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-
         const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split("\n");
-
-        for (const line of lines) {
+        for (const line of chunk.split("\n")) {
           if (line.startsWith("data: ")) {
             try {
               const data = JSON.parse(line.slice(6));
-              if (data.content) {
-                fullText += data.content;
-              }
-              if (data.done) break;
+              if (data.content) fullText += data.content;
             } catch {
               // ignore partial JSON
             }
@@ -130,121 +124,102 @@ export function ChatArea({
         }
       }
 
-      // Add final assistant message to local state
       if (fullText) {
-        const assistantMsg: AnthropicMessage = {
-          id: Date.now() + 1,
-          conversationId: currentId,
-          role: "assistant",
-          content: fullText,
-          createdAt: new Date().toISOString(),
-        };
-        setLocalMessages((prev) => [...prev, assistantMsg]);
+        setLocalMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now() + 1,
+            conversationId: currentId!,
+            role: "assistant",
+            content: fullText,
+            createdAt: new Date().toISOString(),
+          },
+        ]);
       }
     } catch (error) {
       console.error("Streaming error:", error);
-      const errMsg: AnthropicMessage = {
-        id: Date.now() + 1,
-        conversationId: currentId,
-        role: "assistant",
-        content: "Something went wrong. Please try again.",
-        createdAt: new Date().toISOString(),
-      };
-      setLocalMessages((prev) => [...prev, errMsg]);
+      setLocalMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          conversationId: currentId!,
+          role: "assistant",
+          content: "Une erreur est survenue. Réessaie.",
+          createdAt: new Date().toISOString(),
+        },
+      ]);
     } finally {
-      setIsStreaming(false);
-      // Refresh server data in background
-      queryClient.invalidateQueries({
-        queryKey: getListAnthropicMessagesQueryKey(currentId!),
-      });
-      queryClient.invalidateQueries({
-        queryKey: getListAnthropicConversationsQueryKey(),
-      });
+      onRunEnd();
+      queryClient.invalidateQueries({ queryKey: getListAnthropicMessagesQueryKey(currentId!) });
+      queryClient.invalidateQueries({ queryKey: getListAnthropicConversationsQueryKey() });
     }
   };
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
     e.target.style.height = "auto";
-    e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
+    e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
   };
 
-  const showWelcome = !activeId && localMessages.length === 0 && !isStreaming;
-  const hasContent = localMessages.length > 0 || isStreaming;
+  const showWelcome = !activeId && localMessages.length === 0 && !isRunning;
 
   return (
-    <div className="flex flex-col h-full bg-background relative">
-      {/* Top bar */}
-      <header className="h-14 border-b border-border flex items-center px-4 shrink-0 bg-background/95 backdrop-blur z-10 sticky top-0">
-        {!isSidebarOpen && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="mr-2 text-muted-foreground"
-            onClick={toggleSidebar}
-            data-testid="button-toggle-sidebar"
-          >
-            <PanelLeftOpen className="w-4 h-4" />
-          </Button>
-        )}
-        <div className="flex items-center gap-2">
-          <img src={logoUrl} alt="Grado" className="w-5 h-5 object-contain opacity-60" />
-          {activeId && (
-            <span className="text-sm text-muted-foreground">
-              Chat #{activeId}
-            </span>
-          )}
-        </div>
-      </header>
-
+    <div className="flex flex-col h-full bg-[#0D0D12]">
       {/* Messages */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 md:px-8 py-6 flex flex-col"
+        className="flex-1 overflow-y-auto px-4 py-5"
       >
-        <div className="max-w-3xl w-full mx-auto flex-1 flex flex-col">
+        <div className="max-w-2xl w-full mx-auto flex flex-col gap-3">
           {showWelcome ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center pb-20">
+            <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center gap-4">
               <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
+                initial={{ scale: 0.85, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.3 }}
-                className="w-16 h-16 rounded-2xl bg-card border border-border flex items-center justify-center mb-6 shadow-xl shadow-primary/5"
+                transition={{ duration: 0.35 }}
+                className="w-16 h-16 rounded-2xl bg-[#18181f] border border-[#2a2a38] flex items-center justify-center shadow-xl shadow-primary/10"
               >
-                <img src={logoUrl} alt="Grado" className="w-8 h-8 object-contain" />
+                <img src={logoUrl} alt="Grado" className="w-9 h-9 object-contain" />
               </motion.div>
-              <h1 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight mb-2">
-                Hi, what do you want to build?
-              </h1>
-              <p className="text-muted-foreground max-w-sm">
-                Describe your idea and Grado will build it for you.
-              </p>
+              <div>
+                <h1 className="text-2xl font-semibold text-white mb-1">
+                  Hi, what do you want to build?
+                </h1>
+                <p className="text-sm text-[#8888A8]">
+                  Describe your idea and Grado will build it for you.
+                </p>
+              </div>
             </div>
           ) : (
-            <div className="space-y-6 pb-4">
+            <>
               <AnimatePresence initial={false}>
                 {localMessages.map((msg) => (
                   <motion.div
                     key={msg.id}
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.18 }}
                     className={cn(
                       "flex",
                       msg.role === "user" ? "justify-end" : "justify-start"
                     )}
                     data-testid={`message-${msg.role}-${msg.id}`}
                   >
+                    {msg.role === "assistant" && (
+                      <div className="w-7 h-7 rounded-full bg-[#18181f] border border-[#2a2a38] flex items-center justify-center mr-2 mt-1 shrink-0">
+                        <img src={logoUrl} alt="G" className="w-4 h-4 object-contain" />
+                      </div>
+                    )}
                     <div
                       className={cn(
-                        "max-w-[85%] rounded-2xl px-5 py-3.5",
+                        "max-w-[80%] rounded-2xl px-4 py-3 text-sm",
                         msg.role === "user"
-                          ? "bg-primary text-primary-foreground rounded-tr-sm"
-                          : "bg-card border border-border text-foreground rounded-tl-sm shadow-sm"
+                          ? "bg-[#5B5BD6] text-white rounded-br-sm"
+                          : "bg-[#18181f] border border-[#2a2a38] text-[#E8E8F0] rounded-bl-sm"
                       )}
                     >
                       {msg.role === "user" ? (
-                        <div className="whitespace-pre-wrap text-sm">{msg.content}</div>
+                        <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                       ) : (
                         <MarkdownRenderer content={msg.content} />
                       )}
@@ -253,75 +228,73 @@ export function ChatArea({
                 ))}
               </AnimatePresence>
 
-              {/* Shark coding animation while waiting */}
               <AnimatePresence>
-                {isStreaming && (
+                {isRunning && (
                   <motion.div
                     key="shark"
-                    initial={{ opacity: 0, y: 12 }}
+                    initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.25 }}
+                    exit={{ opacity: 0 }}
                     className="flex justify-start"
                   >
-                    <div className="bg-card border border-border rounded-2xl rounded-tl-sm shadow-sm px-6 py-2">
+                    <div className="w-7 h-7 rounded-full bg-[#18181f] border border-[#2a2a38] flex items-center justify-center mr-2 mt-1 shrink-0">
+                      <img src={logoUrl} alt="G" className="w-4 h-4 object-contain" />
+                    </div>
+                    <div className="bg-[#18181f] border border-[#2a2a38] rounded-2xl rounded-bl-sm px-5 py-3">
                       <SharkCoding />
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+            </>
           )}
         </div>
       </div>
 
-      {/* Input area */}
-      <div className="p-4 bg-background shrink-0">
-        <div className="max-w-3xl mx-auto relative group">
-          <div className="absolute inset-0 bg-primary/5 rounded-xl blur-xl transition-all opacity-0 group-focus-within:opacity-100" />
-          <div className="relative bg-card border border-border rounded-xl shadow-lg focus-within:border-primary/50 transition-colors flex items-end p-2 gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 text-muted-foreground shrink-0 rounded-lg"
-              data-testid="button-attachment"
-            >
-              <Paperclip className="w-4 h-4" />
-            </Button>
+      {/* Input bar */}
+      <div className="border-t border-[#2a2a38] bg-[#111118] px-4 py-3">
+        <div className="max-w-2xl mx-auto flex items-end gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 text-[#8888A8] shrink-0 rounded-lg hover:text-white"
+            data-testid="button-attachment"
+          >
+            <Paperclip className="w-4 h-4" />
+          </Button>
 
+          <div className="flex-1 bg-[#18181f] border border-[#2a2a38] rounded-xl focus-within:border-[#5B5BD6]/60 transition-colors">
             <Textarea
               ref={textareaRef}
               value={input}
               onChange={handleInput}
               onKeyDown={handleKeyDown}
               placeholder="Describe what you want to build..."
-              className="min-h-[40px] max-h-[200px] border-0 focus-visible:ring-0 resize-none bg-transparent p-2 text-foreground text-sm"
+              className="min-h-[40px] max-h-[160px] border-0 focus-visible:ring-0 resize-none bg-transparent px-4 py-2.5 text-[#E8E8F0] text-sm placeholder:text-[#8888A8]"
               rows={1}
-              disabled={isStreaming}
+              disabled={isRunning}
               data-testid="input-message"
             />
+          </div>
 
-            <Button
-              size="icon"
-              className={cn(
-                "h-9 w-9 shrink-0 rounded-lg transition-all duration-200",
-                input.trim() && !isStreaming
-                  ? "bg-primary text-primary-foreground shadow-[0_0_15px_rgba(91,91,214,0.45)] hover:shadow-[0_0_22px_rgba(91,91,214,0.7)] hover:scale-105"
-                  : "bg-muted text-muted-foreground cursor-not-allowed opacity-50"
-              )}
-              disabled={!input.trim() || isStreaming}
-              onClick={handleSend}
-              data-testid="button-run"
-            >
-              <Play className="w-4 h-4 ml-0.5" />
-            </Button>
-          </div>
-          <div className="text-center mt-2">
-            <span className="text-[10px] text-muted-foreground">
-              Grado can make mistakes. Consider verifying critical code.
-            </span>
-          </div>
+          <Button
+            size="icon"
+            className={cn(
+              "h-9 w-9 shrink-0 rounded-lg transition-all duration-150",
+              input.trim() && !isRunning
+                ? "bg-[#5B5BD6] hover:bg-[#4a4ac4] text-white shadow-[0_0_14px_rgba(91,91,214,0.5)]"
+                : "bg-[#1e1e2a] text-[#8888A8] cursor-not-allowed"
+            )}
+            disabled={!input.trim() || isRunning}
+            onClick={handleSend}
+            data-testid="button-send"
+          >
+            <SendHorizonal className="w-4 h-4" />
+          </Button>
         </div>
+        <p className="text-center text-[10px] text-[#8888A8]/60 mt-2">
+          Grado can make mistakes. Consider verifying critical code.
+        </p>
       </div>
     </div>
   );
