@@ -49,7 +49,7 @@ router.post("/music", async (req, res) => {
         },
         body: JSON.stringify({
           text: prompt,
-          duration_seconds: Math.min(Number(durationSeconds), 10), // max 10s — much faster
+          duration_seconds: Math.min(Number(durationSeconds), 20),
           prompt_influence: 0.8,
         }),
       });
