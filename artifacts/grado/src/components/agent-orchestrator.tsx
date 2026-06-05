@@ -167,8 +167,9 @@ export function AgentOrchestrator({ prompt, token, onPreview, onDone }: AgentOrc
         {(agents.length === 0 ? [
           { id: "orchestrateur", name: "Orchestrateur", icon: "🎯", color: "#8B5CF6", task: "En attente…", status: "pending" as const, output: "", index: 0 },
           { id: "architecte", name: "Architecte", icon: "🏗️", color: "#06B6D4", task: "En attente…", status: "pending" as const, output: "", index: 1 },
-          { id: "codeur", name: "Codeur", icon: "💻", color: "#10B981", task: "En attente…", status: "pending" as const, output: "", index: 2 },
-          { id: "revieweur", name: "Revieweur", icon: "🔍", color: "#F59E0B", task: "En attente…", status: "pending" as const, output: "", index: 3 },
+          { id: "designer", name: "Designer UX", icon: "🎨", color: "#EC4899", task: "En attente…", status: "pending" as const, output: "", index: 2 },
+          { id: "codeur", name: "Codeur", icon: "💻", color: "#10B981", task: "En attente…", status: "pending" as const, output: "", index: 3 },
+          { id: "revieweur", name: "Revieweur", icon: "🔍", color: "#F59E0B", task: "En attente…", status: "pending" as const, output: "", index: 4 },
         ] : agents).map((agent, i) => {
           const isExpanded = expandedAgent === agent.id;
           const isRunning = agent.status === "running";
