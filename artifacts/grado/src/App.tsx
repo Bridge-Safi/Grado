@@ -10,6 +10,8 @@ import ChatPage from "@/pages/chat";
 import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
 import PricingPage from "@/pages/pricing";
+import SettingsPage from "@/pages/settings";
+import AdminPage from "@/pages/admin";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -53,6 +55,12 @@ function Router() {
       </Route>
       <Route path="/chat">
         <ProtectedRoute component={ChatPage} />
+      </Route>
+      <Route path="/settings">
+        <ProtectedRoute component={SettingsPage} />
+      </Route>
+      <Route path="/admin">
+        <ProtectedRoute component={AdminPage} />
       </Route>
       <Route component={NotFound} />
     </Switch>

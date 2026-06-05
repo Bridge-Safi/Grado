@@ -1,10 +1,12 @@
 import React from "react";
-import { Plus, Trash2, MessageSquare, PanelLeftClose } from "lucide-react";
+import { Plus, Trash2, MessageSquare, PanelLeftClose, Settings, Shield } from "lucide-react";
 import { AnthropicConversation } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { GradoLogo } from "@/components/grado-logo";
+import { useAuth } from "@/lib/auth";
+import { useLocation } from "wouter";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -14,7 +16,6 @@ interface SidebarProps {
   onSelect: (id: number) => void;
   onDelete: (id: number) => void;
   onNew: () => void;
-  logoUrl: string;
 }
 
 export function Sidebar({
@@ -26,6 +27,9 @@ export function Sidebar({
   onDelete,
   onNew,
 }: SidebarProps) {
+  const { user } = useAuth();
+  const [, navigate] = useLocation();
+
   if (!isOpen) return null;
 
   return (
@@ -97,8 +101,27 @@ export function Sidebar({
         )}
       </ScrollArea>
 
-      {/* Bottom glow accent */}
-      <div className="h-px bg-gradient-to-r from-transparent via-[#5B5BD6]/30 to-transparent mx-3 mb-3" />
+      {/* Bottom links */}
+      <div className="px-3 pb-3 space-y-1">
+        <div className="h-px bg-gradient-to-r from-transparent via-[#5B5BD6]/30 to-transparent mb-2" />
+        <button
+          onClick={() => navigate("/settings")}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-[#8888A8] hover:text-white hover:bg-[#1a1a28] transition-colors"
+        >
+          <Settings className="w-3.5 h-3.5" />
+          <span>Paramètres</span>
+        </button>
+        <button
+          onClick={() => navigate("/admin")}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-[#8888A8] hover:text-white hover:bg-[#1a1a28] transition-colors"
+        >
+          <Shield className="w-3.5 h-3.5" />
+          <span>Admin — Clients</span>
+        </button>
+        {user && (
+          <div className="px-3 py-2 text-xs text-[#5555A8] truncate">{user.email}</div>
+        )}
+      </div>
     </aside>
   );
 }

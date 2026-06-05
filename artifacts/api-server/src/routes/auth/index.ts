@@ -74,6 +74,47 @@ router.post("/login", async (req, res) => {
   });
 });
 
+// POST /auth/change-password
+router.post("/change-password", async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith("Bearer ")) {
+    res.status(401).json({ error: "Non authentifié" });
+    return;
+  }
+  let userId: number;
+  try {
+    const decoded = jwt.verify(auth.slice(7), JWT_SECRET) as { userId: number };
+    userId = decoded.userId;
+  } catch {
+    res.status(401).json({ error: "Token invalide" });
+    return;
+  }
+
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    res.status(400).json({ error: "Mots de passe requis" });
+    return;
+  }
+  if (newPassword.length < 6) {
+    res.status(400).json({ error: "Le nouveau mot de passe doit faire au moins 6 caractères" });
+    return;
+  }
+
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) { res.status(404).json({ error: "Utilisateur introuvable" }); return; }
+
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!valid) {
+    res.status(401).json({ error: "Mot de passe actuel incorrect" });
+    return;
+  }
+
+  const newHash = await bcrypt.hash(newPassword, 10);
+  await db.update(users).set({ passwordHash: newHash }).where(eq(users.id, userId));
+
+  res.json({ ok: true });
+});
+
 // GET /auth/me
 router.get("/me", async (req, res) => {
   const auth = req.headers.authorization;
