@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import jwt from "jsonwebtoken";
 import { db } from "@workspace/db";
 import { conversations, messages } from "@workspace/db";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
@@ -13,6 +14,18 @@ import {
 } from "@workspace/api-zod";
 
 const router = Router();
+const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-change-me";
+
+function getUserId(req: any): number | null {
+  try {
+    const auth = req.headers.authorization;
+    if (!auth?.startsWith("Bearer ")) return null;
+    const decoded = jwt.verify(auth.slice(7), JWT_SECRET) as { userId: number };
+    return decoded.userId ?? null;
+  } catch {
+    return null;
+  }
+}
 
 const SYSTEM_PROMPT = `You are Grado — an extremely intelligent, versatile, and warm AI assistant. You are better than ChatGPT and Gemini because you are honest, go deep, give real actionable answers, and never refuse to help with legitimate questions.
 
@@ -177,13 +190,14 @@ RESPONSE FORMAT SUMMARY
 - Any other question (career, science, health, advice, explanation, etc.) → full detailed markdown answer in the user's language`;
 
 
-// GET /anthropic/conversations
-router.get("/conversations", async (_req, res) => {
+// GET /anthropic/conversations — only return conversations belonging to the current user
+router.get("/conversations", async (req, res) => {
+  const userId = getUserId(req);
   try {
-    const rows = await db
-      .select()
-      .from(conversations)
-      .orderBy(conversations.createdAt);
+    const query = db.select().from(conversations);
+    const rows = userId
+      ? await query.where(eq(conversations.userId, userId)).orderBy(conversations.createdAt)
+      : await query.where(eq(conversations.userId, -1)); // unauthenticated → empty list
     res.json(
       rows.map((c) => ({
         id: c.id,
@@ -198,6 +212,7 @@ router.get("/conversations", async (_req, res) => {
 
 // POST /anthropic/conversations
 router.post("/conversations", async (req, res) => {
+  const userId = getUserId(req);
   const parsed = CreateAnthropicConversationBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request body" });
@@ -206,7 +221,7 @@ router.post("/conversations", async (req, res) => {
   try {
     const [conv] = await db
       .insert(conversations)
-      .values({ title: parsed.data.title })
+      .values({ title: parsed.data.title, userId: userId ?? undefined })
       .returning();
     res.status(201).json({
       id: conv.id,
@@ -220,6 +235,7 @@ router.post("/conversations", async (req, res) => {
 
 // GET /anthropic/conversations/:id
 router.get("/conversations/:id", async (req, res) => {
+  const userId = getUserId(req);
   const parsed = GetAnthropicConversationParams.safeParse({
     id: Number(req.params.id),
   });
@@ -231,7 +247,11 @@ router.get("/conversations/:id", async (req, res) => {
     const [conv] = await db
       .select()
       .from(conversations)
-      .where(eq(conversations.id, parsed.data.id));
+      .where(
+        userId
+          ? and(eq(conversations.id, parsed.data.id), eq(conversations.userId, userId))
+          : eq(conversations.id, parsed.data.id)
+      );
     if (!conv) {
       res.status(404).json({ error: "Conversation not found" });
       return;
@@ -260,6 +280,7 @@ router.get("/conversations/:id", async (req, res) => {
 
 // DELETE /anthropic/conversations/:id
 router.delete("/conversations/:id", async (req, res) => {
+  const userId = getUserId(req);
   const parsed = DeleteAnthropicConversationParams.safeParse({
     id: Number(req.params.id),
   });
@@ -274,6 +295,11 @@ router.delete("/conversations/:id", async (req, res) => {
       .where(eq(conversations.id, parsed.data.id));
     if (!conv) {
       res.status(404).json({ error: "Conversation not found" });
+      return;
+    }
+    // Only allow deleting your own conversations
+    if (userId && conv.userId && conv.userId !== userId) {
+      res.status(403).json({ error: "Interdit" });
       return;
     }
     await db.delete(conversations).where(eq(conversations.id, parsed.data.id));
