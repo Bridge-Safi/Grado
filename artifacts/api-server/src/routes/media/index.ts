@@ -13,9 +13,9 @@ function resolveMediaPath(filePath: string): string {
   return path.join(WORKSPACE_ROOT, filePath);
 }
 
-// POST /media/music  — generate music via ElevenLabs
+// POST /media/music — generate music via ElevenLabs sound-generation (free plan)
 router.post("/music", async (req, res) => {
-  const { conversationId, prompt, durationSeconds = 30 } = req.body;
+  const { conversationId, prompt, durationSeconds = 22 } = req.body;
   if (!conversationId || !prompt) {
     res.status(400).json({ error: "conversationId and prompt required" });
     return;
@@ -34,10 +34,10 @@ router.post("/music", async (req, res) => {
 
   res.status(202).json({ id: record.id, status: "pending" });
 
-  // Generate asynchronously
+  // Generate asynchronously using ElevenLabs sound-generation (works on free plan)
   (async () => {
     try {
-      const response = await fetch("https://api.elevenlabs.io/v1/music", {
+      const response = await fetch("https://api.elevenlabs.io/v1/sound-generation", {
         method: "POST",
         headers: {
           "xi-api-key": apiKey,
@@ -45,8 +45,9 @@ router.post("/music", async (req, res) => {
           "Accept": "audio/mpeg",
         },
         body: JSON.stringify({
-          prompt,
-          duration_seconds: Math.min(durationSeconds, 60),
+          text: prompt,
+          duration_seconds: Math.min(Number(durationSeconds), 22),
+          prompt_influence: 0.8,
         }),
       });
 
@@ -67,6 +68,7 @@ router.post("/music", async (req, res) => {
         .set({ status: "done", filePath: `attached_assets/generated_audio/${fileName}` })
         .where(eq(mediaGenerations.id, record.id));
     } catch (err: any) {
+      console.error("Music generation error:", err.message);
       await db
         .update(mediaGenerations)
         .set({ status: "error", error: err.message })
@@ -75,7 +77,7 @@ router.post("/music", async (req, res) => {
   })();
 });
 
-// POST /media/video  — generate video via FAL.ai
+// POST /media/video — generate video via FAL.ai
 router.post("/video", async (req, res) => {
   const { conversationId, prompt, aspectRatio = "16:9" } = req.body;
   if (!conversationId || !prompt) {
@@ -96,21 +98,16 @@ router.post("/video", async (req, res) => {
 
   res.status(202).json({ id: record.id, status: "pending" });
 
-  // Generate asynchronously
+  // Generate asynchronously via FAL.ai queue
   (async () => {
     try {
-      // Submit to FAL queue
       const submitRes = await fetch("https://queue.fal.run/fal-ai/minimax-video/v2/video-01", {
         method: "POST",
         headers: {
           "Authorization": `Key ${apiKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          prompt,
-          aspect_ratio: aspectRatio,
-          duration: "6s",
-        }),
+        body: JSON.stringify({ prompt, aspect_ratio: aspectRatio, duration: "6s" }),
       });
 
       if (!submitRes.ok) {
@@ -134,27 +131,24 @@ router.post("/video", async (req, res) => {
           videoUrl = data.output.video.url;
           break;
         }
-        if (data.status === "FAILED") {
-          throw new Error("FAL video generation failed");
-        }
+        if (data.status === "FAILED") throw new Error("FAL video generation failed");
       }
 
       if (!videoUrl) throw new Error("Video generation timed out");
 
-      // Download the video
       const videoRes = await fetch(videoUrl);
       const videoBuffer = await videoRes.arrayBuffer();
       const dir = path.join(WORKSPACE_ROOT, "attached_assets", "generated_videos");
       fs.mkdirSync(dir, { recursive: true });
       const fileName = `video_${record.id}_${Date.now()}.mp4`;
-      const filePath = path.join(dir, fileName);
-      fs.writeFileSync(filePath, Buffer.from(videoBuffer));
+      fs.writeFileSync(path.join(dir, fileName), Buffer.from(videoBuffer));
 
       await db
         .update(mediaGenerations)
         .set({ status: "done", filePath: `attached_assets/generated_videos/${fileName}` })
         .where(eq(mediaGenerations.id, record.id));
     } catch (err: any) {
+      console.error("Video generation error:", err.message);
       await db
         .update(mediaGenerations)
         .set({ status: "error", error: err.message })
@@ -184,7 +178,7 @@ router.get("/:id", async (req, res) => {
   });
 });
 
-// GET /media/file/:id — serve the actual media file
+// GET /media/file/:id — stream the media file
 router.get("/file/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (isNaN(id)) { res.status(400).send("Invalid id"); return; }
@@ -200,7 +194,7 @@ router.get("/file/:id", async (req, res) => {
   if (!fs.existsSync(absPath)) { res.status(404).send("File not found on disk"); return; }
 
   const ext = path.extname(absPath).toLowerCase();
-  const contentType = ext === ".mp4" ? "video/mp4" : ext === ".mp3" ? "audio/mpeg" : "application/octet-stream";
+  const contentType = ext === ".mp4" ? "video/mp4" : "audio/mpeg";
   res.setHeader("Content-Type", contentType);
   res.setHeader("Cache-Control", "public, max-age=3600");
   fs.createReadStream(absPath).pipe(res);
