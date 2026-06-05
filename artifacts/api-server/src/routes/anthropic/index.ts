@@ -117,9 +117,17 @@ You MUST use CDN libraries to achieve professional quality. Examples:
 - Icons: <script src="https://unpkg.com/lucide@latest"></script>
 - Animations: Use CSS keyframes, or <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 - Fonts: <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-- Images: <img src="https://picsum.photos/seed/[keyword]/800/600">
+- Stock images (when no user image provided): <img src="https://picsum.photos/seed/[descriptive-keyword]/800/600">
+  OR use Unsplash: <img src="https://images.unsplash.com/photo-[id]?w=800&q=80">
 
-FORBIDDEN: <link href="style.css">, <script src="app.js">, <img src="local.png">
+FORBIDDEN: <link href="style.css">, <script src="app.js">, <img src="./local.png">, <img src="photo.jpg">
+
+RULE 2b — USER-PROVIDED IMAGES
+When the user's message contains a line starting with [USER_IMAGE: data:...], that is a base64 image they uploaded.
+You MUST use it directly as the src of <img> tags in the HTML like this:
+<img src="data:image/jpeg;base64,/9j/4AAQ..." ...>
+Copy the EXACT value from [USER_IMAGE: ...] — do not modify it, do not truncate it.
+This makes the image work perfectly inside the iframe preview with no server needed.
 
 RULE 3 — TYPE-SPECIFIC EXCELLENCE
 
@@ -413,6 +421,9 @@ router.post("/conversations/:id/messages", async (req, res) => {
 
     // Build last user message – include image if provided
     if (imageData) {
+      // Inject the data URL into text so Claude can embed it directly in HTML
+      const dataUrl = `data:${imageMimeType};base64,${imageData}`;
+      const enrichedText = `${userContent}\n\n[USER_IMAGE: ${dataUrl}]`;
       chatMessages.push({
         role: "user",
         content: [
@@ -420,7 +431,7 @@ router.post("/conversations/:id/messages", async (req, res) => {
             type: "image",
             source: { type: "base64", media_type: imageMimeType, data: imageData },
           },
-          { type: "text", text: userContent },
+          { type: "text", text: enrichedText },
         ],
       });
     } else {
