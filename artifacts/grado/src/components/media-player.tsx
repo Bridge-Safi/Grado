@@ -48,11 +48,16 @@ export function MediaPlayer({ type, mediaId, prompt, title, genre, lyrics }: Med
   const [showLyrics, setShowLyrics] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const animFrameRef = useRef<number | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    // Start elapsed timer
+    timerRef.current = setInterval(() => setElapsed(s => s + 1), 1000);
+
     pollRef.current = setInterval(async () => {
       try {
         const res = await fetch(`/api/media/${mediaId}`);
@@ -62,13 +67,18 @@ export function MediaPlayer({ type, mediaId, prompt, title, genre, lyrics }: Med
         if (data.status === "done" && data.fileUrl) {
           setFileUrl(data.fileUrl);
           if (pollRef.current) clearInterval(pollRef.current);
+          if (timerRef.current) clearInterval(timerRef.current);
         } else if (data.status === "error") {
           setError(friendlyError(data.error, type));
           if (pollRef.current) clearInterval(pollRef.current);
+          if (timerRef.current) clearInterval(timerRef.current);
         }
       } catch { /* ignore */ }
     }, 2000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, [mediaId]);
 
   const updateTime = () => {
@@ -181,9 +191,11 @@ export function MediaPlayer({ type, mediaId, prompt, title, genre, lyrics }: Med
             </>
           )}
           {status === "pending" ? (
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-1.5">
               <Loader2 className="w-6 h-6 text-white/80 animate-spin" />
-              <span className="text-[9px] text-white/50 text-center px-1">Génération...</span>
+              <span className="text-[10px] text-white/70 font-mono tabular-nums">
+                {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")}
+              </span>
             </div>
           ) : status === "error" ? (
             <AlertCircle className="w-6 h-6 text-red-400/70" />
@@ -210,7 +222,10 @@ export function MediaPlayer({ type, mediaId, prompt, title, genre, lyrics }: Med
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="text-[14px] font-semibold text-[#E8E8F0] truncate leading-tight">
-                {status === "pending" ? "Composition en cours..." : status === "error" ? "Génération échouée" : songTitle}
+                {status === "pending"
+                  ? `Composition en cours… ${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, "0")}`
+                  : status === "error" ? "Génération échouée"
+                  : songTitle}
               </p>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="text-[10px] text-[#5B5BD6] font-medium bg-[#5B5BD6]/10 px-1.5 py-0.5 rounded-full border border-[#5B5BD6]/20">

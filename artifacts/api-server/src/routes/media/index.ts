@@ -37,8 +37,11 @@ router.post("/music", async (req, res) => {
   // Generate asynchronously using ElevenLabs sound-generation (works on free plan)
   (async () => {
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 90_000); // 90s max
       const response = await fetch("https://api.elevenlabs.io/v1/sound-generation", {
         method: "POST",
+        signal: controller.signal,
         headers: {
           "xi-api-key": apiKey,
           "Content-Type": "application/json",
@@ -46,10 +49,11 @@ router.post("/music", async (req, res) => {
         },
         body: JSON.stringify({
           text: prompt,
-          duration_seconds: Math.min(Number(durationSeconds), 22),
+          duration_seconds: Math.min(Number(durationSeconds), 10), // max 10s — much faster
           prompt_influence: 0.8,
         }),
       });
+      clearTimeout(timeout);
 
       if (!response.ok) {
         const err = await response.text();
