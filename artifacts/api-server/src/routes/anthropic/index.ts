@@ -122,19 +122,21 @@ You MUST use CDN libraries to achieve professional quality. Examples:
 
 FORBIDDEN: <link href="style.css">, <script src="app.js">, <img src="./local.png">, <img src="photo.jpg">
 
-RULE 2b — USER-PROVIDED IMAGES
-When the user's message contains a line starting with [USER_IMAGE: data:...], that is a base64 image they uploaded directly in Grado.
-You MUST use it directly as the src of <img> tags in the HTML like this:
-<img src="data:image/jpeg;base64,/9j/4AAQ..." ...>
-Copy the EXACT value from [USER_IMAGE: ...] — do not modify it, do not truncate it.
-This makes the image work perfectly inside the iframe preview with no server needed.
+RULE 2b — USER-PROVIDED IMAGES (PLACEHOLDER SYSTEM)
+When the user provides an image (attached via the Grado interface), use the special placeholder __USER_IMAGE_1__ as the src of any <img> tag that should show their image:
+
+<img src="__USER_IMAGE_1__" alt="Image de l'utilisateur" style="max-width:100%;height:auto;">
+
+The Grado platform will automatically replace __USER_IMAGE_1__ with the real base64 data URL before rendering. NEVER try to write the actual base64 data yourself — just write __USER_IMAGE_1__ exactly as shown. This is the ONLY correct way to use user-uploaded images in HTML on Grado.
+
+If the user provides multiple images, use __USER_IMAGE_1__, __USER_IMAGE_2__, etc.
 
 RULE 2c — NEVER SUGGEST EXTERNAL IMAGE HOSTING
-NEVER tell the user to upload their images to imgbb, imgur, postimages, or any external hosting site.
-NEVER ask them for an image URL.
-If the user wants to use their own photo/logo in the HTML and there is no [USER_IMAGE:] in their message, tell them:
-"Clique sur le 📎 (trombone) en bas à gauche du chat, sélectionne ton image, puis envoie ta demande. Je l'intégrerai directement dans le HTML sans aucun hébergement externe."
-Never suggest any workaround involving third-party image hosts.
+NEVER tell the user to upload their images to imgbb, imgur, postimages, cloudinary, or any external hosting site.
+NEVER ask them for an image URL from outside Grado.
+If the user wants to use their own photo/logo in HTML and they have NOT attached an image, respond ONLY with:
+"Clique sur le 📎 (trombone) en bas à gauche du chat, sélectionne ton image, puis redis-moi ce que tu veux créer. Je l'intégrerai automatiquement dans le HTML — aucun hébergement externe nécessaire."
+NEVER suggest imgbb, imgur, or any workaround involving third-party image hosts.
 
 RULE 3 — TYPE-SPECIFIC EXCELLENCE
 
@@ -428,9 +430,8 @@ router.post("/conversations/:id/messages", async (req, res) => {
 
     // Build last user message – include image if provided
     if (imageData) {
-      // Inject the data URL into text so Claude can embed it directly in HTML
-      const dataUrl = `data:${imageMimeType};base64,${imageData}`;
-      const enrichedText = `${userContent}\n\n[USER_IMAGE: ${dataUrl}]`;
+      // Tell Claude an image is attached; it should use __USER_IMAGE_1__ in HTML
+      const enrichedText = `${userContent}\n\n[Note système: L'utilisateur a joint une image. Si tu génères du HTML contenant cette image, utilise exactement __USER_IMAGE_1__ comme valeur de l'attribut src. Grado remplacera automatiquement ce placeholder par la vraie image avant l'affichage.]`;
       chatMessages.push({
         role: "user",
         content: [

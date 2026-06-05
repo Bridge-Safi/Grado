@@ -120,6 +120,8 @@ export function ChatArea({
   const [localMessages, setLocalMessages] = useState<AnthropicMessage[]>([]);
   const [activeId, setActiveId] = useState<number | null>(null);
   const [mediaJobs, setMediaJobs] = useState<MediaJob[]>([]);
+  // Map: user message id → data URL (for __USER_IMAGE_1__ replacement in HTML)
+  const [msgImageMap, setMsgImageMap] = useState<Record<number, string>>({});
 
   // Image upload state
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -238,14 +240,19 @@ export function ChatArea({
       setConversationId(newId);
     }
 
+    const userMsgId = Date.now();
     const userMsg: AnthropicMessage & { imagePreview?: string } = {
-      id: Date.now(),
+      id: userMsgId,
       conversationId: currentId,
       role: "user",
       content,
       createdAt: new Date().toISOString(),
       imagePreview: sentImagePreview ?? undefined,
     } as any;
+    // Store data URL so assistant HTML can resolve __USER_IMAGE_1__
+    if (sentImagePreview) {
+      setMsgImageMap((prev) => ({ ...prev, [userMsgId]: sentImagePreview }));
+    }
     setLocalMessages((prev) => [...prev, userMsg]);
     onRunStart();
 
@@ -362,7 +369,21 @@ export function ChatArea({
             <>
               <AnimatePresence initial={false}>
                 {localMessages.map((msg) => {
-                  const html = msg.role === "assistant" ? extractHtml(msg.content) : null;
+                  // Find the most recent user message before this one that has an image
+                  const msgIndex = localMessages.indexOf(msg);
+                  const precedingUserImgUrl = (() => {
+                    if (msg.role !== "assistant") return undefined;
+                    for (let i = msgIndex - 1; i >= 0; i--) {
+                      const prev = localMessages[i];
+                      if (prev.role === "user") {
+                        return msgImageMap[prev.id] ?? undefined;
+                      }
+                    }
+                    return undefined;
+                  })();
+                  const html = msg.role === "assistant"
+                    ? extractHtml(msg.content, precedingUserImgUrl ? [precedingUserImgUrl] : undefined)
+                    : null;
                   const mediaTag = msg.role === "assistant" ? extractMediaTag(msg.content) : null;
                   const displayContent = mediaTag ? stripMediaTag(msg.content) : msg.content;
                   const mediaJob = mediaTag ? mediaJobs.find((j) => j.prompt === mediaTag.prompt) : undefined;
