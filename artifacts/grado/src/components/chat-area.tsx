@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Paperclip, SendHorizonal } from "lucide-react";
+import { Paperclip, SendHorizonal, Globe, Palette, GalleryHorizontal, Sparkles, BarChart3, Gamepad2, FileText } from "lucide-react";
 import { AnthropicMessage } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,6 +18,7 @@ import { extractHtml } from "@/lib/extract-html";
 import { extractMediaTag, stripMediaTag } from "@/lib/extract-media";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth";
 
 interface ChatAreaProps {
   conversationId: number | null;
@@ -37,31 +38,59 @@ interface MediaJob {
   type: "music" | "video";
 }
 
-function WelcomeInner({ setInput }: { setInput: (v: string) => void }) {
-  const { t } = useI18n();
-  const chips = [
-    { label: t.chip1, value: "make me a chill lo-fi beat" },
-    { label: t.chip2, value: "generate a video of an ocean at sunset" },
-    { label: t.chip3, value: "build me a beautiful todo app" },
-  ];
+const CATEGORIES = [
+  { label: "Website",            icon: Globe,             prompt: "Build a website for " },
+  { label: "Design",             icon: Palette,           prompt: "Design a beautiful landing page for " },
+  { label: "Slides",             icon: GalleryHorizontal, prompt: "Create a slide presentation about " },
+  { label: "Animation",          icon: Sparkles,          prompt: "Build a stunning animation showing " },
+  { label: "Data Visualization", icon: BarChart3,         prompt: "Create a data visualization dashboard showing " },
+  { label: "3D Game",            icon: Gamepad2,          prompt: "Build a 3D game where " },
+  { label: "Document",           icon: FileText,          prompt: "Write a professional document about " },
+];
+
+function WelcomeInner({ setInput, focusInput }: { setInput: (v: string) => void; focusInput: () => void }) {
+  const { user } = useAuth();
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+  const handleCategory = (cat: typeof CATEGORIES[0]) => {
+    setActiveCategory(cat.label);
+    setInput(cat.prompt);
+    focusInput();
+  };
+
+  const firstName = user?.name?.split(" ")[0] ?? "toi";
+
   return (
-    <>
-      <div>
-        <h1 className="text-2xl font-semibold text-white mb-1">{t.chatWelcome}</h1>
-        <p className="text-sm text-[#8888A8]">{t.chatSub}</p>
+    <div className="flex flex-col items-center gap-5 w-full max-w-2xl">
+      <div className="text-center">
+        <h1 className="text-3xl font-semibold text-white mb-1">
+          Salut {firstName},
+        </h1>
+        <p className="text-xl text-[#8888A8] font-light">Qu'est-ce que tu veux créer ?</p>
       </div>
-      <div className="flex gap-3 flex-wrap justify-center mt-2">
-        {chips.map((chip) => (
-          <button
-            key={chip.value}
-            onClick={() => setInput(chip.value)}
-            className="text-xs px-3 py-1.5 rounded-full bg-[#18181f] border border-[#2a2a38] text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/40 transition-colors"
-          >
-            {chip.label}
-          </button>
-        ))}
+
+      <div className="flex flex-wrap justify-center gap-2 mt-1">
+        {CATEGORIES.map((cat) => {
+          const Icon = cat.icon;
+          const isActive = activeCategory === cat.label;
+          return (
+            <button
+              key={cat.label}
+              onClick={() => handleCategory(cat)}
+              className={cn(
+                "flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all border",
+                isActive
+                  ? "bg-[#5B5BD6]/15 border-[#5B5BD6]/50 text-white shadow-[0_0_12px_rgba(91,91,214,0.2)]"
+                  : "bg-[#18181f] border-[#2a2a38] text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/30 hover:bg-[#1a1a2a]"
+              )}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {cat.label}
+            </button>
+          );
+        })}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -246,7 +275,7 @@ export function ChatArea({
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-5">
         <div className="max-w-2xl w-full mx-auto flex flex-col gap-4">
           {showWelcome ? (
-            <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center gap-4">
+            <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center gap-6">
               <motion.div
                 initial={{ scale: 0.85, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -254,9 +283,16 @@ export function ChatArea({
                 className="relative"
               >
                 <div className="absolute inset-0 bg-[#5B5BD6]/30 rounded-2xl blur-2xl scale-150" />
-                <GradoLogo size={64} className="relative" />
+                <GradoLogo size={48} className="relative" />
               </motion.div>
-              <WelcomeInner setInput={setInput} />
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: 0.1 }}
+                className="w-full"
+              >
+                <WelcomeInner setInput={setInput} focusInput={() => textareaRef.current?.focus()} />
+              </motion.div>
             </div>
           ) : (
             <>
