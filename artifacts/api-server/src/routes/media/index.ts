@@ -13,17 +13,21 @@ function resolveMediaPath(filePath: string): string {
   return path.join(WORKSPACE_ROOT, filePath);
 }
 
-// POST /media/music — generate music via ElevenLabs sound-generation (free plan)
+// POST /media/music — generate music
+// Primary: fal.ai ACE-Step (full songs with vocals + lyrics, ~3 min)
+// Fallback: ElevenLabs sound-generation (instrumental, 20s)
 router.post("/music", async (req, res) => {
-  const { conversationId, prompt, durationSeconds = 22 } = req.body;
+  const { conversationId, prompt, lyrics, genre, durationSeconds = 180 } = req.body;
   if (!conversationId || !prompt) {
     res.status(400).json({ error: "conversationId and prompt required" });
     return;
   }
 
-  const apiKey = process.env.ELEVENLABS_API_KEY;
-  if (!apiKey) {
-    res.status(503).json({ error: "ELEVENLABS_API_KEY not configured" });
+  const falKey = process.env.FAL_KEY;
+  const elevenKey = process.env.ELEVENLABS_API_KEY;
+
+  if (!falKey && !elevenKey) {
+    res.status(503).json({ error: "No music API configured" });
     return;
   }
 
@@ -34,52 +38,121 @@ router.post("/music", async (req, res) => {
 
   res.status(202).json({ id: record.id, status: "pending" });
 
-  // Generate asynchronously using ElevenLabs sound-generation (works on free plan)
-  (async () => {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 90_000); // 90s max
-      const response = await fetch("https://api.elevenlabs.io/v1/sound-generation", {
-        method: "POST",
-        signal: controller.signal,
-        headers: {
-          "xi-api-key": apiKey,
-          "Content-Type": "application/json",
-          "Accept": "audio/mpeg",
-        },
-        body: JSON.stringify({
-          text: prompt,
-          duration_seconds: Math.min(Number(durationSeconds), 20),
-          prompt_influence: 0.8,
-        }),
-      });
-      clearTimeout(timeout);
+  const dir = path.join(WORKSPACE_ROOT, "attached_assets", "generated_audio");
+  fs.mkdirSync(dir, { recursive: true });
 
-      if (!response.ok) {
-        const err = await response.text();
-        throw new Error(`ElevenLabs error ${response.status}: ${err}`);
+  // ── fal.ai ACE-Step: full song with vocals ─────────────────────────────────
+  if (falKey) {
+    (async () => {
+      try {
+        const tags = [genre || "", prompt].filter(Boolean).join(", ");
+        const audioDuration = Math.min(Number(durationSeconds), 240); // max 4 min
+
+        const submitRes = await fetch("https://queue.fal.run/fal-ai/ace-step", {
+          method: "POST",
+          headers: {
+            "Authorization": `Key ${falKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            tags,
+            lyrics: lyrics || "[verse]\n" + prompt + "\n[chorus]\n" + prompt,
+            audio_duration: audioDuration,
+          }),
+        });
+
+        if (!submitRes.ok) {
+          const err = await submitRes.text();
+          throw new Error(`FAL submit error ${submitRes.status}: ${err}`);
+        }
+
+        const { request_id } = await submitRes.json() as { request_id: string };
+
+        // Poll for completion (up to 8 minutes)
+        let audioUrl: string | null = null;
+        for (let i = 0; i < 96; i++) {
+          await new Promise(r => setTimeout(r, 5000));
+          const statusRes = await fetch(
+            `https://queue.fal.run/fal-ai/ace-step/requests/${request_id}`,
+            { headers: { "Authorization": `Key ${falKey}` } }
+          );
+          if (!statusRes.ok) continue;
+          const data = await statusRes.json() as any;
+          if (data.status === "COMPLETED" && data.output?.audio?.url) {
+            audioUrl = data.output.audio.url;
+            break;
+          }
+          if (data.status === "FAILED") throw new Error("ACE-Step generation failed: " + JSON.stringify(data.error));
+        }
+
+        if (!audioUrl) throw new Error("Music generation timed out");
+
+        const audioRes = await fetch(audioUrl);
+        const audioBuffer = await audioRes.arrayBuffer();
+        const fileName = `music_${record.id}_${Date.now()}.mp3`;
+        fs.writeFileSync(path.join(dir, fileName), Buffer.from(audioBuffer));
+
+        await db
+          .update(mediaGenerations)
+          .set({ status: "done", filePath: `attached_assets/generated_audio/${fileName}` })
+          .where(eq(mediaGenerations.id, record.id));
+      } catch (err: any) {
+        console.error("ACE-Step music error:", err.message);
+        // If FAL fails, try ElevenLabs fallback
+        if (elevenKey) {
+          await generateWithElevenLabs(elevenKey, prompt, record.id, dir);
+        } else {
+          await db
+            .update(mediaGenerations)
+            .set({ status: "error", error: err.message })
+            .where(eq(mediaGenerations.id, record.id));
+        }
       }
+    })();
+    return;
+  }
 
-      const audioBuffer = await response.arrayBuffer();
-      const dir = path.join(WORKSPACE_ROOT, "attached_assets", "generated_audio");
-      fs.mkdirSync(dir, { recursive: true });
-      const fileName = `music_${record.id}_${Date.now()}.mp3`;
-      const filePath = path.join(dir, fileName);
-      fs.writeFileSync(filePath, Buffer.from(audioBuffer));
-
-      await db
-        .update(mediaGenerations)
-        .set({ status: "done", filePath: `attached_assets/generated_audio/${fileName}` })
-        .where(eq(mediaGenerations.id, record.id));
-    } catch (err: any) {
-      console.error("Music generation error:", err.message);
-      await db
-        .update(mediaGenerations)
-        .set({ status: "error", error: err.message })
-        .where(eq(mediaGenerations.id, record.id));
-    }
-  })();
+  // ── ElevenLabs fallback: instrumental only ─────────────────────────────────
+  generateWithElevenLabs(elevenKey!, prompt, record.id, dir);
 });
+
+async function generateWithElevenLabs(apiKey: string, prompt: string, recordId: number, dir: string) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 90_000);
+    const response = await fetch("https://api.elevenlabs.io/v1/sound-generation", {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "xi-api-key": apiKey,
+        "Content-Type": "application/json",
+        "Accept": "audio/mpeg",
+      },
+      body: JSON.stringify({ text: prompt, duration_seconds: 20, prompt_influence: 0.8 }),
+    });
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`ElevenLabs error ${response.status}: ${err}`);
+    }
+
+    const audioBuffer = await response.arrayBuffer();
+    const fileName = `music_${recordId}_${Date.now()}.mp3`;
+    fs.writeFileSync(path.join(dir, fileName), Buffer.from(audioBuffer));
+
+    await db
+      .update(mediaGenerations)
+      .set({ status: "done", filePath: `attached_assets/generated_audio/${fileName}` })
+      .where(eq(mediaGenerations.id, recordId));
+  } catch (err: any) {
+    console.error("ElevenLabs fallback error:", err.message);
+    await db
+      .update(mediaGenerations)
+      .set({ status: "error", error: err.message })
+      .where(eq(mediaGenerations.id, recordId));
+  }
+}
 
 // POST /media/video — generate video via FAL.ai
 router.post("/video", async (req, res) => {

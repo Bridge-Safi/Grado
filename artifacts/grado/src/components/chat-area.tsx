@@ -205,7 +205,9 @@ export function ChatArea({
         body: JSON.stringify({
           conversationId: currentId,
           prompt,
-          durationSeconds: 22,
+          lyrics,
+          genre,
+          durationSeconds: 180,
         }),
       });
       if (res.ok) {
@@ -213,7 +215,7 @@ export function ChatArea({
         setMediaJobs((prev) => [...prev, { prompt, mediaId: data.id, type, title, genre, lyrics }]);
       } else {
         const err = await res.json();
-        if (err.error === "ELEVENLABS_API_KEY not configured" || err.error === "FAL_KEY not configured") {
+        if (err.error === "ELEVENLABS_API_KEY not configured" || err.error === "FAL_KEY not configured" || err.error === "No music API configured") {
           setMediaJobs((prev) => [...prev, { prompt, mediaId: -1, type, title, genre, lyrics }]);
         }
       }
