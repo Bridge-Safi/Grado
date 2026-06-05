@@ -19,6 +19,24 @@ interface MediaPollResult {
   fileUrl?: string;
 }
 
+function friendlyError(raw: string | undefined, type: "music" | "video"): string {
+  if (!raw) return type === "video" ? "Génération vidéo échouée." : "Génération audio échouée.";
+  const lower = raw.toLowerCase();
+  if (lower.includes("exhausted balance") || lower.includes("exhausted") || lower.includes("top up"))
+    return "💳 Solde épuisé sur le compte de génération vidéo. Recharge nécessaire pour continuer.";
+  if (lower.includes("user is locked"))
+    return "🔒 Compte de génération vidéo verrouillé. Vérifie le solde sur fal.ai.";
+  if (lower.includes("403") || lower.includes("unauthorized") || lower.includes("forbidden"))
+    return "🔑 Clé API invalide ou quota dépassé. Vérifie ta clé FAL.";
+  if (lower.includes("429") || lower.includes("rate limit"))
+    return "⏳ Trop de requêtes. Réessaie dans quelques instants.";
+  if (lower.includes("timeout") || lower.includes("timed out"))
+    return "⏱️ La génération a pris trop de temps. Réessaie avec une description plus courte.";
+  if (lower.includes("failed") || lower.includes("error"))
+    return type === "video" ? "❌ La génération vidéo a échoué. Réessaie." : "❌ La génération audio a échoué. Réessaie.";
+  return raw;
+}
+
 export function MediaPlayer({ type, mediaId, prompt }: MediaPlayerProps) {
   const [status, setStatus] = useState<MediaStatus>("pending");
   const [fileUrl, setFileUrl] = useState<string | null>(null);
@@ -38,7 +56,7 @@ export function MediaPlayer({ type, mediaId, prompt }: MediaPlayerProps) {
           setFileUrl(data.fileUrl);
           if (pollRef.current) clearInterval(pollRef.current);
         } else if (data.status === "error") {
-          setError(data.error || "Génération échouée");
+          setError(friendlyError(data.error, type));
           if (pollRef.current) clearInterval(pollRef.current);
         }
       } catch {
