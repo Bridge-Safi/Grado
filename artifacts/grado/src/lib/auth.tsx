@@ -15,6 +15,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  updatePlan: (plan: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -68,8 +69,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const updatePlan = async (plan: string) => {
+    const stored = localStorage.getItem("grado_token");
+    if (!stored) throw new Error("Non authentifié");
+    const res = await fetch("/api/auth/plan", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${stored}` },
+      body: JSON.stringify({ plan }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Erreur");
+    setUser(data);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updatePlan }}>
       {children}
     </AuthContext.Provider>
   );

@@ -24,7 +24,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await register(name, email, password);
-      navigate("/chat");
+      navigate("/pricing?onboard=1");
     } catch (err: any) {
       setError(err.message);
     } finally {

@@ -115,6 +115,31 @@ router.post("/change-password", async (req, res) => {
   res.json({ ok: true });
 });
 
+// PUT /api/auth/plan
+router.put("/plan", async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith("Bearer ")) { res.status(401).json({ error: "Non authentifié" }); return; }
+  let userId: number;
+  try {
+    const decoded = jwt.verify(auth.slice(7), JWT_SECRET) as { userId: number };
+    userId = decoded.userId;
+  } catch { res.status(401).json({ error: "Token invalide" }); return; }
+
+  const { plan } = req.body;
+  const allowed = ["gratuit", "hacker", "pro"];
+  if (!plan || !allowed.includes(plan)) { res.status(400).json({ error: "Plan invalide" }); return; }
+
+  // 48h trial for paid plans, immediate for free
+  const trialEndsAt = plan !== "gratuit" ? new Date(Date.now() + 48 * 60 * 60 * 1000) : null;
+
+  const [updated] = await db.update(users)
+    .set({ plan, trialEndsAt })
+    .where(eq(users.id, userId))
+    .returning();
+
+  res.json({ id: updated.id, name: updated.name, email: updated.email, plan: updated.plan, trialEndsAt: updated.trialEndsAt });
+});
+
 // GET /auth/me
 router.get("/me", async (req, res) => {
   const auth = req.headers.authorization;
