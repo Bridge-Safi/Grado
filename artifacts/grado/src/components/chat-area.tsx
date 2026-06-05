@@ -14,6 +14,7 @@ import { MarkdownRenderer } from "./markdown";
 import { SharkCoding } from "./shark-coding";
 import { ProjectPreview } from "./project-preview";
 import { MediaPlayer } from "./media-player";
+import { ImagePlayer } from "./image-player";
 import { GradoLogo } from "./grado-logo";
 import { extractHtml } from "@/lib/extract-html";
 import { extractMediaTag, stripMediaTag } from "@/lib/extract-media";
@@ -195,7 +196,7 @@ export function ChatArea({
 
   const triggerMediaGeneration = async (
     currentId: number,
-    type: "music" | "video",
+    type: "music" | "video" | "image",
     prompt: string,
     title?: string,
     genre?: string,
@@ -203,7 +204,10 @@ export function ChatArea({
   ) => {
     if (mediaJobs.find((j) => j.prompt === prompt)) return;
     try {
-      const endpoint = type === "music" ? "/api/media/music" : "/api/media/video";
+      const endpoint =
+        type === "music" ? "/api/media/music" :
+        type === "image" ? "/api/media/image" :
+        "/api/media/video";
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -220,7 +224,11 @@ export function ChatArea({
         setMediaJobs((prev) => [...prev, { prompt, mediaId: data.id, type, title, genre, lyrics }]);
       } else {
         const err = await res.json();
-        if (err.error === "ELEVENLABS_API_KEY not configured" || err.error === "FAL_KEY not configured" || err.error === "No music API configured") {
+        if (
+          err.error === "ELEVENLABS_API_KEY not configured" ||
+          err.error === "FAL_KEY not configured" ||
+          err.error === "No music API configured"
+        ) {
           setMediaJobs((prev) => [...prev, { prompt, mediaId: -1, type, title, genre, lyrics }]);
         }
       }
@@ -488,10 +496,18 @@ export function ChatArea({
                           <ProjectPreview html={html} conversationId={activeId} />
                         )}
 
-                        {/* Media player */}
-                        {mediaJob && mediaJob.mediaId > 0 && (
+                        {/* Image player */}
+                        {mediaJob && mediaJob.type === "image" && mediaJob.mediaId > 0 && (
+                          <ImagePlayer
+                            mediaId={mediaJob.mediaId}
+                            prompt={mediaJob.prompt}
+                          />
+                        )}
+
+                        {/* Music / video player */}
+                        {mediaJob && mediaJob.type !== "image" && mediaJob.mediaId > 0 && (
                           <MediaPlayer
-                            type={mediaJob.type}
+                            type={mediaJob.type as "music" | "video"}
                             mediaId={mediaJob.mediaId}
                             prompt={mediaJob.prompt}
                             title={mediaJob.title}

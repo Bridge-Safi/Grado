@@ -1,5 +1,5 @@
 export interface MediaTag {
-  type: "music" | "video";
+  type: "music" | "video" | "image";
   prompt: string;
   title?: string;
   genre?: string;
@@ -7,7 +7,7 @@ export interface MediaTag {
 }
 
 export function extractMediaTag(content: string): MediaTag | null {
-  // New rich format: [GRADO_MUSIC: prompt="..." | title="..." | genre="..." | lyrics="..."]
+  // Rich music format: [GRADO_MUSIC: prompt="..." | title="..." | genre="..." | lyrics="..."]
   const richMusicMatch = content.match(/\[GRADO_MUSIC:\s*([\s\S]+?)\]/);
   if (richMusicMatch) {
     const raw = richMusicMatch[1];
@@ -29,6 +29,12 @@ export function extractMediaTag(content: string): MediaTag | null {
   if (videoMatch) {
     return { type: "video", prompt: videoMatch[1].trim() };
   }
+
+  const imageMatch = content.match(/\[GRADO_IMAGE:\s*(.+?)\]/s);
+  if (imageMatch) {
+    return { type: "image", prompt: imageMatch[1].trim() };
+  }
+
   return null;
 }
 
@@ -36,5 +42,6 @@ export function stripMediaTag(content: string): string {
   return content
     .replace(/\[GRADO_MUSIC:\s*[\s\S]+?\]/g, "")
     .replace(/\[GRADO_VIDEO:\s*.+?\]/s, "")
+    .replace(/\[GRADO_IMAGE:\s*.+?\]/s, "")
     .trim();
 }

@@ -304,13 +304,24 @@ Output EXACTLY this tag on its own line:
 [GRADO_VIDEO: <detailed description: subject, visual style, motion, mood, setting, lighting, duration>]
 Then 1-2 lines describing what you're creating.
 
+When the user asks to GENERATE an image, photo, illustration, artwork, portrait, or any visual:
+Output EXACTLY this tag on its own line:
+[GRADO_IMAGE: <ultra-detailed visual prompt: subject, style (photorealistic/digital art/oil painting/anime/etc.), lighting, colors, composition, mood, camera angle, quality descriptors like "8K, sharp focus, cinematic, masterpiece">]
+Then 1-2 lines describing the image you're generating.
+
+Image prompt tips:
+- Be hyper-descriptive: "a lone wolf standing on a snowy mountain peak at golden hour, photorealistic, dramatic volumetric lighting, 8K, cinematic"
+- Add artistic style when relevant: "in the style of Studio Ghibli", "oil painting", "concept art", "photography"
+- Add quality boosters: "masterpiece, highly detailed, professional photography, sharp focus"
+
 ============================
 RESPONSE FORMAT
 ============================
 
 - Any creation/build request → complete HTML file in \`\`\`html block + 1-2 line description
 - Music generation → [GRADO_MUSIC: ...] tag + description
-- Video generation → [GRADO_VIDEO: ...] tag + description  
+- Video generation → [GRADO_VIDEO: ...] tag + description
+- Image generation → [GRADO_IMAGE: ...] tag + description
 - Knowledge question → complete detailed markdown answer in the user's language`;
 
 

@@ -234,6 +234,76 @@ router.post("/video", async (req, res) => {
   })();
 });
 
+// POST /media/image — generate image via FAL.ai Flux Schnell (fast, ~3s)
+router.post("/image", async (req, res) => {
+  const { conversationId, prompt } = req.body;
+  if (!conversationId || !prompt) {
+    res.status(400).json({ error: "conversationId and prompt required" });
+    return;
+  }
+
+  const apiKey = process.env.FAL_KEY;
+  if (!apiKey) {
+    res.status(503).json({ error: "FAL_KEY not configured" });
+    return;
+  }
+
+  const [record] = await db
+    .insert(mediaGenerations)
+    .values({ conversationId: Number(conversationId), type: "image", prompt, status: "pending" })
+    .returning();
+
+  res.status(202).json({ id: record.id, status: "pending" });
+
+  (async () => {
+    try {
+      // Use Flux Schnell — synchronous, fast (~3s), high quality
+      const falRes = await fetch("https://fal.run/fal-ai/flux/schnell", {
+        method: "POST",
+        headers: {
+          "Authorization": `Key ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt,
+          image_size: "landscape_4_3",
+          num_inference_steps: 4,
+          num_images: 1,
+          enable_safety_checker: true,
+        }),
+      });
+
+      if (!falRes.ok) {
+        const err = await falRes.text();
+        throw new Error(`FAL image error ${falRes.status}: ${err}`);
+      }
+
+      const data = await falRes.json() as any;
+      const imageUrl: string | undefined = data?.images?.[0]?.url;
+      if (!imageUrl) throw new Error("No image URL in FAL response");
+
+      // Download and save locally
+      const imgRes = await fetch(imageUrl);
+      const imgBuffer = await imgRes.arrayBuffer();
+      const dir = path.join(WORKSPACE_ROOT, "attached_assets", "generated_images");
+      fs.mkdirSync(dir, { recursive: true });
+      const fileName = `image_${record.id}_${Date.now()}.webp`;
+      fs.writeFileSync(path.join(dir, fileName), Buffer.from(imgBuffer));
+
+      await db
+        .update(mediaGenerations)
+        .set({ status: "done", filePath: `attached_assets/generated_images/${fileName}` })
+        .where(eq(mediaGenerations.id, record.id));
+    } catch (err: any) {
+      console.error("Image generation error:", err.message);
+      await db
+        .update(mediaGenerations)
+        .set({ status: "error", error: err.message })
+        .where(eq(mediaGenerations.id, record.id));
+    }
+  })();
+});
+
 // GET /media/:id — poll status
 router.get("/:id", async (req, res) => {
   const id = Number(req.params.id);
@@ -271,7 +341,10 @@ router.get("/file/:id", async (req, res) => {
   if (!fs.existsSync(absPath)) { res.status(404).send("File not found on disk"); return; }
 
   const ext = path.extname(absPath).toLowerCase();
-  const contentType = ext === ".mp4" ? "video/mp4" : "audio/mpeg";
+  const contentType =
+    ext === ".mp4" ? "video/mp4" :
+    ext === ".webp" || ext === ".png" || ext === ".jpg" || ext === ".jpeg" ? `image/${ext.slice(1)}` :
+    "audio/mpeg";
   res.setHeader("Content-Type", contentType);
   res.setHeader("Cache-Control", "public, max-age=3600");
   fs.createReadStream(absPath).pipe(res);
