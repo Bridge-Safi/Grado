@@ -13,6 +13,8 @@ import RegisterPage from "@/pages/register";
 import PricingPage from "@/pages/pricing";
 import SettingsPage from "@/pages/settings";
 import AdminPage from "@/pages/admin";
+import MySitesPage from "@/pages/my-sites";
+import SiteViewPage from "@/pages/site-view";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -63,6 +65,10 @@ function Router() {
       <Route path="/admin">
         <ProtectedRoute component={AdminPage} />
       </Route>
+      <Route path="/sites">
+        <ProtectedRoute component={MySitesPage} />
+      </Route>
+      <Route path="/s/:slug" component={SiteViewPage} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Trash2, MessageSquare, PanelLeftClose, Settings, Shield } from "lucide-react";
+import { Plus, Trash2, MessageSquare, PanelLeftClose, Settings, Shield, Globe } from "lucide-react";
 import { AnthropicConversation } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -106,6 +106,13 @@ export function Sidebar({
       {/* Bottom links */}
       <div className="px-3 pb-3 space-y-1">
         <div className="h-px bg-gradient-to-r from-transparent via-[#5B5BD6]/30 to-transparent mb-2" />
+        <button
+          onClick={() => navigate("/sites")}
+          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-[#8888A8] hover:text-white hover:bg-[#1a1a28] transition-colors"
+        >
+          <Globe className="w-3.5 h-3.5" />
+          <span>Mes Sites</span>
+        </button>
         <button
           onClick={() => navigate("/settings")}
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-[#8888A8] hover:text-white hover:bg-[#1a1a28] transition-colors"

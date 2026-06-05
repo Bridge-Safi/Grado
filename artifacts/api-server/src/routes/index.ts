@@ -5,6 +5,7 @@ import previewRouter from "./preview";
 import mediaRouter from "./media";
 import authRouter from "./auth";
 import adminRouter from "./admin";
+import sitesRouter from "./sites";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use("/admin", adminRouter);
 router.use("/anthropic", anthropicRouter);
 router.use("/preview", previewRouter);
 router.use("/media", mediaRouter);
+router.use("/sites", sitesRouter);
 
 export default router;
