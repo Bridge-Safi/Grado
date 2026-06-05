@@ -4,3 +4,4 @@ export * from "./previews";
 export * from "./media";
 export * from "./users";
 export * from "./sites";
+export * from "./payments";
