@@ -3,10 +3,12 @@ import healthRouter from "./health";
 import anthropicRouter from "./anthropic";
 import previewRouter from "./preview";
 import mediaRouter from "./media";
+import authRouter from "./auth";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use("/auth", authRouter);
 router.use("/anthropic", anthropicRouter);
 router.use("/preview", previewRouter);
 router.use("/media", mediaRouter);
