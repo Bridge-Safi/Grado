@@ -365,7 +365,10 @@ router.post("/conversations/:id/messages", async (req, res) => {
     haiku: "claude-haiku-4-5",
     sonnet: "claude-sonnet-4-5",
   };
-  const selectedModel = MODEL_MAP[modelChoice] ?? "claude-haiku-4-5";
+  // Vision (images) requires a multimodal model — haiku-4-5 is text-only
+  const selectedModel = imageData
+    ? "claude-sonnet-4-5"
+    : (MODEL_MAP[modelChoice] ?? "claude-haiku-4-5");
 
   const AGENT_PREFIXES: Record<string, string> = {
     dev: "Tu es un agent de développement expert. Priorité absolue: générer du code complet, fonctionnel et optimisé.\n\n",
