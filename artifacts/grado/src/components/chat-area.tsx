@@ -584,7 +584,7 @@ export function ChatArea({
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/gif,image/webp"
+              accept="image/*,.jpg,.jpeg,.png,.gif,.webp,.pdf"
               className="hidden"
               onChange={handleFileChange}
             />
