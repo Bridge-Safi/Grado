@@ -26,7 +26,9 @@ import type {
   AnthropicError,
   AnthropicMessage,
   AnthropicMessageInput,
-  HealthStatus
+  HealthStatus,
+  PreviewMeta,
+  SavePreviewInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -562,4 +564,152 @@ export const useSendAnthropicMessage = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getSendAnthropicMessageMutationOptions(options));
     }
+
+export const getSavePreviewUrl = () => {
+
+
+
+
+  return `/api/preview`
+}
+
+/**
+ * @summary Save HTML preview for a conversation
+ */
+export const savePreview = async (savePreviewInput: SavePreviewInput, options?: RequestInit): Promise<PreviewMeta> => {
+
+  return customFetch<PreviewMeta>(getSavePreviewUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      savePreviewInput,)
+  }
+);}
+
+
+
+
+export const getSavePreviewMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof savePreview>>, TError,{data: BodyType<SavePreviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof savePreview>>, TError,{data: BodyType<SavePreviewInput>}, TContext> => {
+
+const mutationKey = ['savePreview'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof savePreview>>, {data: BodyType<SavePreviewInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  savePreview(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SavePreviewMutationResult = NonNullable<Awaited<ReturnType<typeof savePreview>>>
+    export type SavePreviewMutationBody = BodyType<SavePreviewInput>
+    export type SavePreviewMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Save HTML preview for a conversation
+ */
+export const useSavePreview = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof savePreview>>, TError,{data: BodyType<SavePreviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof savePreview>>,
+        TError,
+        {data: BodyType<SavePreviewInput>},
+        TContext
+      > => {
+      return useMutation(getSavePreviewMutationOptions(options));
+    }
+
+export const getGetPreviewUrl = (id: number,) => {
+
+
+
+
+  return `/api/preview/${id}`
+}
+
+/**
+ * @summary Serve the preview HTML page
+ */
+export const getPreview = async (id: number, options?: RequestInit): Promise<unknown> => {
+
+  return customFetch<unknown>(getGetPreviewUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPreviewQueryKey = (id: number,) => {
+    return [
+    `/api/preview/${id}`
+    ] as const;
+    }
+
+
+export const getGetPreviewQueryOptions = <TData = Awaited<ReturnType<typeof getPreview>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPreviewQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPreview>>> = ({ signal }) => getPreview(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPreview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPreviewQueryResult = NonNullable<Awaited<ReturnType<typeof getPreview>>>
+export type GetPreviewQueryError = ErrorType<void>
+
+
+/**
+ * @summary Serve the preview HTML page
+ */
+
+export function useGetPreview<TData = Awaited<ReturnType<typeof getPreview>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPreviewQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 

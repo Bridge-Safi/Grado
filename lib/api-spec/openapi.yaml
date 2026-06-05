@@ -11,6 +11,8 @@ tags:
     description: Health operations
   - name: anthropic
     description: Anthropic AI chat operations
+  - name: preview
+    description: Live preview operations
 paths:
   /healthz:
     get:
@@ -140,6 +142,42 @@ paths:
           description: SSE stream of assistant response chunks
           content:
             text/event-stream: {}
+  /preview:
+    post:
+      operationId: savePreview
+      tags: [preview]
+      summary: Save HTML preview for a conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SavePreviewInput"
+      responses:
+        "201":
+          description: Saved preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PreviewMeta"
+  /preview/{id}:
+    get:
+      operationId: getPreview
+      tags: [preview]
+      summary: Serve the preview HTML page
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: HTML page
+          content:
+            text/html: {}
+        "404":
+          description: Not found
 components:
   schemas:
     HealthStatus:
@@ -223,3 +261,23 @@ components:
           type: string
       required:
         - error
+    SavePreviewInput:
+      type: object
+      properties:
+        conversationId:
+          type: integer
+        htmlContent:
+          type: string
+      required:
+        - conversationId
+        - htmlContent
+    PreviewMeta:
+      type: object
+      properties:
+        id:
+          type: integer
+        previewUrl:
+          type: string
+      required:
+        - id
+        - previewUrl

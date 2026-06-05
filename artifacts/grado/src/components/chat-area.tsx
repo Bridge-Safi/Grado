@@ -11,6 +11,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { MarkdownRenderer } from "./markdown";
 import { SharkCoding } from "./shark-coding";
+import { ProjectPreview } from "./project-preview";
+import { extractHtml } from "@/lib/extract-html";
 import { cn } from "@/lib/utils";
 
 interface ChatAreaProps {
@@ -166,11 +168,8 @@ export function ChatArea({
   return (
     <div className="flex flex-col h-full bg-[#0D0D12]">
       {/* Messages */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 py-5"
-      >
-        <div className="max-w-2xl w-full mx-auto flex flex-col gap-3">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-5">
+        <div className="max-w-2xl w-full mx-auto flex flex-col gap-4">
           {showWelcome ? (
             <div className="flex flex-col items-center justify-center h-full min-h-[60vh] text-center gap-4">
               <motion.div
@@ -186,46 +185,58 @@ export function ChatArea({
                   Hi, what do you want to build?
                 </h1>
                 <p className="text-sm text-[#8888A8]">
-                  Describe your idea and Grado will build it for you.
+                  Describe your idea — Grado builds it live for you.
                 </p>
               </div>
             </div>
           ) : (
             <>
               <AnimatePresence initial={false}>
-                {localMessages.map((msg) => (
-                  <motion.div
-                    key={msg.id}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.18 }}
-                    className={cn(
-                      "flex",
-                      msg.role === "user" ? "justify-end" : "justify-start"
-                    )}
-                    data-testid={`message-${msg.role}-${msg.id}`}
-                  >
-                    {msg.role === "assistant" && (
-                      <div className="w-7 h-7 rounded-full bg-[#18181f] border border-[#2a2a38] flex items-center justify-center mr-2 mt-1 shrink-0">
-                        <img src={logoUrl} alt="G" className="w-4 h-4 object-contain" />
-                      </div>
-                    )}
-                    <div
+                {localMessages.map((msg) => {
+                  const html = msg.role === "assistant" ? extractHtml(msg.content) : null;
+
+                  return (
+                    <motion.div
+                      key={msg.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.18 }}
                       className={cn(
-                        "max-w-[80%] rounded-2xl px-4 py-3 text-sm",
-                        msg.role === "user"
-                          ? "bg-[#5B5BD6] text-white rounded-br-sm"
-                          : "bg-[#18181f] border border-[#2a2a38] text-[#E8E8F0] rounded-bl-sm"
+                        "flex",
+                        msg.role === "user" ? "justify-end" : "justify-start"
                       )}
+                      data-testid={`message-${msg.role}-${msg.id}`}
                     >
-                      {msg.role === "user" ? (
-                        <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
-                      ) : (
-                        <MarkdownRenderer content={msg.content} />
+                      {msg.role === "assistant" && (
+                        <div className="w-7 h-7 rounded-full bg-[#18181f] border border-[#2a2a38] flex items-center justify-center mr-2 mt-1 shrink-0">
+                          <img src={logoUrl} alt="G" className="w-4 h-4 object-contain" />
+                        </div>
                       )}
-                    </div>
-                  </motion.div>
-                ))}
+
+                      <div className={cn("flex flex-col", msg.role === "assistant" ? "flex-1 min-w-0" : "max-w-[80%]")}>
+                        <div
+                          className={cn(
+                            "rounded-2xl px-4 py-3 text-sm",
+                            msg.role === "user"
+                              ? "bg-[#5B5BD6] text-white rounded-br-sm"
+                              : "bg-[#18181f] border border-[#2a2a38] text-[#E8E8F0] rounded-bl-sm"
+                          )}
+                        >
+                          {msg.role === "user" ? (
+                            <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                          ) : (
+                            <MarkdownRenderer content={msg.content} />
+                          )}
+                        </div>
+
+                        {/* Live project preview below agent message */}
+                        {html && activeId && (
+                          <ProjectPreview html={html} conversationId={activeId} />
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
 
               <AnimatePresence>

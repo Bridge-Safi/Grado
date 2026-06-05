@@ -42,3 +42,13 @@ export interface AnthropicError {
   error: string;
 }
 
+export interface SavePreviewInput {
+  conversationId: number;
+  htmlContent: string;
+}
+
+export interface PreviewMeta {
+  id: number;
+  previewUrl: string;
+}
+

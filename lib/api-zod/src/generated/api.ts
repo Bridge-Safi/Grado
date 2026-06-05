@@ -94,3 +94,20 @@ export const SendAnthropicMessageBody = zod.object({
 })
 
 
+/**
+ * @summary Save HTML preview for a conversation
+ */
+export const SavePreviewBody = zod.object({
+  "conversationId": zod.number(),
+  "htmlContent": zod.string()
+})
+
+
+/**
+ * @summary Serve the preview HTML page
+ */
+export const GetPreviewParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
