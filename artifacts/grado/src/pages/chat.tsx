@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { GradoLogo } from "@/components/grado-logo";
+import { LangSwitcher } from "@/components/lang-switcher";
 
 export default function ChatPage() {
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
@@ -100,6 +101,8 @@ export default function ChatPage() {
             </button>
           </div>
         )}
+
+        <LangSwitcher compact />
 
         {/* Red Run button */}
         <button

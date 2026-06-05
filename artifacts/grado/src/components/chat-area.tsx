@@ -17,6 +17,7 @@ import { GradoLogo } from "./grado-logo";
 import { extractHtml } from "@/lib/extract-html";
 import { extractMediaTag, stripMediaTag } from "@/lib/extract-media";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
 interface ChatAreaProps {
   conversationId: number | null;
@@ -34,6 +35,34 @@ interface MediaJob {
   prompt: string;
   mediaId: number;
   type: "music" | "video";
+}
+
+function WelcomeInner({ setInput }: { setInput: (v: string) => void }) {
+  const { t } = useI18n();
+  const chips = [
+    { label: t.chip1, value: "make me a chill lo-fi beat" },
+    { label: t.chip2, value: "generate a video of an ocean at sunset" },
+    { label: t.chip3, value: "build me a beautiful todo app" },
+  ];
+  return (
+    <>
+      <div>
+        <h1 className="text-2xl font-semibold text-white mb-1">{t.chatWelcome}</h1>
+        <p className="text-sm text-[#8888A8]">{t.chatSub}</p>
+      </div>
+      <div className="flex gap-3 flex-wrap justify-center mt-2">
+        {chips.map((chip) => (
+          <button
+            key={chip.value}
+            onClick={() => setInput(chip.value)}
+            className="text-xs px-3 py-1.5 rounded-full bg-[#18181f] border border-[#2a2a38] text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/40 transition-colors"
+          >
+            {chip.label}
+          </button>
+        ))}
+      </div>
+    </>
+  );
 }
 
 export function ChatArea({
@@ -227,29 +256,7 @@ export function ChatArea({
                 <div className="absolute inset-0 bg-[#5B5BD6]/30 rounded-2xl blur-2xl scale-150" />
                 <GradoLogo size={64} className="relative" />
               </motion.div>
-              <div>
-                <h1 className="text-2xl font-semibold text-white mb-1">
-                  Qu'est-ce qu'on crée aujourd'hui ?
-                </h1>
-                <p className="text-sm text-[#8888A8]">
-                  Décris ton idée — Grado la construit, la compose ou la filme en direct.
-                </p>
-              </div>
-              <div className="flex gap-3 flex-wrap justify-center mt-2">
-                {[
-                  { label: "🎵 Make a lo-fi beat", value: "make me a chill lo-fi beat" },
-                  { label: "🎬 Ocean at sunset video", value: "generate a video of an ocean at sunset" },
-                  { label: "💻 Build a todo app", value: "build me a beautiful todo app" },
-                ].map((chip) => (
-                  <button
-                    key={chip.value}
-                    onClick={() => setInput(chip.value)}
-                    className="text-xs px-3 py-1.5 rounded-full bg-[#18181f] border border-[#2a2a38] text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/40 transition-colors"
-                  >
-                    {chip.label}
-                  </button>
-                ))}
-              </div>
+              <WelcomeInner setInput={setInput} />
             </div>
           ) : (
             <>

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { GradoLogo } from "@/components/grado-logo";
 import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
+import { useI18n } from "@/lib/i18n";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export function Sidebar({
 }: SidebarProps) {
   const { user } = useAuth();
   const [, navigate] = useLocation();
+  const { t } = useI18n();
 
   if (!isOpen) return null;
 
@@ -60,7 +62,7 @@ export function Sidebar({
           onClick={onNew}
         >
           <Plus className="w-4 h-4" />
-          Nouveau chat
+          {t.newChat}
         </Button>
       </div>
 
@@ -68,7 +70,7 @@ export function Sidebar({
       <ScrollArea className="flex-1 px-3 py-1">
         {conversations.length === 0 ? (
           <div className="text-xs text-[#8888A8] p-3 text-center mt-4 bg-[#1a1a28] rounded-xl border border-[#2a2a38]">
-            Aucun chat. Commence !
+            {t.noConv}
           </div>
         ) : (
           <div className="space-y-1">
@@ -109,14 +111,14 @@ export function Sidebar({
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-[#8888A8] hover:text-white hover:bg-[#1a1a28] transition-colors"
         >
           <Settings className="w-3.5 h-3.5" />
-          <span>Paramètres</span>
+          <span>{t.settings}</span>
         </button>
         <button
           onClick={() => navigate("/admin")}
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-[#8888A8] hover:text-white hover:bg-[#1a1a28] transition-colors"
         >
           <Shield className="w-3.5 h-3.5" />
-          <span>Admin — Clients</span>
+          <span>{t.admin}</span>
         </button>
         {user && (
           <div className="px-3 py-2 text-xs text-[#5555A8] truncate">{user.email}</div>

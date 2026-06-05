@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { I18nProvider } from "@/lib/i18n";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/landing";
 import ChatPage from "@/pages/chat";
@@ -72,12 +73,14 @@ function App() {
     <ThemeProvider defaultTheme="dark" storageKey="grado-theme">
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
+          <I18nProvider>
           <AuthProvider>
             <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
               <Router />
             </WouterRouter>
             <Toaster />
           </AuthProvider>
+          </I18nProvider>
         </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>

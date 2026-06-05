@@ -1,25 +1,28 @@
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { Zap, Code2, Music, Video, ArrowRight, Check, Star } from "lucide-react";
+import { Zap, Code2, Music, Video, ArrowRight, Star } from "lucide-react";
 import { GradoLogo } from "@/components/grado-logo";
-
-const FEATURES = [
-  { icon: Code2, title: "Apps & Sites web", desc: "Décris ton idée, Grado génère l'application complète en quelques secondes avec preview live." },
-  { icon: Music, title: "Musique IA", desc: "Beats, mélodies, ambiances — génère des morceaux audio directement dans le chat." },
-  { icon: Video, title: "Vidéos IA", desc: "Crée des vidéos cinématiques à partir d'un simple texte. Prêtes à partager." },
-];
-
-const TESTIMONIALS = [
-  { name: "Karim B.", role: "Entrepreneur", text: "J'ai lancé mon site e-commerce en 10 minutes. Incroyable.", stars: 5 },
-  { name: "Sara M.", role: "Créatrice de contenu", text: "Je génère mes musiques pour mes vidéos sans aucune connaissance musicale.", stars: 5 },
-  { name: "Youssef A.", role: "Développeur", text: "Grado me fait gagner des heures chaque semaine sur les projets clients.", stars: 5 },
-];
+import { LangSwitcher } from "@/components/lang-switcher";
+import { useI18n } from "@/lib/i18n";
 
 export default function LandingPage() {
   const [, navigate] = useLocation();
+  const { t, rtl } = useI18n();
+
+  const FEATURES = [
+    { icon: Code2, title: t.f1Title, desc: t.f1Desc },
+    { icon: Music, title: t.f2Title, desc: t.f2Desc },
+    { icon: Video, title: t.f3Title, desc: t.f3Desc },
+  ];
+
+  const TESTIMONIALS = [
+    { name: "Karim B.", role: "Entrepreneur", text: t.t1, stars: 5 },
+    { name: "Sara M.", role: "Créatrice de contenu", text: t.t2, stars: 5 },
+    { name: "Youssef A.", role: "Développeur", text: t.t3, stars: 5 },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#0D0D12] text-white overflow-x-hidden">
+    <div className="min-h-screen bg-[#0D0D12] text-white overflow-x-hidden" dir={rtl ? "rtl" : "ltr"}>
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-[#1e1e2a]/80 bg-[#0D0D12]/85 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-5 h-14 flex items-center gap-4">
@@ -28,20 +31,20 @@ export default function LandingPage() {
             <span className="text-base font-bold tracking-tight">Grado</span>
           </div>
           <div className="flex-1" />
-          <button onClick={() => navigate("/pricing")} className="text-sm text-[#8888A8] hover:text-white transition-colors hidden sm:block">Tarifs</button>
-          <button onClick={() => navigate("/login")} className="text-sm text-[#8888A8] hover:text-white transition-colors">Connexion</button>
+          <LangSwitcher />
+          <button onClick={() => navigate("/pricing")} className="text-sm text-[#8888A8] hover:text-white transition-colors hidden sm:block">{t.navPricing}</button>
+          <button onClick={() => navigate("/login")} className="text-sm text-[#8888A8] hover:text-white transition-colors">{t.navLogin}</button>
           <button
             onClick={() => navigate("/register")}
             className="text-sm bg-[#5B5BD6] hover:bg-[#4a4ac4] text-white px-4 py-2 rounded-lg font-medium transition-all shadow-[0_0_16px_rgba(91,91,214,0.4)]"
           >
-            Commencer gratuitement
+            {t.navStart}
           </button>
         </div>
       </nav>
 
       {/* Hero */}
       <section className="pt-36 pb-24 px-5 relative overflow-hidden">
-        {/* Background glows */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-[#5B5BD6]/12 rounded-full blur-[120px] pointer-events-none" />
         <div className="absolute top-10 left-10 w-[300px] h-[300px] bg-[#8B5CF6]/8 rounded-full blur-[100px] pointer-events-none" />
         <div className="absolute top-10 right-10 w-[300px] h-[300px] bg-[#6366f1]/8 rounded-full blur-[100px] pointer-events-none" />
@@ -53,10 +56,9 @@ export default function LandingPage() {
             className="inline-flex items-center gap-2 bg-[#5B5BD6]/15 border border-[#5B5BD6]/30 rounded-full px-4 py-1.5 mb-6 shadow-[0_0_20px_rgba(91,91,214,0.15)]"
           >
             <Zap className="w-3.5 h-3.5 text-[#5B5BD6]" />
-            <span className="text-xs font-semibold text-[#5B5BD6]">Essai gratuit 48h · Aucune carte requise</span>
+            <span className="text-xs font-semibold text-[#5B5BD6]">{t.badge}</span>
           </motion.div>
 
-          {/* Big logo in hero */}
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -75,9 +77,9 @@ export default function LandingPage() {
             transition={{ delay: 0.05 }}
             className="text-5xl md:text-7xl font-extrabold leading-tight tracking-tight mb-6"
           >
-            Construis. Compose.{" "}
+            {t.heroLine1}{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#7B7BFF] to-[#5B5BD6]">
-              Crée.
+              {t.heroLine2}
             </span>
           </motion.h1>
 
@@ -87,7 +89,7 @@ export default function LandingPage() {
             transition={{ delay: 0.1 }}
             className="text-lg text-[#8888A8] mb-10 max-w-2xl mx-auto leading-relaxed"
           >
-            Décris ce que tu veux — Grado génère des applications, de la musique et des vidéos en direct dans le chat. L'IA créative tout-en-un.
+            {t.heroDesc}
           </motion.p>
 
           <motion.div
@@ -100,13 +102,13 @@ export default function LandingPage() {
               onClick={() => navigate("/register")}
               className="flex items-center gap-2 bg-[#5B5BD6] hover:bg-[#4a4ac4] text-white px-7 py-3.5 rounded-xl font-semibold text-base transition-all shadow-[0_0_32px_rgba(91,91,214,0.5)] hover:shadow-[0_0_48px_rgba(91,91,214,0.7)]"
             >
-              Créer mon compte <ArrowRight className="w-4 h-4" />
+              {t.ctaCreate} <ArrowRight className="w-4 h-4" />
             </button>
             <button
               onClick={() => navigate("/pricing")}
               className="flex items-center gap-2 border border-[#2a2a38] text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/50 px-7 py-3.5 rounded-xl font-medium text-base transition-all hover:shadow-[0_0_16px_rgba(91,91,214,0.15)]"
             >
-              Voir les tarifs
+              {t.ctaPricing}
             </button>
           </motion.div>
 
@@ -174,8 +176,8 @@ export default function LandingPage() {
         <div className="absolute bottom-0 left-1/4 w-[400px] h-[300px] bg-[#5B5BD6]/6 rounded-full blur-[100px] pointer-events-none" />
         <div className="max-w-5xl mx-auto relative">
           <div className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-bold mb-3">Tout ce dont tu as besoin</h2>
-            <p className="text-[#8888A8]">Un seul outil pour créer apps, musiques et vidéos.</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-3">{t.featuresTitle}</h2>
+            <p className="text-[#8888A8]">{t.featuresSub}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {FEATURES.map((f, i) => (
@@ -203,12 +205,12 @@ export default function LandingPage() {
         <div className="absolute top-0 right-1/4 w-[400px] h-[300px] bg-[#8B5CF6]/6 rounded-full blur-[100px] pointer-events-none" />
         <div className="max-w-5xl mx-auto relative">
           <div className="text-center mb-14">
-            <h2 className="text-3xl md:text-4xl font-bold mb-3">Ce qu'ils en disent</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-3">{t.testimonialsTitle}</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((t, i) => (
+            {TESTIMONIALS.map((item, i) => (
               <motion.div
-                key={t.name}
+                key={item.name}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -216,14 +218,14 @@ export default function LandingPage() {
                 className="bg-[#111118] border border-[#2a2a38] rounded-2xl p-6 hover:border-[#5B5BD6]/30 transition-all"
               >
                 <div className="flex gap-0.5 mb-3">
-                  {Array.from({ length: t.stars }).map((_, j) => (
+                  {Array.from({ length: item.stars }).map((_, j) => (
                     <Star key={j} className="w-4 h-4 fill-[#5B5BD6] text-[#5B5BD6]" />
                   ))}
                 </div>
-                <p className="text-sm text-[#C8C8E8] leading-relaxed mb-4">"{t.text}"</p>
+                <p className="text-sm text-[#C8C8E8] leading-relaxed mb-4">"{item.text}"</p>
                 <div>
-                  <p className="text-sm font-semibold text-white">{t.name}</p>
-                  <p className="text-xs text-[#8888A8]">{t.role}</p>
+                  <p className="text-sm font-semibold text-white">{item.name}</p>
+                  <p className="text-xs text-[#8888A8]">{item.role}</p>
                 </div>
               </motion.div>
             ))}
@@ -242,13 +244,13 @@ export default function LandingPage() {
               <GradoLogo size={56} className="relative" />
             </div>
           </div>
-          <h2 className="text-4xl md:text-5xl font-extrabold mb-4">Prêt à créer ?</h2>
-          <p className="text-[#8888A8] mb-8">Inscris-toi gratuitement. 48h d'essai. Aucune carte bancaire.</p>
+          <h2 className="text-4xl md:text-5xl font-extrabold mb-4">{t.ctaTitle}</h2>
+          <p className="text-[#8888A8] mb-8">{t.ctaSub}</p>
           <button
             onClick={() => navigate("/register")}
             className="inline-flex items-center gap-2 bg-[#5B5BD6] hover:bg-[#4a4ac4] text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all shadow-[0_0_40px_rgba(91,91,214,0.5)] hover:shadow-[0_0_60px_rgba(91,91,214,0.7)]"
           >
-            Créer mon compte <ArrowRight className="w-5 h-5" />
+            {t.ctaBtn} <ArrowRight className="w-5 h-5" />
           </button>
         </div>
       </section>
@@ -261,11 +263,11 @@ export default function LandingPage() {
             <span className="text-sm font-semibold">Grado</span>
           </div>
           <div className="flex gap-6">
-            <button onClick={() => navigate("/pricing")} className="text-xs text-[#8888A8] hover:text-white transition-colors">Tarifs</button>
-            <button onClick={() => navigate("/login")} className="text-xs text-[#8888A8] hover:text-white transition-colors">Connexion</button>
-            <button onClick={() => navigate("/register")} className="text-xs text-[#8888A8] hover:text-white transition-colors">Inscription</button>
+            <button onClick={() => navigate("/pricing")} className="text-xs text-[#8888A8] hover:text-white transition-colors">{t.navPricing}</button>
+            <button onClick={() => navigate("/login")} className="text-xs text-[#8888A8] hover:text-white transition-colors">{t.navLogin}</button>
+            <button onClick={() => navigate("/register")} className="text-xs text-[#8888A8] hover:text-white transition-colors">{t.navSignup}</button>
           </div>
-          <p className="text-xs text-[#8888A8]">© 2026 Grado · Tous droits réservés</p>
+          <p className="text-xs text-[#8888A8]">{t.footerRights}</p>
         </div>
       </footer>
     </div>

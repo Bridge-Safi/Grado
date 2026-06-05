@@ -4,10 +4,13 @@ import { motion } from "framer-motion";
 import { Eye, EyeOff, ArrowLeft, Loader2, Check } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { GradoLogo } from "@/components/grado-logo";
+import { LangSwitcher } from "@/components/lang-switcher";
+import { useI18n } from "@/lib/i18n";
 
 export default function RegisterPage() {
   const [, navigate] = useLocation();
   const { register } = useAuth();
+  const { t, rtl } = useI18n();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -29,14 +32,17 @@ export default function RegisterPage() {
     }
   };
 
-  const perks = ["Essai gratuit 48h", "Aucune carte bancaire", "Accès immédiat"];
+  const perks = [t.perk1, t.perk2, t.perk3];
 
   return (
-    <div className="min-h-screen bg-[#0D0D12] flex flex-col items-center justify-center px-4 relative overflow-hidden">
-      {/* Background glows */}
+    <div className="min-h-screen bg-[#0D0D12] flex flex-col items-center justify-center px-4 relative overflow-hidden" dir={rtl ? "rtl" : "ltr"}>
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#5B5BD6]/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-0 right-10 w-[300px] h-[300px] bg-[#8B5CF6]/8 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute top-0 left-10 w-[300px] h-[300px] bg-[#6366f1]/8 rounded-full blur-[100px] pointer-events-none" />
+
+      <div className="absolute top-4 right-4">
+        <LangSwitcher />
+      </div>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -47,7 +53,7 @@ export default function RegisterPage() {
           onClick={() => navigate("/")}
           className="flex items-center gap-1.5 text-sm text-[#8888A8] hover:text-white mb-8 transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" /> Retour
+          <ArrowLeft className="w-4 h-4" /> {t.back}
         </button>
 
         <div className="bg-[#111118] border border-[#5B5BD6]/20 rounded-2xl p-8 shadow-[0_0_60px_rgba(91,91,214,0.1)]">
@@ -57,8 +63,8 @@ export default function RegisterPage() {
               <GradoLogo size={40} className="relative" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">Créer un compte</h1>
-              <p className="text-xs text-[#8888A8]">Rejoins des milliers de créateurs</p>
+              <h1 className="text-xl font-bold text-white">{t.registerTitle}</h1>
+              <p className="text-xs text-[#8888A8]">{t.registerSub}</p>
             </div>
           </div>
 
@@ -72,37 +78,40 @@ export default function RegisterPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm text-[#8888A8] mb-1.5">Prénom / Nom</label>
+              <label className="block text-sm text-[#8888A8] mb-1.5">{t.fullName}</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Karim Benali"
+                autoComplete="name"
                 required
                 className="w-full bg-[#0D0D12] border border-[#2a2a38] rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#4a4a5a] focus:outline-none focus:border-[#5B5BD6]/70 focus:shadow-[0_0_0_3px_rgba(91,91,214,0.1)] transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-sm text-[#8888A8] mb-1.5">Email</label>
+              <label className="block text-sm text-[#8888A8] mb-1.5">{t.email}</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="ton@email.com"
+                autoComplete="email"
                 required
                 className="w-full bg-[#0D0D12] border border-[#2a2a38] rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#4a4a5a] focus:outline-none focus:border-[#5B5BD6]/70 focus:shadow-[0_0_0_3px_rgba(91,91,214,0.1)] transition-all"
               />
             </div>
 
             <div>
-              <label className="block text-sm text-[#8888A8] mb-1.5">Mot de passe</label>
+              <label className="block text-sm text-[#8888A8] mb-1.5">{t.password}</label>
               <div className="relative">
                 <input
                   type={showPw ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Min. 6 caractères"
+                  placeholder="Min. 6"
+                  autoComplete="new-password"
                   required
                   minLength={6}
                   className="w-full bg-[#0D0D12] border border-[#2a2a38] rounded-xl px-4 py-3 pr-11 text-sm text-white placeholder:text-[#4a4a5a] focus:outline-none focus:border-[#5B5BD6]/70 focus:shadow-[0_0_0_3px_rgba(91,91,214,0.1)] transition-all"
@@ -127,18 +136,16 @@ export default function RegisterPage() {
               className="w-full bg-[#5B5BD6] hover:bg-[#4a4ac4] disabled:opacity-60 text-white py-3 rounded-xl font-semibold text-sm transition-all shadow-[0_0_20px_rgba(91,91,214,0.4)] hover:shadow-[0_0_30px_rgba(91,91,214,0.6)] flex items-center justify-center gap-2"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Créer mon compte gratuit
+              {t.registerBtn}
             </button>
 
-            <p className="text-center text-xs text-[#4a4a5a]">
-              En t'inscrivant, tu acceptes les conditions d'utilisation.
-            </p>
+            <p className="text-center text-xs text-[#4a4a5a]">{t.terms}</p>
           </form>
 
           <p className="text-center text-sm text-[#8888A8] mt-5">
-            Déjà un compte ?{" "}
+            {t.hasAccount}{" "}
             <button onClick={() => navigate("/login")} className="text-[#7B7BFF] hover:text-[#a0a0ff] font-medium transition-colors">
-              Se connecter
+              {t.toLogin}
             </button>
           </p>
         </div>
