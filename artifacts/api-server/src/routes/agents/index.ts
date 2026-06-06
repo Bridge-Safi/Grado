@@ -16,6 +16,9 @@ function getUserId(req: any): number | null {
 
 function send(res: any, data: object) {
   res.write(`data: ${JSON.stringify(data)}\n\n`);
+  // Force flush — bypass any proxy/middleware buffering
+  if (typeof res.flush === "function") res.flush();
+  if (typeof (res as any).socket?.flush === "function") (res as any).socket.flush();
 }
 
 const AGENTS = [

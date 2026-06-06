@@ -28,8 +28,10 @@ export function AgentOrchestrator({ prompt, token, onPreview, onDone }: AgentOrc
   const [previewExpanded, setPreviewExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDone, setIsDone] = useState(false);
+  const [connecting, setConnecting] = useState(true);
   const outputRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const abortRef = useRef<AbortController | null>(null);
+  const firstEventRef = useRef(false);
 
   useEffect(() => {
     run();
@@ -38,6 +40,18 @@ export function AgentOrchestrator({ prompt, token, onPreview, onDone }: AgentOrc
 
   const run = async () => {
     abortRef.current = new AbortController();
+    firstEventRef.current = false;
+
+    // 30s timeout if no first event arrives — shows error
+    const timeoutId = setTimeout(() => {
+      if (!firstEventRef.current) {
+        setError("Les agents ne répondent pas. Réessaie dans quelques secondes.");
+        setConnecting(false);
+        onDone?.();
+        abortRef.current?.abort();
+      }
+    }, 30_000);
+
     try {
       const res = await fetch("/api/agents/run", {
         method: "POST",
@@ -50,7 +64,10 @@ export function AgentOrchestrator({ prompt, token, onPreview, onDone }: AgentOrc
       });
 
       if (!res.ok || !res.body) {
-        setError("Erreur de connexion aux agents");
+        clearTimeout(timeoutId);
+        const errText = await res.text().catch(() => "");
+        setError(`Erreur ${res.status} — ${errText || "connexion impossible"}`);
+        setConnecting(false);
         onDone?.();
         return;
       }
@@ -71,13 +88,22 @@ export function AgentOrchestrator({ prompt, token, onPreview, onDone }: AgentOrc
           if (!line.startsWith("data: ")) continue;
           try {
             const ev = JSON.parse(line.slice(6));
+            // First event received — clear timeout, mark connected
+            if (!firstEventRef.current) {
+              firstEventRef.current = true;
+              clearTimeout(timeoutId);
+              setConnecting(false);
+            }
             handleEvent(ev);
           } catch { /* skip malformed */ }
         }
       }
+      clearTimeout(timeoutId);
     } catch (e: any) {
+      clearTimeout(timeoutId);
       if (e.name !== "AbortError") {
         setError(e.message || "Erreur inconnue");
+        setConnecting(false);
         onDone?.();
       }
     }
@@ -156,20 +182,29 @@ export function AgentOrchestrator({ prompt, token, onPreview, onDone }: AgentOrc
       <div className="flex items-center gap-2 mb-3">
         <div className="flex items-center gap-1.5 bg-gradient-to-r from-[#8B5CF6]/20 to-[#5B5BD6]/20 border border-[#5B5BD6]/30 rounded-full px-3 py-1">
           <span className="text-xs font-bold text-white tracking-tight">⚡ Multi-Agents Grado</span>
-          {!isDone && <Loader2 className="w-3 h-3 animate-spin text-[#7B7BFF]" />}
+          {connecting && !error && <Loader2 className="w-3 h-3 animate-spin text-[#7B7BFF]" />}
+          {!connecting && !isDone && !error && <Loader2 className="w-3 h-3 animate-spin text-[#7B7BFF]" />}
           {isDone && !error && <CheckCircle2 className="w-3 h-3 text-green-400" />}
         </div>
-        <span className="text-xs text-[#8888A8]">{agents.filter(a => a.status === "done").length}/{agents.length || 4} agents</span>
+        {connecting && !error && (
+          <span className="text-xs text-[#8888A8] animate-pulse">Connexion aux agents…</span>
+        )}
+        {!connecting && !isDone && (
+          <span className="text-xs text-[#8888A8]">{agents.filter(a => a.status === "done").length}/{agents.length || 5} agents terminés</span>
+        )}
+        {isDone && !error && (
+          <span className="text-xs text-green-400">Pipeline terminé</span>
+        )}
       </div>
 
       {/* Agent cards */}
       <div className="space-y-2">
         {(agents.length === 0 ? [
-          { id: "orchestrateur", name: "Orchestrateur", icon: "🎯", color: "#8B5CF6", task: "En attente…", status: "pending" as const, output: "", index: 0 },
-          { id: "architecte", name: "Architecte", icon: "🏗️", color: "#06B6D4", task: "En attente…", status: "pending" as const, output: "", index: 1 },
-          { id: "designer", name: "Designer UX", icon: "🎨", color: "#EC4899", task: "En attente…", status: "pending" as const, output: "", index: 2 },
-          { id: "codeur", name: "Codeur", icon: "💻", color: "#10B981", task: "En attente…", status: "pending" as const, output: "", index: 3 },
-          { id: "revieweur", name: "Revieweur", icon: "🔍", color: "#F59E0B", task: "En attente…", status: "pending" as const, output: "", index: 4 },
+          { id: "orchestrateur", name: "Orchestrateur", icon: "🎯", color: "#8B5CF6", task: connecting ? "Initialisation…" : "En attente de son tour", status: "pending" as const, output: "", index: 0 },
+          { id: "architecte", name: "Architecte", icon: "🏗️", color: "#06B6D4", task: "En attente de son tour", status: "pending" as const, output: "", index: 1 },
+          { id: "designer", name: "Designer UX", icon: "🎨", color: "#EC4899", task: "En attente de son tour", status: "pending" as const, output: "", index: 2 },
+          { id: "codeur", name: "Codeur", icon: "💻", color: "#10B981", task: "En attente de son tour", status: "pending" as const, output: "", index: 3 },
+          { id: "revieweur", name: "Revieweur", icon: "🔍", color: "#F59E0B", task: "En attente de son tour", status: "pending" as const, output: "", index: 4 },
         ] : agents).map((agent, i) => {
           const isExpanded = expandedAgent === agent.id;
           const isRunning = agent.status === "running";
