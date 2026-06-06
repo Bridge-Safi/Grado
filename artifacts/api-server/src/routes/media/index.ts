@@ -257,8 +257,8 @@ router.post("/image", async (req, res) => {
 
   (async () => {
     try {
-      // Use Flux Schnell — synchronous, fast (~3s), high quality
-      const falRes = await fetch("https://fal.run/fal-ai/flux/schnell", {
+      // Use Flux Dev — higher quality than Schnell (20 steps), ~8-12s, photorealistic
+      const falRes = await fetch("https://fal.run/fal-ai/flux/dev", {
         method: "POST",
         headers: {
           "Authorization": `Key ${apiKey}`,
@@ -267,9 +267,11 @@ router.post("/image", async (req, res) => {
         body: JSON.stringify({
           prompt,
           image_size: "landscape_4_3",
-          num_inference_steps: 4,
+          num_inference_steps: 28,
+          guidance_scale: 3.5,
           num_images: 1,
           enable_safety_checker: true,
+          output_format: "jpeg",
         }),
       });
 
@@ -287,7 +289,7 @@ router.post("/image", async (req, res) => {
       const imgBuffer = await imgRes.arrayBuffer();
       const dir = path.join(WORKSPACE_ROOT, "attached_assets", "generated_images");
       fs.mkdirSync(dir, { recursive: true });
-      const fileName = `image_${record.id}_${Date.now()}.webp`;
+      const fileName = `image_${record.id}_${Date.now()}.jpg`;
       fs.writeFileSync(path.join(dir, fileName), Buffer.from(imgBuffer));
 
       await db
