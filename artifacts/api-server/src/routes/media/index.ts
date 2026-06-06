@@ -257,41 +257,58 @@ router.post("/image", async (req, res) => {
 
   (async () => {
     try {
-      // Use Flux Dev — higher quality than Schnell (20 steps), ~8-12s, photorealistic
-      const falRes = await fetch("https://fal.run/fal-ai/flux/dev", {
-        method: "POST",
-        headers: {
-          "Authorization": `Key ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt,
-          image_size: "landscape_4_3",
-          num_inference_steps: 28,
-          guidance_scale: 3.5,
-          num_images: 1,
-          enable_safety_checker: true,
-          output_format: "jpeg",
-        }),
-      });
-
-      if (!falRes.ok) {
-        const err = await falRes.text();
-        throw new Error(`FAL image error ${falRes.status}: ${err}`);
-      }
-
-      const data = await falRes.json() as any;
-      const imageUrl: string | undefined = data?.images?.[0]?.url;
-      if (!imageUrl) throw new Error("No image URL in FAL response");
-
-      // Download and save locally
-      const imgRes = await fetch(imageUrl);
-      const imgBuffer = await imgRes.arrayBuffer();
       const dir = path.join(WORKSPACE_ROOT, "attached_assets", "generated_images");
       fs.mkdirSync(dir, { recursive: true });
       const fileName = `image_${record.id}_${Date.now()}.jpg`;
-      fs.writeFileSync(path.join(dir, fileName), Buffer.from(imgBuffer));
+      const filePath = path.join(dir, fileName);
 
+      // ── Primary: Pollinations.ai — free, no API key, Flux-based ──────────────
+      const seed = Math.floor(Math.random() * 999999);
+      const encodedPrompt = encodeURIComponent(
+        prompt + ", masterpiece, highly detailed, sharp focus, professional photography"
+      );
+      const pollinationsUrl =
+        `https://image.pollinations.ai/prompt/${encodedPrompt}` +
+        `?width=1280&height=960&model=flux&nologo=true&enhance=true&seed=${seed}`;
+
+      let imageBuffer: Buffer | null = null;
+
+      try {
+        const imgRes = await fetch(pollinationsUrl, {
+          headers: { "User-Agent": "Grado/1.0" },
+          signal: AbortSignal.timeout(60_000),
+        });
+        if (imgRes.ok) {
+          imageBuffer = Buffer.from(await imgRes.arrayBuffer());
+        }
+      } catch (e: any) {
+        console.warn("Pollinations failed, trying FAL:", e.message);
+      }
+
+      // ── Fallback: FAL.ai Flux Schnell (if FAL_KEY set and Pollinations failed)
+      if (!imageBuffer && apiKey) {
+        const falRes = await fetch("https://fal.run/fal-ai/flux/schnell", {
+          method: "POST",
+          headers: { "Authorization": `Key ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt,
+            image_size: "landscape_4_3",
+            num_inference_steps: 4,
+            num_images: 1,
+            enable_safety_checker: true,
+          }),
+        });
+        if (!falRes.ok) throw new Error(`FAL image error ${falRes.status}: ${await falRes.text()}`);
+        const data = await falRes.json() as any;
+        const imageUrl: string | undefined = data?.images?.[0]?.url;
+        if (!imageUrl) throw new Error("No image URL in FAL response");
+        const dlRes = await fetch(imageUrl);
+        imageBuffer = Buffer.from(await dlRes.arrayBuffer());
+      }
+
+      if (!imageBuffer) throw new Error("Tous les services d'image ont échoué");
+
+      fs.writeFileSync(filePath, imageBuffer);
       await db
         .update(mediaGenerations)
         .set({ status: "done", filePath: `attached_assets/generated_images/${fileName}` })
