@@ -134,7 +134,7 @@ Rules: Be visually opinionated. Dark themes unless specified. Go bold — subtle
     color: "#10B981",
     task: "Génération du code…",
     model: "claude-sonnet-4-5",
-    maxTokens: 9000,
+    maxTokens: 7000,
     system: `You are the Grado Elite Coder — the most exceptional web developer alive. You write code that makes engineers gasp and users fall in love.
 
 You receive: a project brief, a technical architecture, and a design system. Your mission: write a COMPLETE, FLAWLESS, BREATHTAKING single HTML file.
@@ -173,28 +173,21 @@ If it's creative: push the boundary of what's possible in a browser`,
     icon: "🔍",
     color: "#F59E0B",
     task: "Révision et perfectionnement…",
-    model: "claude-sonnet-4-5",
-    maxTokens: 9000,
-    system: `You are the Grado Elite Code Reviewer — a perfectionist with the eye of a designer and the brain of a senior engineer.
+    model: "claude-haiku-4-5",
+    maxTokens: 5000,
+    system: `You are the Grado Code Reviewer — fast, precise, and effective.
 
-You receive the generated code and ALL specs. Your mission: make it SIGNIFICANTLY better.
+You receive complete HTML code. Your mission: output the FIXED version with targeted improvements only.
 
-REVIEW CHECKLIST:
-□ ALL features from the brief are implemented (add any missing ones)
-□ Design system is applied correctly (check every color, font, spacing value)
-□ Signature animation is implemented and smooth
-□ All CDN libraries are actually USED (remove unused ones)
-□ Zero JavaScript errors (fix all potential runtime issues)
-□ Loading states and error states are present and beautiful  
-□ Mobile responsive at 375px, 768px, 1280px
-□ Keyboard shortcuts and accessibility (aria labels, focus traps in modals)
-□ Local storage persistence where it makes sense
-□ Performance: requestAnimationFrame for animations, debounce for inputs
-□ The WOW factor — add one unexpected detail that delights the user
+QUICK CHECKLIST (fix what's broken/missing):
+□ JavaScript runtime errors → fix them
+□ Missing features from the brief → add them concisely
+□ Design inconsistencies → align colors/spacing with the design system
+□ Mobile responsive issues → fix breakpoints
+□ Add ONE delightful surprise the user didn't ask for
 
-Output ONLY the improved complete HTML inside \`\`\`html ... \`\`\`
-
-IMPORTANT: Don't be conservative. Make bold improvements. If something is mediocre, make it exceptional. If a feature is missing, add it. Output the FULL file — never truncate.`,
+Output ONLY the complete fixed HTML inside \`\`\`html ... \`\`\`
+Be surgical — don't rewrite what already works. Output the FULL file.`,
     buildPrompt: (p: string, prev: string[]) =>
       `User request: "${p}"\n\n---\nPROJECT BRIEF:\n${prev[0]}\n\n---\nTECHNICAL ARCHITECTURE:\n${prev[1]}\n\n---\nDESIGN SYSTEM:\n${prev[2]}\n\n---\nCODE TO REVIEW AND PERFECT:\n${prev[3]}\n\nOutput the perfected version.`,
   },

@@ -32,6 +32,7 @@ export function AgentOrchestrator({ prompt, token, onPreview, onDone }: AgentOrc
   const outputRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const abortRef = useRef<AbortController | null>(null);
   const firstEventRef = useRef(false);
+  const doneRef = useRef(false);
 
   useEffect(() => {
     run();
@@ -155,12 +156,14 @@ export function AgentOrchestrator({ prompt, token, onPreview, onDone }: AgentOrc
         break;
 
       case "done":
+        doneRef.current = true;
         setIsDone(true);
         onDone?.();
         break;
 
       case "error":
         setError(ev.message);
+        setConnecting(false);
         setIsDone(true);
         onDone?.();
         break;
@@ -319,8 +322,22 @@ export function AgentOrchestrator({ prompt, token, onPreview, onDone }: AgentOrc
 
       {/* Error */}
       {error && (
-        <div className="mt-3 flex items-start gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+        <div className="mt-3 flex items-center justify-between gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
           <span className="text-red-400 text-sm">{error}</span>
+          <button
+            onClick={() => {
+              setError(null);
+              setConnecting(true);
+              setIsDone(false);
+              setAgents([]);
+              doneRef.current = false;
+              firstEventRef.current = false;
+              run();
+            }}
+            className="shrink-0 text-xs px-3 py-1.5 rounded-lg bg-[#5B5BD6]/20 border border-[#5B5BD6]/40 text-[#a0a0ff] hover:bg-[#5B5BD6]/30 transition-colors"
+          >
+            Réessayer
+          </button>
         </div>
       )}
 
