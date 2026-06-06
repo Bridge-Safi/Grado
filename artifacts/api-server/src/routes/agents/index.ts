@@ -210,20 +210,6 @@ router.post("/run", async (req, res) => {
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.setHeader("X-Accel-Buffering", "no");
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.flushHeaders();
-
-  // Disable Nagle algorithm — send every chunk immediately without batching
-  const socket = (res as any).socket;
-  if (socket?.setNoDelay) socket.setNoDelay(true);
-
-  // Heartbeat every 5s — flushes proxy buffers and keeps connection alive
-  const heartbeat = setInterval(() => {
-    try {
-      res.write(": heartbeat\n\n");
-      if (typeof res.flush === "function") (res as any).flush();
-    } catch { /* ignore if already closed */ }
-  }, 5_000);
 
   const agentOutputs: string[] = [];
 
@@ -273,7 +259,6 @@ router.post("/run", async (req, res) => {
   } catch (err: any) {
     send(res, { type: "error", message: err.message || "Erreur lors de l'exécution des agents" });
   } finally {
-    clearInterval(heartbeat);
     res.end();
   }
 });
