@@ -152,7 +152,8 @@ export function ChatArea({
   }, [conversationId]);
 
   useEffect(() => {
-    setLocalMessages(messages);
+    // Don't overwrite locally-built messages while multi-agent is active
+    if (!isMultiAgent) setLocalMessages(messages);
   }, [messages]);
 
   useEffect(() => {
@@ -547,6 +548,19 @@ export function ChatArea({
                     <AgentOrchestrator
                       prompt={multiAgentPrompt}
                       token={localStorage.getItem("grado_token")}
+                      onPreview={(html) => {
+                        // Add generated HTML as a real assistant message so it survives DB sync
+                        setLocalMessages((prev) => [
+                          ...prev,
+                          {
+                            id: Date.now(),
+                            conversationId: activeId!,
+                            role: "assistant",
+                            content: "```html\n" + html + "\n```",
+                            createdAt: new Date().toISOString(),
+                          } as AnthropicMessage,
+                        ]);
+                      }}
                       onDone={() => {
                         onRunEnd();
                         // don't clear isMultiAgent here — keep preview visible

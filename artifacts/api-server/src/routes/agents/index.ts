@@ -194,8 +194,16 @@ Be surgical — don't rewrite what already works. Output the FULL file.`,
 ];
 
 function extractHtml(text: string): string | null {
+  // Try with closing ```
   const m = text.match(/```html\s*([\s\S]*?)```/);
-  return m ? m[1].trim() : null;
+  if (m) return m[1].trim();
+  // Fallback: truncated output (no closing ```) — grab everything after ```html
+  const m2 = text.match(/```html\s*([\s\S]+)/);
+  if (m2) return m2[1].trim();
+  // Last resort: if the text contains a full DOCTYPE/html tag
+  const m3 = text.match(/(<!DOCTYPE[\s\S]+<\/html>)/i);
+  if (m3) return m3[1].trim();
+  return null;
 }
 
 // POST /api/agents/run — pipeline multi-agents SSE
