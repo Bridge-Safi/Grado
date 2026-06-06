@@ -241,6 +241,7 @@ export function ChatArea({
     const content = input.trim();
     if (!content || isRunning) return;
 
+    setIsMultiAgent(false);
     setInput("");
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -356,6 +357,7 @@ export function ChatArea({
     const content = input.trim();
     if (!content || isRunning) return;
 
+    setIsMultiAgent(false);
     setInput("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
 
@@ -531,7 +533,7 @@ export function ChatArea({
               </AnimatePresence>
 
               <AnimatePresence>
-                {isRunning && isMultiAgent && (
+                {isMultiAgent && (
                   <motion.div
                     key="multi-agent"
                     initial={{ opacity: 0, y: 10 }}
@@ -546,8 +548,8 @@ export function ChatArea({
                       prompt={multiAgentPrompt}
                       token={localStorage.getItem("grado_token")}
                       onDone={() => {
-                        setIsMultiAgent(false);
                         onRunEnd();
+                        // don't clear isMultiAgent here — keep preview visible
                       }}
                     />
                   </motion.div>
