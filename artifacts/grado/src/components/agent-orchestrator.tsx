@@ -43,15 +43,15 @@ export function AgentOrchestrator({ prompt, token, onPreview, onDone }: AgentOrc
     abortRef.current = new AbortController();
     firstEventRef.current = false;
 
-    // 30s timeout if no first event arrives — shows error
+    // 90s timeout if no first event arrives (proxy can buffer up to ~30s)
     const timeoutId = setTimeout(() => {
       if (!firstEventRef.current) {
-        setError("Les agents ne répondent pas. Réessaie dans quelques secondes.");
+        setError("Les agents ne répondent pas après 90s. Clique Réessayer.");
         setConnecting(false);
         onDone?.();
         abortRef.current?.abort();
       }
-    }, 30_000);
+    }, 90_000);
 
     try {
       const res = await fetch("/api/agents/run", {

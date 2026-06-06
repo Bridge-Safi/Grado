@@ -16,6 +16,38 @@ import AdminPage from "@/pages/admin";
 import MySitesPage from "@/pages/my-sites";
 import SiteViewPage from "@/pages/site-view";
 import { Loader2 } from "lucide-react";
+import React from "react";
+
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="min-h-screen bg-[#0D0D12] flex flex-col items-center justify-center gap-4 text-center px-6">
+          <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-2xl">⚡</div>
+          <h2 className="text-white font-semibold text-lg">Une erreur inattendue est survenue</h2>
+          <p className="text-[#8888A8] text-sm max-w-sm">{this.state.error.message}</p>
+          <button
+            onClick={() => { this.setState({ error: null }); window.location.reload(); }}
+            className="mt-2 px-4 py-2 rounded-xl bg-[#5B5BD6]/20 border border-[#5B5BD6]/40 text-white text-sm hover:bg-[#5B5BD6]/30 transition-colors"
+          >
+            Recharger l'application
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const queryClient = new QueryClient();
 
@@ -76,20 +108,22 @@ function Router() {
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="grado-theme">
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <I18nProvider>
-          <AuthProvider>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Router />
-            </WouterRouter>
-            <Toaster />
-          </AuthProvider>
-          </I18nProvider>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider defaultTheme="dark" storageKey="grado-theme">
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <I18nProvider>
+              <AuthProvider>
+                <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                  <Router />
+                </WouterRouter>
+                <Toaster />
+              </AuthProvider>
+            </I18nProvider>
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 
