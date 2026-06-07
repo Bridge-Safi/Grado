@@ -442,7 +442,11 @@ export function ChatArea({
                     ? extractHtml(msg.content, precedingUserImgUrl ? [precedingUserImgUrl] : undefined)
                     : null;
                   const mediaTag = msg.role === "assistant" ? extractMediaTag(msg.content) : null;
-                  const displayContent = mediaTag ? stripMediaTag(msg.content) : msg.content;
+                  const rawDisplay = mediaTag ? stripMediaTag(msg.content) : msg.content;
+                  // When HTML is present, only show text before the code block (hide the raw code)
+                  const displayContent = html
+                    ? rawDisplay.split(/```html/i)[0].trim()
+                    : rawDisplay;
                   const mediaJob = mediaTag ? mediaJobs.find((j) => j.prompt === mediaTag.prompt) : undefined;
                   const msgImagePreview = (msg as any).imagePreview as string | undefined;
 
@@ -476,8 +480,8 @@ export function ChatArea({
                           </div>
                         )}
 
-                        {/* Text bubble */}
-                        {(!mediaTag || displayContent) && (
+                        {/* Text bubble — hidden when message is pure HTML (preview replaces it) */}
+                        {(!html || displayContent) && (!mediaTag || displayContent) && (
                           <div
                             className={cn(
                               "rounded-2xl px-4 py-3 text-sm",
