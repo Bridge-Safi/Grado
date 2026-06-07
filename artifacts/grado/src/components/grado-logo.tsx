@@ -20,19 +20,11 @@ export function GradoLogo({ size = 32, className = "" }: GradoLogoProps) {
           <stop offset="0%" stopColor="#A78BFF" />
           <stop offset="100%" stopColor="#5B5BD6" />
         </linearGradient>
-        <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
-          <feGaussianBlur stdDeviation="1.5" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
       </defs>
       {/* Lightning bolt */}
       <path
         d="M18.5 3L9 17.5H15.5L13.5 29L23 14.5H16.5L18.5 3Z"
         fill="url(#bolt-grad)"
-        filter="url(#glow)"
       />
     </svg>
   );

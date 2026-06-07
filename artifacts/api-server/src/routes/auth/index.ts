@@ -76,6 +76,27 @@ router.post("/login", async (req, res) => {
   });
 });
 
+// POST /auth/forgot-password — reset without email verification (no email service)
+router.post("/forgot-password", async (req, res) => {
+  const { email, newPassword } = req.body;
+  if (!email || !newPassword) {
+    res.status(400).json({ error: "Email et nouveau mot de passe requis" });
+    return;
+  }
+  if (newPassword.length < 6) {
+    res.status(400).json({ error: "Le mot de passe doit faire au moins 6 caractères" });
+    return;
+  }
+  const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1);
+  if (!user) {
+    res.status(404).json({ error: "Aucun compte trouvé avec cet email" });
+    return;
+  }
+  const newHash = await bcrypt.hash(newPassword, 10);
+  await db.update(users).set({ passwordHash: newHash }).where(eq(users.id, user.id));
+  res.json({ ok: true });
+});
+
 // POST /auth/change-password
 router.post("/change-password", async (req, res) => {
   const auth = req.headers.authorization;

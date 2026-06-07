@@ -58,9 +58,8 @@ export default function RegisterPage() {
 
         <div className="bg-[#111118] border border-[#5B5BD6]/20 rounded-2xl p-8 shadow-[0_0_60px_rgba(91,91,214,0.1)]">
           <div className="flex items-center gap-3 mb-3">
-            <div className="relative">
-              <div className="absolute inset-0 bg-[#5B5BD6]/30 rounded-xl blur-lg" />
-              <GradoLogo size={40} className="relative" />
+            <div>
+              <GradoLogo size={40} />
             </div>
             <div>
               <h1 className="text-xl font-bold text-white">{t.registerTitle}</h1>

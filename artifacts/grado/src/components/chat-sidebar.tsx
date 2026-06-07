@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Trash2, MessageSquare, PanelLeftClose, Settings, Shield, Globe } from "lucide-react";
+import { Plus, Trash2, MessageSquare, PanelLeftClose, Settings, Shield, Globe, Download } from "lucide-react";
 import { AnthropicConversation } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -8,6 +8,7 @@ import { GradoLogo } from "@/components/grado-logo";
 import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
 import { useI18n } from "@/lib/i18n";
+import { usePwaInstall } from "@/hooks/use-pwa-install";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export function Sidebar({
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const { t } = useI18n();
+  const { canInstall, install } = usePwaInstall();
 
   if (!isOpen) return null;
 
@@ -39,9 +41,8 @@ export function Sidebar({
       {/* Header */}
       <div className="p-4 flex items-center justify-between border-b border-[#1e1e2a]">
         <div className="flex items-center gap-2.5">
-          <div className="relative">
-            <div className="absolute inset-0 bg-[#5B5BD6]/25 rounded-lg blur-md" />
-            <GradoLogo size={26} className="relative" />
+          <div>
+            <GradoLogo size={26} />
           </div>
           <span className="font-bold text-white tracking-tight">Grado</span>
         </div>
@@ -127,6 +128,15 @@ export function Sidebar({
           >
             <Shield className="w-3.5 h-3.5" />
             <span>{t.admin}</span>
+          </button>
+        )}
+        {canInstall && (
+          <button
+            onClick={install}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-[#5B5BD6] hover:text-white hover:bg-[#1a1a28] transition-colors border border-[#5B5BD6]/20 hover:border-[#5B5BD6]/50"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Installer l'app</span>
           </button>
         )}
         {user && (

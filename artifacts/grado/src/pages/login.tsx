@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft, Loader2, Download } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { GradoLogo } from "@/components/grado-logo";
 import { LangSwitcher } from "@/components/lang-switcher";
 import { useI18n } from "@/lib/i18n";
+import { usePwaInstall } from "@/hooks/use-pwa-install";
 
 export default function LoginPage() {
   const [, navigate] = useLocation();
   const { login } = useAuth();
   const { t, rtl } = useI18n();
+  const { canInstall, install } = usePwaInstall();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -56,9 +58,8 @@ export default function LoginPage() {
 
         <div className="bg-[#111118] border border-[#5B5BD6]/20 rounded-2xl p-8 shadow-[0_0_60px_rgba(91,91,214,0.1)]">
           <div className="flex items-center gap-3 mb-8">
-            <div className="relative">
-              <div className="absolute inset-0 bg-[#5B5BD6]/30 rounded-xl blur-lg" />
-              <GradoLogo size={40} className="relative" />
+            <div>
+              <GradoLogo size={40} />
             </div>
             <div>
               <h1 className="text-xl font-bold text-white">{t.loginTitle}</h1>
@@ -102,6 +103,16 @@ export default function LoginPage() {
               </div>
             </div>
 
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => navigate("/forgot-password")}
+                className="text-xs text-[#7B7BFF] hover:text-[#a0a0ff] transition-colors"
+              >
+                Mot de passe oublié ?
+              </button>
+            </div>
+
             {error && (
               <p className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">{error}</p>
             )}
@@ -114,6 +125,17 @@ export default function LoginPage() {
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               {t.loginBtn}
             </button>
+
+            {canInstall && (
+              <button
+                type="button"
+                onClick={install}
+                className="w-full flex items-center justify-center gap-2 border border-[#5B5BD6]/30 hover:border-[#5B5BD6]/60 text-[#8888A8] hover:text-white py-3 rounded-xl text-sm transition-all hover:bg-[#5B5BD6]/10"
+              >
+                <Download className="w-4 h-4" />
+                Installer l'application
+              </button>
+            )}
           </form>
 
           <p className="text-center text-sm text-[#8888A8] mt-6">
