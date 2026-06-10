@@ -158,12 +158,16 @@ export function ChatArea({
   // Track if current request is a build (vs quick question)
   const [isBuilding, setIsBuilding] = useState(false);
 
+  // More options menu
+  const [showMore, setShowMore] = useState(false);
+
   // Voice input
   const { isListening, start: startListening, stop: stopListening } = useVoiceInput((text) => {
     setInput(prev => prev ? prev + " " + text : text);
   });
 
   const { token } = useAuth();
+  const { t, rtl } = useI18n();
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -656,12 +660,13 @@ export function ChatArea({
       <div className="border-t border-[#2a2a38] bg-[#111118] px-4 pt-2 pb-3">
         <div className="max-w-2xl mx-auto">
 
-          {/* Toolbar: agents + model */}
-          <div className="flex items-center gap-2 mb-2 flex-wrap">
-            {/* Agent selector */}
+          {/* Toolbar — simplified: 3 controls + ··· overflow */}
+          <div className={cn("flex items-center gap-2 mb-2", rtl && "flex-row-reverse")}>
+
+            {/* 1 — Agent mode selector */}
             <div className="relative">
               <button
-                onClick={() => setShowAgents((v) => !v)}
+                onClick={() => { setShowAgents(v => !v); setShowMore(false); }}
                 className={cn(
                   "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all",
                   showAgents
@@ -672,7 +677,6 @@ export function ChatArea({
                 <activeAgent.icon className="w-3 h-3" />
                 {activeAgent.label}
               </button>
-
               <AnimatePresence>
                 {showAgents && (
                   <motion.div
@@ -680,101 +684,142 @@ export function ChatArea({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 4, scale: 0.97 }}
                     transition={{ duration: 0.12 }}
-                    className="absolute bottom-full mb-2 left-0 bg-[#1a1a24] border border-[#2a2a38] rounded-xl p-1.5 z-50 min-w-[190px] shadow-xl"
+                    className={cn(
+                      "absolute bottom-full mb-2 bg-[#1a1a24] border border-[#2a2a38] rounded-xl p-1.5 z-50 min-w-[200px] shadow-xl",
+                      rtl ? "right-0" : "left-0"
+                    )}
                   >
-                    {(["Création", "Connaissance"] as const).map((group) => (
-                      <div key={group}>
-                        <div className="px-2.5 py-1 text-[9px] font-semibold uppercase tracking-widest text-[#5B5BD6]/60 mt-1 first:mt-0">
-                          {group}
+                    {(["Création", "Connaissance"] as const).map((group) => {
+                      const groupLabel = group === "Création" ? t.groupCreation : t.groupKnowledge;
+                      return (
+                        <div key={group}>
+                          <div className="px-2.5 py-1 text-[9px] font-semibold uppercase tracking-widest text-[#5B5BD6]/60 mt-1 first:mt-0">
+                            {groupLabel}
+                          </div>
+                          {AGENTS.filter(a => a.group === group).map((ag) => {
+                            const Icon = ag.icon;
+                            return (
+                              <button
+                                key={ag.id}
+                                onClick={() => { setAgentMode(ag.id); setShowAgents(false); }}
+                                className={cn(
+                                  "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all",
+                                  rtl ? "flex-row-reverse text-right" : "text-left",
+                                  agentMode === ag.id
+                                    ? "bg-[#5B5BD6]/15 text-white"
+                                    : "text-[#8888A8] hover:text-white hover:bg-[#ffffff08]"
+                                )}
+                              >
+                                <Icon className="w-3.5 h-3.5 shrink-0" />
+                                <div>
+                                  <div className="font-medium">{ag.label}</div>
+                                  <div className="text-[10px] opacity-60">{ag.desc}</div>
+                                </div>
+                              </button>
+                            );
+                          })}
                         </div>
-                        {AGENTS.filter(a => a.group === group).map((ag) => {
-                          const Icon = ag.icon;
-                          return (
-                            <button
-                              key={ag.id}
-                              onClick={() => { setAgentMode(ag.id); setShowAgents(false); }}
-                              className={cn(
-                                "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all text-left",
-                                agentMode === ag.id
-                                  ? "bg-[#5B5BD6]/15 text-white"
-                                  : "text-[#8888A8] hover:text-white hover:bg-[#ffffff08]"
-                              )}
-                            >
-                              <Icon className="w-3.5 h-3.5 shrink-0" />
-                              <div>
-                                <div className="font-medium">{ag.label}</div>
-                                <div className="text-[10px] opacity-60">{ag.desc}</div>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </motion.div>
                 )}
               </AnimatePresence>
             </div>
 
-            {/* Model toggle */}
+            {/* 2 — Model toggle (Rapide / Intelligent) */}
             <div className="flex items-center bg-[#18181f] border border-[#2a2a38] rounded-lg p-0.5">
               <button
                 onClick={() => setModel("haiku")}
                 className={cn(
                   "flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all",
-                  model === "haiku"
-                    ? "bg-[#5B5BD6]/20 text-white"
-                    : "text-[#8888A8] hover:text-white"
+                  model === "haiku" ? "bg-[#5B5BD6]/20 text-white" : "text-[#8888A8] hover:text-white"
                 )}
               >
                 <Zap className="w-3 h-3" />
-                Rapide
+                {t.toolFast}
               </button>
               <button
                 onClick={() => setModel("sonnet")}
                 className={cn(
                   "flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all",
-                  model === "sonnet"
-                    ? "bg-[#5B5BD6]/20 text-white"
-                    : "text-[#8888A8] hover:text-white"
+                  model === "sonnet" ? "bg-[#5B5BD6]/20 text-white" : "text-[#8888A8] hover:text-white"
                 )}
               >
                 <Brain className="w-3 h-3" />
-                Intelligent
+                {t.toolSmart}
               </button>
             </div>
 
-            {/* Reflection mode */}
-            <button
-              onClick={() => setReflectionMode(v => !v)}
-              title="Mode réflexion — Grado pense avant de répondre"
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all",
-                reflectionMode
-                  ? "bg-amber-500/15 border-amber-500/40 text-amber-300"
-                  : "bg-[#18181f] border-[#2a2a38] text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/30"
-              )}
-            >
-              <Brain className="w-3 h-3" />
-              Réflexion
-            </button>
+            {/* 3 — ··· More options (Réflexion + Partager) */}
+            <div className="relative">
+              <button
+                onClick={() => { setShowMore(v => !v); setShowAgents(false); }}
+                title={t.toolMore}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all",
+                  showMore || reflectionMode
+                    ? "bg-[#5B5BD6]/15 border-[#5B5BD6]/40 text-white"
+                    : "bg-[#18181f] border-[#2a2a38] text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/30"
+                )}
+              >
+                {reflectionMode && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />}
+                <ChevronUp className={cn("w-3 h-3 transition-transform", !showMore && "rotate-180")} />
+              </button>
+              <AnimatePresence>
+                {showMore && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 4, scale: 0.97 }}
+                    transition={{ duration: 0.12 }}
+                    className={cn(
+                      "absolute bottom-full mb-2 bg-[#1a1a24] border border-[#2a2a38] rounded-xl p-1.5 z-50 min-w-[160px] shadow-xl",
+                      rtl ? "right-0" : "left-0"
+                    )}
+                  >
+                    {/* Réflexion */}
+                    <button
+                      onClick={() => { setReflectionMode(v => !v); setShowMore(false); }}
+                      className={cn(
+                        "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all",
+                        rtl ? "flex-row-reverse text-right" : "text-left",
+                        reflectionMode
+                          ? "bg-amber-500/12 text-amber-300"
+                          : "text-[#8888A8] hover:text-white hover:bg-[#ffffff08]"
+                      )}
+                    >
+                      <Brain className="w-3.5 h-3.5 shrink-0" />
+                      <div>
+                        <div className="font-medium">{t.toolReflection}</div>
+                        <div className="text-[10px] opacity-60">
+                          {reflectionMode ? (rtl ? "مفعّل" : "Activé ✓") : (rtl ? "Grado يفكّر أولاً" : "Grado pense d'abord")}
+                        </div>
+                      </div>
+                    </button>
+                    {/* Partager */}
+                    <div className={cn("px-1", rtl && "flex justify-end")}>
+                      <ShareButton conversationId={activeId} token={token} label={t.toolShare} rtl={rtl} />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
-            {/* Share button */}
-            <ShareButton conversationId={activeId} token={token} />
-
-            {/* Multi-Agent button */}
+            {/* 4 — Multi-Agents (right-aligned) */}
             <button
               onClick={handleMultiAgent}
               disabled={!input.trim() || isRunning}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border transition-all ml-auto",
+                "flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border transition-all",
+                rtl ? "mr-auto" : "ml-auto",
                 input.trim() && !isRunning
                   ? "bg-gradient-to-r from-[#8B5CF6]/20 to-[#5B5BD6]/20 border-[#7B5CF6]/50 text-white hover:from-[#8B5CF6]/30 hover:to-[#5B5BD6]/30 shadow-[0_0_12px_rgba(139,92,246,0.2)]"
                   : "bg-[#18181f] border-[#2a2a38] text-[#8888A8]/50 cursor-not-allowed"
               )}
-              title="Lancer 4 agents IA spécialisés pour construire ton projet"
+              title={t.toolMultiAgents}
             >
               <Users className="w-3 h-3" />
-              ⚡ Multi-Agents
+              ⚡ {t.toolMultiAgents}
             </button>
           </div>
 
