@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
 import { useI18n } from "@/lib/i18n";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
+import { ProjectsPanel } from "./projects-panel";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -65,6 +66,16 @@ export function Sidebar({
           <Plus className="w-4 h-4" />
           {t.newChat}
         </Button>
+      </div>
+
+      {/* Projects */}
+      <div className="border-b border-[#1e1e2a] py-2">
+        <ProjectsPanel
+          token={localStorage.getItem("grado_token")}
+          conversations={conversations}
+          activeConvId={activeId}
+          onSelectConv={onSelect}
+        />
       </div>
 
       {/* Conversations */}

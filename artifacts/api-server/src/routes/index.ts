@@ -8,6 +8,9 @@ import adminRouter from "./admin";
 import sitesRouter from "./sites";
 import paymentsRouter from "./payments";
 import agentsRouter from "./agents";
+import settingsRouter from "./settings";
+import projectsRouter from "./projects";
+import shareRouter from "./share";
 
 const router: IRouter = Router();
 
@@ -20,5 +23,8 @@ router.use("/media", mediaRouter);
 router.use("/sites", sitesRouter);
 router.use("/payments", paymentsRouter);
 router.use("/agents", agentsRouter);
+router.use("/user-settings", settingsRouter);
+router.use("/projects", projectsRouter);
+router.use("/share", shareRouter);
 
 export default router;

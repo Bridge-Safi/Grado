@@ -16,6 +16,7 @@ import AdminPage from "@/pages/admin";
 import MySitesPage from "@/pages/my-sites";
 import SiteViewPage from "@/pages/site-view";
 import ForgotPasswordPage from "@/pages/forgot-password";
+import SharedConversationPage from "@/pages/shared-conversation";
 import { Loader2 } from "lucide-react";
 import React from "react";
 
@@ -102,6 +103,7 @@ function Router() {
         <ProtectedRoute component={MySitesPage} />
       </Route>
       <Route path="/forgot-password" component={ForgotPasswordPage} />
+      <Route path="/share/:slug" component={SharedConversationPage} />
       <Route path="/s/:slug" component={SiteViewPage} />
       <Route component={NotFound} />
     </Switch>

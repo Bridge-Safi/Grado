@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Paperclip, SendHorizonal, Globe, Palette, GalleryHorizontal, Sparkles, BarChart3, Gamepad2, FileText, X, Zap, Brain, Code2, Lightbulb, BarChart2, Users } from "lucide-react";
+import { Paperclip, SendHorizonal, Globe, Palette, GalleryHorizontal, Sparkles, BarChart3, Gamepad2, FileText, X, Zap, Brain, Code2, Lightbulb, BarChart2, Users, Mic, MicOff, ChevronDown, ChevronUp } from "lucide-react";
 import { AgentOrchestrator } from "./agent-orchestrator";
 import { AnthropicMessage } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ import { extractMediaTag, stripMediaTag } from "@/lib/extract-media";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
+import { useVoiceInput } from "@/hooks/use-voice-input";
+import { ShareButton } from "./share-button";
 
 interface ChatAreaProps {
   conversationId: number | null;
@@ -125,7 +127,6 @@ export function ChatArea({
   const [localMessages, setLocalMessages] = useState<AnthropicMessage[]>([]);
   const [activeId, setActiveId] = useState<number | null>(null);
   const [mediaJobs, setMediaJobs] = useState<MediaJob[]>([]);
-  // Map: user message id → data URL (for __USER_IMAGE_1__ replacement in HTML)
   const [msgImageMap, setMsgImageMap] = useState<Record<number, string>>({});
 
   // Image upload state
@@ -142,6 +143,18 @@ export function ChatArea({
   // Multi-agent mode
   const [isMultiAgent, setIsMultiAgent] = useState(false);
   const [multiAgentPrompt, setMultiAgentPrompt] = useState("");
+
+  // Reflection mode (think before answering)
+  const [reflectionMode, setReflectionMode] = useState(false);
+  const [thinkingSteps, setThinkingSteps] = useState<string[]>([]);
+  const [expandedThinking, setExpandedThinking] = useState<Record<number, boolean>>({});
+
+  // Voice input
+  const { isListening, start: startListening, stop: stopListening } = useVoiceInput((text) => {
+    setInput(prev => prev ? prev + " " + text : text);
+  });
+
+  const { token } = useAuth();
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -280,7 +293,10 @@ export function ChatArea({
     onRunStart();
 
     try {
-      const body: Record<string, any> = { content, model, agentMode };
+      const reflectPrefix = reflectionMode
+        ? "[MODE RÉFLEXION] Avant de répondre, pense étape par étape entre des balises <think>...</think>, puis donne ta réponse finale après.\n\n"
+        : "";
+      const body: Record<string, any> = { content: reflectPrefix + content, model, agentMode };
       if (sentImageBase64) {
         body.imageData = sentImageBase64;
         body.imageMimeType = sentImageMime;
@@ -443,10 +459,14 @@ export function ChatArea({
                     : null;
                   const mediaTag = msg.role === "assistant" ? extractMediaTag(msg.content) : null;
                   const rawDisplay = mediaTag ? stripMediaTag(msg.content) : msg.content;
+                  // Extract <think>...</think> block for reflection mode display
+                  const thinkMatch = msg.role === "assistant" ? rawDisplay.match(/<think>([\s\S]*?)<\/think>/i) : null;
+                  const thinkContent = thinkMatch ? thinkMatch[1].trim() : null;
+                  const contentWithoutThink = thinkContent ? rawDisplay.replace(/<think>[\s\S]*?<\/think>/i, "").trim() : rawDisplay;
                   // When HTML is present, only show text before the code block (hide the raw code)
                   const displayContent = html
-                    ? rawDisplay.split(/```html/i)[0].trim()
-                    : rawDisplay;
+                    ? contentWithoutThink.split(/```html/i)[0].trim()
+                    : contentWithoutThink;
                   const mediaJob = mediaTag ? mediaJobs.find((j) => j.prompt === mediaTag.prompt) : undefined;
                   const msgImagePreview = (msg as any).imagePreview as string | undefined;
 
@@ -477,6 +497,33 @@ export function ChatArea({
                               alt="Pièce jointe"
                               className="max-w-[200px] max-h-[160px] rounded-xl border border-[#2a2a38] object-cover"
                             />
+                          </div>
+                        )}
+
+                        {/* Reflection block */}
+                        {thinkContent && (
+                          <div className="text-xs">
+                            <button
+                              onClick={() => setExpandedThinking(prev => ({ ...prev, [msg.id]: !prev[msg.id] }))}
+                              className="flex items-center gap-1.5 text-amber-400/70 hover:text-amber-300 transition-colors mb-1"
+                            >
+                              {expandedThinking[msg.id] ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                              <span>Réflexion de Grado</span>
+                            </button>
+                            <AnimatePresence>
+                              {expandedThinking[msg.id] && (
+                                <motion.div
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: "auto" }}
+                                  exit={{ opacity: 0, height: 0 }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="bg-amber-500/5 border border-amber-500/15 rounded-xl px-3 py-2.5 text-[#B8A880] leading-relaxed whitespace-pre-wrap font-mono text-[11px]">
+                                    {thinkContent}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
                         )}
 
@@ -678,6 +725,24 @@ export function ChatArea({
               </button>
             </div>
 
+            {/* Reflection mode */}
+            <button
+              onClick={() => setReflectionMode(v => !v)}
+              title="Mode réflexion — Grado pense avant de répondre"
+              className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all",
+                reflectionMode
+                  ? "bg-amber-500/15 border-amber-500/40 text-amber-300"
+                  : "bg-[#18181f] border-[#2a2a38] text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/30"
+              )}
+            >
+              <Brain className="w-3 h-3" />
+              Réflexion
+            </button>
+
+            {/* Share button */}
+            <ShareButton conversationId={activeId} token={token} />
+
             {/* Multi-Agent button */}
             <button
               onClick={handleMultiAgent}
@@ -745,6 +810,22 @@ export function ChatArea({
               data-testid="button-attachment"
             >
               <Paperclip className="w-4 h-4" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-9 w-9 shrink-0 rounded-lg transition-colors",
+                isListening
+                  ? "text-red-400 hover:text-red-300 bg-red-500/10"
+                  : "text-[#8888A8] hover:text-white"
+              )}
+              onClick={() => isListening ? stopListening() : startListening()}
+              title={isListening ? "Arrêter l'écoute" : "Parler à Grado"}
+              data-testid="button-voice"
+            >
+              {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </Button>
 
             <div className="flex-1 bg-[#18181f] border border-[#2a2a38] rounded-xl focus-within:border-[#5B5BD6]/60 transition-colors">

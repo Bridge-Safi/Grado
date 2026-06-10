@@ -5,3 +5,6 @@ export * from "./media";
 export * from "./users";
 export * from "./sites";
 export * from "./payments";
+export * from "./user-settings";
+export * from "./projects";
+export * from "./shared-conversations";

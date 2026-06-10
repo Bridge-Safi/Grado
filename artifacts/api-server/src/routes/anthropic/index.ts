@@ -2,7 +2,7 @@ import { Router } from "express";
 import { eq, and } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import { db } from "@workspace/db";
-import { conversations, messages } from "@workspace/db";
+import { conversations, messages, userSettings } from "@workspace/db";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import {
   GetAnthropicConversationParams,
@@ -572,6 +572,9 @@ router.post("/conversations/:id/messages", async (req, res) => {
   const systemPrefix = agentMode ? (AGENT_PREFIXES[agentMode] ?? "") : "";
   const effectiveSystem = systemPrefix + SYSTEM_PROMPT;
 
+  // Get user ID for memory/settings
+  const userId = getUserId(req);
+
   try {
     // Verify conversation exists
     const [conv] = await db
@@ -583,12 +586,23 @@ router.post("/conversations/:id/messages", async (req, res) => {
       return;
     }
 
-    // Save user message
-    await db.insert(messages).values({
-      conversationId,
-      role: "user",
-      content: userContent,
-    });
+    // Load user settings (memory + custom instructions) in parallel with message save
+    const [, userSettingsRow] = await Promise.all([
+      db.insert(messages).values({ conversationId, role: "user", content: userContent }),
+      userId
+        ? db.select().from(userSettings).where(eq(userSettings.userId, userId)).limit(1).then(r => r[0] ?? null)
+        : Promise.resolve(null),
+    ]);
+
+    // Build dynamic system prompt with memory + custom instructions
+    let dynamicPrefix = "";
+    if (userSettingsRow?.memoryNotes?.trim()) {
+      dynamicPrefix += `[MÉMOIRE UTILISATEUR — faits importants à toujours garder en tête]:\n${userSettingsRow.memoryNotes.trim()}\n\n`;
+    }
+    if (userSettingsRow?.customInstructions?.trim()) {
+      dynamicPrefix += `[INSTRUCTIONS PERSONNALISÉES DE L'UTILISATEUR — respecte-les absolument]:\n${userSettingsRow.customInstructions.trim()}\n\n`;
+    }
+    const finalSystem = dynamicPrefix + effectiveSystem;
 
     // Load full conversation history for context
     const history = await db
@@ -605,7 +619,6 @@ router.post("/conversations/:id/messages", async (req, res) => {
 
     // Build last user message – include image if provided
     if (imageData) {
-      // Tell Claude an image is attached; it should use __USER_IMAGE_1__ in HTML
       const enrichedText = `${userContent}\n\n[Note système: L'utilisateur a joint une image. Si tu génères du HTML contenant cette image, utilise exactement __USER_IMAGE_1__ comme valeur de l'attribut src. Grado remplacera automatiquement ce placeholder par la vraie image avant l'affichage.]`;
       chatMessages.push({
         role: "user",
@@ -632,7 +645,7 @@ router.post("/conversations/:id/messages", async (req, res) => {
     const stream = anthropic.messages.stream({
       model: selectedModel,
       max_tokens: 8192,
-      system: effectiveSystem,
+      system: finalSystem,
       messages: chatMessages,
     });
 
