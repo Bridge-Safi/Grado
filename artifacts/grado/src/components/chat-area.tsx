@@ -45,16 +45,22 @@ interface MediaJob {
   lyrics?: string;
 }
 
-type AgentMode = "general" | "dev" | "design" | "analyse" | "tutor";
+type AgentMode = "general" | "dev" | "design" | "analyse" | "tutor" | "writer" | "translate" | "philosophy" | "casual";
 type ModelChoice = "haiku" | "sonnet";
 
-const AGENTS: { id: AgentMode; label: string; icon: React.ElementType; desc: string }[] = [
-  { id: "general", label: "Général",  icon: Sparkles, desc: "Agent polyvalent" },
-  { id: "dev",     label: "Dev",      icon: Code2,    desc: "Code & applications" },
-  { id: "design",  label: "Design",   icon: Palette,  desc: "UI/UX & animations" },
-  { id: "analyse", label: "Analyse",  icon: BarChart2, desc: "Données & rapports" },
-  { id: "tutor",   label: "Tuteur",   icon: Lightbulb, desc: "Explications & cours" },
+const AGENTS: { id: AgentMode; label: string; icon: React.ElementType; desc: string; group?: string }[] = [
+  { id: "general",    label: "Général",     icon: Sparkles,  desc: "Agent polyvalent",              group: "Création" },
+  { id: "dev",        label: "Dev",         icon: Code2,     desc: "Code & applications",           group: "Création" },
+  { id: "design",     label: "Design",      icon: Palette,   desc: "UI/UX & animations",            group: "Création" },
+  { id: "analyse",    label: "Analyse",     icon: BarChart2, desc: "Données & rapports",            group: "Création" },
+  { id: "tutor",      label: "Tuteur",      icon: Lightbulb, desc: "Explications & cours",          group: "Création" },
+  { id: "writer",     label: "Rédaction",   icon: FileText,  desc: "Articles, essais, contenus",    group: "Connaissance" },
+  { id: "translate",  label: "Traduction",  icon: Globe,     desc: "Traduit & corrige la grammaire",group: "Connaissance" },
+  { id: "philosophy", label: "Expert",      icon: Brain,     desc: "Philo, histoire, droit, santé", group: "Connaissance" },
+  { id: "casual",     label: "Discussion",  icon: Users,     desc: "Conversation libre & détente",  group: "Connaissance" },
 ];
+
+const BUILD_KEYWORDS = /créer?|crée|creer|build|constru|développe|genère|générer|génère|app|site|jeu|game|dashboard|landing|animation|présentation|rapport|code|projet/i;
 
 const CATEGORIES = [
   { label: "App web",       icon: Globe,             prompt: "Crée une app web " },
@@ -148,6 +154,9 @@ export function ChatArea({
   const [reflectionMode, setReflectionMode] = useState(false);
   const [thinkingSteps, setThinkingSteps] = useState<string[]>([]);
   const [expandedThinking, setExpandedThinking] = useState<Record<number, boolean>>({});
+
+  // Track if current request is a build (vs quick question)
+  const [isBuilding, setIsBuilding] = useState(false);
 
   // Voice input
   const { isListening, start: startListening, stop: stopListening } = useVoiceInput((text) => {
@@ -290,6 +299,8 @@ export function ChatArea({
       setMsgImageMap((prev) => ({ ...prev, [userMsgId]: sentImagePreview }));
     }
     setLocalMessages((prev) => [...prev, userMsg]);
+    // Detect if this is a build request or a quick question
+    setIsBuilding(BUILD_KEYWORDS.test(content) || agentMode === "dev" || agentMode === "design");
     onRunStart();
 
     try {
@@ -630,8 +641,8 @@ export function ChatArea({
                     <div className="w-7 h-7 rounded-full bg-[#0e0e16] border border-[#5B5BD6]/30 flex items-center justify-center mr-2 mt-1 shrink-0 shadow-[0_0_8px_rgba(91,91,214,0.2)]">
                       <GradoLogo size={20} />
                     </div>
-                    <div className="bg-[#18181f] border border-[#2a2a38] rounded-2xl rounded-bl-sm px-5 py-3">
-                      <SharkCoding />
+                    <div className="bg-[#18181f] border border-[#2a2a38] rounded-2xl rounded-bl-sm px-4 py-3">
+                      <SharkCoding isBuilding={isBuilding} />
                     </div>
                   </motion.div>
                 )}
@@ -669,29 +680,36 @@ export function ChatArea({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 4, scale: 0.97 }}
                     transition={{ duration: 0.12 }}
-                    className="absolute bottom-full mb-2 left-0 bg-[#1a1a24] border border-[#2a2a38] rounded-xl p-1.5 z-50 min-w-[160px] shadow-xl"
+                    className="absolute bottom-full mb-2 left-0 bg-[#1a1a24] border border-[#2a2a38] rounded-xl p-1.5 z-50 min-w-[190px] shadow-xl"
                   >
-                    {AGENTS.map((ag) => {
-                      const Icon = ag.icon;
-                      return (
-                        <button
-                          key={ag.id}
-                          onClick={() => { setAgentMode(ag.id); setShowAgents(false); }}
-                          className={cn(
-                            "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all text-left",
-                            agentMode === ag.id
-                              ? "bg-[#5B5BD6]/15 text-white"
-                              : "text-[#8888A8] hover:text-white hover:bg-[#ffffff08]"
-                          )}
-                        >
-                          <Icon className="w-3.5 h-3.5 shrink-0" />
-                          <div>
-                            <div className="font-medium">{ag.label}</div>
-                            <div className="text-[10px] opacity-60">{ag.desc}</div>
-                          </div>
-                        </button>
-                      );
-                    })}
+                    {(["Création", "Connaissance"] as const).map((group) => (
+                      <div key={group}>
+                        <div className="px-2.5 py-1 text-[9px] font-semibold uppercase tracking-widest text-[#5B5BD6]/60 mt-1 first:mt-0">
+                          {group}
+                        </div>
+                        {AGENTS.filter(a => a.group === group).map((ag) => {
+                          const Icon = ag.icon;
+                          return (
+                            <button
+                              key={ag.id}
+                              onClick={() => { setAgentMode(ag.id); setShowAgents(false); }}
+                              className={cn(
+                                "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all text-left",
+                                agentMode === ag.id
+                                  ? "bg-[#5B5BD6]/15 text-white"
+                                  : "text-[#8888A8] hover:text-white hover:bg-[#ffffff08]"
+                              )}
+                            >
+                              <Icon className="w-3.5 h-3.5 shrink-0" />
+                              <div>
+                                <div className="font-medium">{ag.label}</div>
+                                <div className="text-[10px] opacity-60">{ag.desc}</div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))}
                   </motion.div>
                 )}
               </AnimatePresence>
