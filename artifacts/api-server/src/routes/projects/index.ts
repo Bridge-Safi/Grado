@@ -49,7 +49,7 @@ router.put("/:id/conversations/:convId", async (req, res) => {
   if (!userId) { res.status(401).json({ error: "Non authentifié" }); return; }
   const projectId = Number(req.params.id);
   const convId = Number(req.params.convId);
-  const [proj] = await db.select().from(projects).where(and(eq(projects.id, projectId), eq(projects.userId, userId))).limit(1);
+  const [proj] = await db.select().from(projects).where(and(eq(projects.id, project_id), eq(projects.userId, userId))).limit(1);
   if (!proj) { res.status(404).json({ error: "Projet introuvable" }); return; }
   await db.update(conversations).set({ projectId }).where(eq(conversations.id, convId));
   res.json({ ok: true });
