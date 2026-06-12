@@ -32,8 +32,8 @@ export function ProjectsPanel({ token, conversations, activeConvId, onSelectConv
 
   const load = () => {
     if (!token) return;
-    fetch("/api/projects", { headers }).then(r => r.json()).then(setProjects).catch(() => {});
-  };
+    fetch("/api/projects", { headers: { Authorization: token ?? "" } })
+
 
   useEffect(() => { load(); }, [token]);
 
@@ -41,7 +41,8 @@ export function ProjectsPanel({ token, conversations, activeConvId, onSelectConv
     if (!newName.trim()) return;
     const res = await fetch("/api/projects", {
       method: "POST",
-      headers: { ...headers, "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: token ?? "" },
+
       body: JSON.stringify({ name: newName.trim(), emoji: newEmoji }),
     });
     if (res.ok) {
@@ -53,7 +54,8 @@ export function ProjectsPanel({ token, conversations, activeConvId, onSelectConv
   };
 
   const deleteProject = async (id: number) => {
-    await fetch(`/api/projects/${id}`, { method: "DELETE", headers });
+    fetch(`/api/projects/${id}`, { method: "DELETE", headers: { Authorization: token ?? "" } })
+
     setProjects(p => p.filter(x => x.id !== id));
   };
 
