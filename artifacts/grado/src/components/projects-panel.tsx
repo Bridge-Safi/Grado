@@ -25,15 +25,14 @@ export function ProjectsPanel({ token, conversations, activeConvId, onSelectConv
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmoji, setNewEmoji] = useState("📁");
-  const headers: Record<string, string> = token ? { Authorization: token } : {};
-
-
-
 
   const load = () => {
     if (!token) return;
-    fetch("/api/projects", { headers: { Authorization: token ?? "" } })
-
+    fetch("/api/projects", { headers: { Authorization: token } })
+      .then(r => r.json())
+      .then(setProjects)
+      .catch(() => {});
+  };
 
   useEffect(() => { load(); }, [token]);
 
@@ -42,7 +41,6 @@ export function ProjectsPanel({ token, conversations, activeConvId, onSelectConv
     const res = await fetch("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: token ?? "" },
-
       body: JSON.stringify({ name: newName.trim(), emoji: newEmoji }),
     });
     if (res.ok) {
@@ -54,8 +52,7 @@ export function ProjectsPanel({ token, conversations, activeConvId, onSelectConv
   };
 
   const deleteProject = async (id: number) => {
-    fetch(`/api/projects/${id}`, { method: "DELETE", headers: { Authorization: token ?? "" } })
-
+    await fetch(`/api/projects/${id}`, { method: "DELETE", headers: { Authorization: token ?? "" } });
     setProjects(p => p.filter(x => x.id !== id));
   };
 
@@ -72,7 +69,6 @@ export function ProjectsPanel({ token, conversations, activeConvId, onSelectConv
         </button>
       </div>
 
-      {/* Create form */}
       <AnimatePresence>
         {creating && (
           <motion.div
@@ -111,7 +107,6 @@ export function ProjectsPanel({ token, conversations, activeConvId, onSelectConv
         )}
       </AnimatePresence>
 
-      {/* Project list */}
       <div className="space-y-0.5">
         {projects.map(proj => (
           <div key={proj.id}>
@@ -147,3 +142,4 @@ export function ProjectsPanel({ token, conversations, activeConvId, onSelectConv
     </div>
   );
 }
+
