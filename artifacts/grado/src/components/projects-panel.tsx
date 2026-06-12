@@ -25,8 +25,8 @@ export function ProjectsPanel({ token, conversations, activeConvId, onSelectConv
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newEmoji, setNewEmoji] = useState("📁");
+  const headers: Record<string, string> = token ? { Authorization: token } : {};
 
-const headers = token ? { Authorization: token } : {};
 
 
 
