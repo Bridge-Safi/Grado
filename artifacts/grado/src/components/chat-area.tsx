@@ -39,7 +39,15 @@ interface ChatAreaProps {
 interface MediaJob {
   prompt: string;
   mediaId: number;
-  type: "music" | "video";
+  type: "music" | "video";interface MediaJob {
+  prompt: string;
+  mediaId: number;
+  type: "music" | "video" | "image";
+  title?: string;
+  genre?: string;
+  lyrics?: string;
+}
+
   title?: string;
   genre?: string;
   lyrics?: string;
