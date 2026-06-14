@@ -22,7 +22,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// Keep the API client in sync with the stored token at all times
+const API_URL = import.meta.env.VITE_API_URL || "";
+
 setAuthTokenGetter(() => localStorage.getItem("grado_token"));
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -33,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const stored = localStorage.getItem("grado_token");
     if (stored) {
-      fetch("/api/auth/me", { headers: { Authorization: `Bearer ${stored}` } })
+      fetch(`${API_URL}/api/auth/me`, { headers: { Authorization: `Bearer ${stored}` } })
         .then((r) => r.ok ? r.json() : null)
         .then((u) => { if (u) { setUser(u); setToken(stored); } else { localStorage.removeItem("grado_token"); } })
         .finally(() => setLoading(false));
@@ -43,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const res = await fetch("/api/auth/login", {
+    const res = await fetch(`${API_URL}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -56,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register = async (name: string, email: string, password: string) => {
-    const res = await fetch("/api/auth/register", {
+    const res = await fetch(`${API_URL}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, password }),
@@ -77,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updatePlan = async (plan: string) => {
     const stored = localStorage.getItem("grado_token");
     if (!stored) throw new Error("Non authentifié");
-    const res = await fetch("/api/auth/plan", {
+    const res = await fetch(`${API_URL}/api/auth/plan`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${stored}` },
       body: JSON.stringify({ plan }),
