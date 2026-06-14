@@ -1,6 +1,8 @@
 :{$PORT} {
     handle /api/* {
-        reverse_proxy https://grado-workspaceapi-server-production.up.railway.app
+        reverse_proxy grado-workspaceapi-server-production.up.railway.app {
+            header_up Host {upstream_hostport}
+        }
     }
     handle {
         root * /app/artifacts/grado/dist/public
