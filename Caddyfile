@@ -1,4 +1,4 @@
-:{$PORT:80} {
+:{$PORT} {
     root * /app/artifacts/grado/dist
     file_server
     try_files {path} /index.html
