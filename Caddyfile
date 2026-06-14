@@ -1,8 +1,8 @@
 :{$PORT} {
     handle /api/* {
-        reverse_proxy https://grado-workspaceapi-server-production.up.railway.app {
+        reverse_proxy {$API_URL} {
             transport http {
-                tls
+                tls_insecure_skip_verify
             }
         }
     }
