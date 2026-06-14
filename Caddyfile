@@ -1,5 +1,5 @@
 :{$PORT} {
-    root * /app/artifacts/grado/dist
+    root * /app/artifacts/grado/dist/public
     file_server
     try_files {path} /index.html
 }
