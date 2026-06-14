@@ -1,10 +1,10 @@
 :{$PORT} {
     handle /api/* {
-        reverse_proxy [URL-publique-api-server]
+        reverse_proxy https://grado-workspaceapi-server-production.up.railway.app
     }
     handle {
         root * /app/artifacts/grado/dist/public
         file_server
-        try_files {path} /index.html
+        try_features {path} /index.html
     }
 }
