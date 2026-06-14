@@ -5,6 +5,6 @@
     handle {
         root * /app/artifacts/grado/dist/public
         file_server
-        try_features {path} /index.html
+        try_files {path} /index.html
     }
 }
