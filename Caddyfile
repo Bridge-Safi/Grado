@@ -1,6 +1,6 @@
 :{$PORT} {
     handle /api/* {
-        reverse_proxy workspaceapi-server.railway.internal:3000
+        reverse_proxy [URL-publique-api-server]
     }
     handle {
         root * /app/artifacts/grado/dist/public
