@@ -26,7 +26,10 @@ app.use(
   }),
 );
 app.use(cors());
-app.use(express.json({ limit: "20mb" }));
+app.use(cors({
+  origin: ['https://grado.safi-bridge.ma', 'https://grado-production-fb0f.up.railway.app'],
+  credentials: true
+}));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
 app.use("/api", router);
