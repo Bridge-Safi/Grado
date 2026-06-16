@@ -25,9 +25,13 @@ app.use(
     },
   }),
 );
-app.use(cors());
 app.use(cors({
-  origin: ['https://grado.safi-bridge.ma', 'https://grado-production-fb0f.up.railway.app'],
+  origin: [
+    'https://grado.safi-bridge.ma',
+    'https://www.grado.safi-bridge.ma',
+    'https://grado-production-fb0f.up.railway.app',
+    /\.up\.railway\.app$/,
+  ],
   credentials: true
 }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
