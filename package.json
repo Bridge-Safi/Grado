@@ -6,6 +6,10 @@
 
   "packageManager": "pnpm@10.12.4",
 
+  "engines": {
+    "node": "22.x"
+  },
+
   "scripts": {
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
