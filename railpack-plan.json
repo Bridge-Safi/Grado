@@ -1,0 +1,8 @@
+{
+  "install": {
+    "cmd": "corepack enable && corepack prepare pnpm@10.12.4 --activate && pnpm install --no-frozen-lockfile"
+  },
+  "build": {
+    "cmd": "pnpm build"
+  }
+}
