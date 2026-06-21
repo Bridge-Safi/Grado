@@ -1,6 +1,6 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm install -g pnpm@10 && npx pnpm@10 install --no-frozen-lockfile && VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY VITE_CLERK_PROXY_URL=$VITE_CLERK_PROXY_URL npx pnpm@10 run build:railway"
+buildCommand = "npm install -g pnpm@10 && npx pnpm@10 install --no-frozen-lockfile && npx pnpm@10 run build:railway"
 
 [deploy]
-startCommand = "npx pnpm@10 run start"
+startCommand = "NODE_ENV=production npx pnpm@10 --filter @workspace/api-server run start"

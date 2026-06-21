@@ -8,7 +8,45 @@ import { eq } from "drizzle-orm";
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-change-me";
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
+const RESEND_FROM = process.env.RESEND_FROM_EMAIL || "noreply@grado.safi-bridge.ma";
 const isAdmin = (email: string) => !!ADMIN_EMAIL && email.toLowerCase() === ADMIN_EMAIL;
+
+function generateCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+async function sendResetEmail(to: string, code: string): Promise<void> {
+  if (!RESEND_API_KEY) {
+    throw new Error("Service email non configuré. Contactez l'administrateur.");
+  }
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: RESEND_FROM,
+      to,
+      subject: "Grado — Code de réinitialisation",
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#0D0D12;color:#fff;border-radius:12px">
+          <h2 style="color:#5B5BD6;margin-bottom:8px">Réinitialisation de mot de passe</h2>
+          <p style="color:#8888A8;margin-bottom:24px">Voici ton code de vérification. Il expire dans 15 minutes.</p>
+          <div style="background:#111118;border:1px solid #5B5BD6;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px">
+            <span style="font-size:36px;font-weight:bold;letter-spacing:12px;color:#fff;font-family:monospace">${code}</span>
+          </div>
+          <p style="color:#4a4a5a;font-size:12px">Si tu n'as pas demandé cette réinitialisation, ignore cet email.</p>
+        </div>
+      `,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Erreur envoi email: ${err}`);
+  }
+}
 
 // POST /auth/register
 router.post("/register", async (req, res) => {
@@ -29,7 +67,6 @@ router.post("/register", async (req, res) => {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
-  // 48h free trial
   const trialEndsAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
 
   const [user] = await db.insert(users).values({
@@ -76,28 +113,73 @@ router.post("/login", async (req, res) => {
   });
 });
 
-// POST /auth/forgot-password — reset without email verification (no email service)
-router.post("/forgot-password", async (req, res) => {
-  const { email, newPassword } = req.body;
-  if (!email || !newPassword) {
-    res.status(400).json({ error: "Email et nouveau mot de passe requis" });
+// POST /auth/request-password-reset — step 1: send 6-digit code by email
+router.post("/request-password-reset", async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    res.status(400).json({ error: "Email requis" });
+    return;
+  }
+
+  const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1);
+
+  if (user) {
+    const code = generateCode();
+    const expires = new Date(Date.now() + 15 * 60 * 1000);
+    const codeHash = await bcrypt.hash(code, 8);
+    await db.update(users)
+      .set({ resetToken: codeHash, resetTokenExpires: expires })
+      .where(eq(users.id, user.id));
+    try {
+      await sendResetEmail(user.email, code);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+  }
+
+  res.json({ ok: true, message: "Si ce compte existe, un email a été envoyé." });
+});
+
+// POST /auth/reset-password — step 2: verify code + set new password
+router.post("/reset-password", async (req, res) => {
+  const { email, code, newPassword } = req.body;
+  if (!email || !code || !newPassword) {
+    res.status(400).json({ error: "Email, code et nouveau mot de passe requis" });
     return;
   }
   if (newPassword.length < 6) {
     res.status(400).json({ error: "Le mot de passe doit faire au moins 6 caractères" });
     return;
   }
+
   const [user] = await db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1);
-  if (!user) {
-    res.status(404).json({ error: "Aucun compte trouvé avec cet email" });
+  if (!user || !user.resetToken || !user.resetTokenExpires) {
+    res.status(400).json({ error: "Code invalide ou expiré" });
     return;
   }
+
+  if (new Date() > user.resetTokenExpires) {
+    await db.update(users).set({ resetToken: null, resetTokenExpires: null }).where(eq(users.id, user.id));
+    res.status(400).json({ error: "Ce code a expiré. Recommence depuis le début." });
+    return;
+  }
+
+  const validCode = await bcrypt.compare(code, user.resetToken);
+  if (!validCode) {
+    res.status(400).json({ error: "Code incorrect" });
+    return;
+  }
+
   const newHash = await bcrypt.hash(newPassword, 10);
-  await db.update(users).set({ passwordHash: newHash }).where(eq(users.id, user.id));
+  await db.update(users)
+    .set({ passwordHash: newHash, resetToken: null, resetTokenExpires: null })
+    .where(eq(users.id, user.id));
+
   res.json({ ok: true });
 });
 
-// POST /auth/change-password
+// POST /auth/change-password (authenticated)
 router.post("/change-password", async (req, res) => {
   const auth = req.headers.authorization;
   if (!auth?.startsWith("Bearer ")) {
@@ -138,7 +220,7 @@ router.post("/change-password", async (req, res) => {
   res.json({ ok: true });
 });
 
-// PUT /api/auth/plan — only allows downgrade to free plan; paid plans require approved payment
+// PUT /api/auth/plan
 router.put("/plan", async (req, res) => {
   const auth = req.headers.authorization;
   if (!auth?.startsWith("Bearer ")) { res.status(401).json({ error: "Non authentifié" }); return; }
@@ -154,7 +236,6 @@ router.put("/plan", async (req, res) => {
   const allowed = ["gratuit", "essentiel", "createur", "fusion", "elite"];
   if (!plan || !allowed.includes(plan)) { res.status(400).json({ error: "Plan invalide" }); return; }
 
-  // Only admins or downgrade to free is allowed without payment
   const adminAllowed = isAdmin(userEmail);
   if (!adminAllowed && plan !== "gratuit") {
     res.status(403).json({ error: "Paiement requis. Utilisez le système de paiement pour souscrire à un plan payant." });

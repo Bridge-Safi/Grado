@@ -8,6 +8,8 @@ export const users = pgTable("users", {
   plan: text("plan").notNull().default("gratuit"),
   trialEndsAt: timestamp("trial_ends_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  resetToken: text("reset_token"),
+  resetTokenExpires: timestamp("reset_token_expires"),
 });
 
 export type User = typeof users.$inferSelect;
