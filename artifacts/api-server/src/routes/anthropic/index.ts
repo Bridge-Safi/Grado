@@ -2,7 +2,7 @@ import { Router } from "express";
 import { eq, and } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import { db } from "@workspace/db";
-import { conversations, messages, userSettings } from "@workspace/db";
+import { conversations, messages, userSettings, users } from "@workspace/db";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import {
   GetAnthropicConversationParams,
@@ -600,14 +600,23 @@ router.post("/conversations/:id/messages", async (req, res) => {
   const modelChoice = bodyParsed.data.model ?? "haiku";
   const agentMode = bodyParsed.data.agentMode;
 
+  // Check plan — free users limited to haiku (fast) model
+  const [currentUser] = userId
+    ? await db.select({ plan: users.plan }).from(users).where(eq(users.id, userId))
+    : [];
+  const isPaidUser = currentUser && currentUser.plan !== "gratuit";
+
   const MODEL_MAP: Record<string, string> = {
     haiku: "claude-haiku-4-5",
     sonnet: "claude-sonnet-4-5",
   };
   // Vision (images) requires a multimodal model — haiku-4-5 is text-only
+  // Free plan users are locked to haiku
   const selectedModel = imageData
     ? "claude-sonnet-4-5"
-    : (MODEL_MAP[modelChoice] ?? "claude-haiku-4-5");
+    : isPaidUser
+      ? (MODEL_MAP[modelChoice] ?? "claude-haiku-4-5")
+      : "claude-haiku-4-5";
 
   const AGENT_PREFIXES: Record<string, string> = {
     dev: "Tu es un agent de développement expert. Priorité absolue: générer du code complet, fonctionnel et optimisé.\n\n",

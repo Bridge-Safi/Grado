@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from "react";
-import { Paperclip, SendHorizonal, Globe, Palette, GalleryHorizontal, Sparkles, BarChart3, Gamepad2, FileText, X, Zap, Brain, Code2, Lightbulb, BarChart2, Users, Mic, MicOff, ChevronDown, ChevronUp } from "lucide-react";
+import { Paperclip, SendHorizonal, Globe, Palette, GalleryHorizontal, Sparkles, BarChart3, Gamepad2, FileText, X, Zap, Brain, Code2, Lightbulb, BarChart2, Users, Mic, MicOff, ChevronDown, ChevronUp, Lock } from "lucide-react";
 import { AgentOrchestrator } from "./agent-orchestrator";
 import { AnthropicMessage } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import {
   getListAnthropicMessagesQueryKey,
   getListAnthropicConversationsQueryKey,
@@ -130,6 +131,7 @@ export function ChatArea({
   onRunEnd,
   isRunning,
 }: ChatAreaProps) {
+  const [, navigate] = useLocation();
   const [input, setInput] = useState("");
   const [localMessages, setLocalMessages] = useState<AnthropicMessage[]>([]);
   const [activeId, setActiveId] = useState<number | null>(null);
@@ -167,8 +169,9 @@ export function ChatArea({
     setInput(prev => prev ? prev + " " + text : text);
   });
 
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { t, rtl } = useI18n();
+  const isPaidUser = user?.plan && user.plan !== "gratuit";
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -740,13 +743,14 @@ export function ChatArea({
                 {t.toolFast}
               </button>
               <button
-                onClick={() => setModel("sonnet")}
+                onClick={() => isPaidUser ? setModel("sonnet") : navigate("/pricing")}
+                title={isPaidUser ? undefined : "Plan payant requis"}
                 className={cn(
                   "flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all",
-                  model === "sonnet" ? "bg-[#5B5BD6]/20 text-white" : "text-[#8888A8] hover:text-white"
+                  model === "sonnet" && isPaidUser ? "bg-[#5B5BD6]/20 text-white" : "text-[#8888A8] hover:text-white"
                 )}
               >
-                <Brain className="w-3 h-3" />
+                {isPaidUser ? <Brain className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
                 {t.toolSmart}
               </button>
             </div>
@@ -780,20 +784,21 @@ export function ChatArea({
                   >
                     {/* Réflexion */}
                     <button
-                      onClick={() => { setReflectionMode(v => !v); setShowMore(false); }}
+                      onClick={() => isPaidUser ? (setReflectionMode(v => !v), setShowMore(false)) : (setShowMore(false), navigate("/pricing"))}
                       className={cn(
                         "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs transition-all",
                         rtl ? "flex-row-reverse text-right" : "text-left",
-                        reflectionMode
+                        reflectionMode && isPaidUser
                           ? "bg-amber-500/12 text-amber-300"
                           : "text-[#8888A8] hover:text-white hover:bg-[#ffffff08]"
                       )}
                     >
-                      <Brain className="w-3.5 h-3.5 shrink-0" />
+                      {isPaidUser ? <Brain className="w-3.5 h-3.5 shrink-0" /> : <Lock className="w-3.5 h-3.5 shrink-0" />}
                       <div>
                         <div className="font-medium">{t.toolReflection}</div>
                         <div className="text-[10px] opacity-60">
-                          {reflectionMode ? (rtl ? "مفعّل" : "Activé ✓") : (rtl ? "Grado يفكّر أولاً" : "Grado pense d'abord")}
+                          {!isPaidUser ? (rtl ? "يتطلب خطة مدفوعة" : "Plan payant requis")
+                            : reflectionMode ? (rtl ? "مفعّل" : "Activé ✓") : (rtl ? "Grado يفكّر أولاً" : "Grado pense d'abord")}
                         </div>
                       </div>
                     </button>
@@ -808,19 +813,21 @@ export function ChatArea({
 
             {/* 4 — Multi-Agents (right-aligned) */}
             <button
-              onClick={handleMultiAgent}
-              disabled={!input.trim() || isRunning}
+              onClick={isPaidUser ? handleMultiAgent : () => navigate("/pricing")}
+              disabled={isPaidUser && (!input.trim() || isRunning)}
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border transition-all",
                 rtl ? "mr-auto" : "ml-auto",
-                input.trim() && !isRunning
-                  ? "bg-gradient-to-r from-[#8B5CF6]/20 to-[#5B5BD6]/20 border-[#7B5CF6]/50 text-white hover:from-[#8B5CF6]/30 hover:to-[#5B5BD6]/30 shadow-[0_0_12px_rgba(139,92,246,0.2)]"
-                  : "bg-[#0A0A0A] border-[#2a2a38] text-[#8888A8]/50 cursor-not-allowed"
+                !isPaidUser
+                  ? "bg-[#0A0A0A] border-[#5B5BD6]/30 text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/60"
+                  : input.trim() && !isRunning
+                    ? "bg-gradient-to-r from-[#8B5CF6]/20 to-[#5B5BD6]/20 border-[#7B5CF6]/50 text-white hover:from-[#8B5CF6]/30 hover:to-[#5B5BD6]/30 shadow-[0_0_12px_rgba(139,92,246,0.2)]"
+                    : "bg-[#0A0A0A] border-[#2a2a38] text-[#8888A8]/50 cursor-not-allowed"
               )}
-              title={t.toolMultiAgents}
+              title={isPaidUser ? t.toolMultiAgents : "Plan payant requis"}
             >
-              <Users className="w-3 h-3" />
-              ⚡ {t.toolMultiAgents}
+              {isPaidUser ? <Users className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+              {isPaidUser ? `⚡ ${t.toolMultiAgents}` : t.toolMultiAgents}
             </button>
           </div>
 

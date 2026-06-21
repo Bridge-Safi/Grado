@@ -5,7 +5,7 @@ export type Lang = "fr" | "en" | "ar" | "ber";
 export const LANGS: { code: Lang; label: string; flag: string; rtl?: boolean }[] = [
   { code: "fr", label: "Français", flag: "🇫🇷" },
   { code: "en", label: "English",  flag: "🇬🇧" },
-  { code: "ar", label: "العربية",  flag: "🇩🇿", rtl: true },
+  { code: "ar", label: "العربية",  flag: "🇸🇦", rtl: true },
   { code: "ber", label: "ⵜⴰⵎⴰⵣⵉⵖⵜ", flag: "ⴰ" },
 ];
 

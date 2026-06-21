@@ -1,5 +1,7 @@
 import { Router } from "express";
 import jwt from "jsonwebtoken";
+import { eq } from "drizzle-orm";
+import { db, users } from "@workspace/db";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 
 const router = Router();
@@ -210,6 +212,13 @@ function extractHtml(text: string): string | null {
 router.post("/run", async (req, res) => {
   const userId = getUserId(req);
   if (!userId) { res.status(401).json({ error: "Non authentifié" }); return; }
+
+  // Check plan — multi-agent requires a paid plan
+  const [currentUser] = await db.select({ plan: users.plan }).from(users).where(eq(users.id, userId));
+  if (!currentUser || currentUser.plan === "gratuit") {
+    res.status(403).json({ error: "Les agents multi-IA nécessitent un plan payant. Accède aux tarifs pour upgrader." });
+    return;
+  }
 
   const { prompt } = req.body;
   if (!prompt?.trim()) { res.status(400).json({ error: "Prompt requis" }); return; }
