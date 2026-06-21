@@ -33,7 +33,7 @@ export function LangSwitcher({ compact = false }: { compact?: boolean }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-44 bg-[#111118] border border-[#2a2a38] rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-1 w-44 bg-[#08080F] border border-[#2a2a38] rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-50 overflow-hidden">
           {LANGS.map((l) => (
             <button
               key={l.code}

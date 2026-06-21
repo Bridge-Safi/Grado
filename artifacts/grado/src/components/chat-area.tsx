@@ -106,7 +106,7 @@ function WelcomeInner({ setInput, focusInput }: { setInput: (v: string) => void;
                 "flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all border",
                 isActive
                   ? "bg-[#5B5BD6]/15 border-[#5B5BD6]/50 text-white shadow-[0_0_12px_rgba(91,91,214,0.2)]"
-                  : "bg-[#18181f] border-[#2a2a38] text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/30 hover:bg-[#1a1a2a]"
+                  : "bg-[#0D0D15] border-[#2a2a38] text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/30 hover:bg-[#1a1a2a]"
               )}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -430,7 +430,7 @@ export function ChatArea({
   const activeAgent = AGENTS.find((a) => a.id === agentMode)!;
 
   return (
-    <div className="flex flex-col h-full bg-[#0D0D12]">
+    <div className="flex flex-col h-full bg-[#050508]">
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-5">
         <div className="max-w-2xl w-full mx-auto flex flex-col gap-4">
@@ -550,7 +550,7 @@ export function ChatArea({
                               "rounded-2xl px-4 py-3 text-sm",
                               msg.role === "user"
                                 ? "bg-[#5B5BD6] text-white rounded-br-sm"
-                                : "bg-[#18181f] border border-[#2a2a38] text-[#E8E8F0] rounded-bl-sm"
+                                : "bg-[#0D0D15] border border-[#2a2a38] text-[#E8E8F0] rounded-bl-sm"
                             )}
                           >
                             {msg.role === "user" ? (
@@ -646,7 +646,7 @@ export function ChatArea({
                     <div className="w-7 h-7 rounded-full bg-[#0e0e16] border border-[#5B5BD6]/30 flex items-center justify-center mr-2 mt-1 shrink-0 shadow-[0_0_8px_rgba(91,91,214,0.2)]">
                       <GradoLogo size={20} />
                     </div>
-                    <div className="bg-[#18181f] border border-[#2a2a38] rounded-2xl rounded-bl-sm px-4 py-3">
+                    <div className="bg-[#0D0D15] border border-[#2a2a38] rounded-2xl rounded-bl-sm px-4 py-3">
                       <SharkCoding isBuilding={isBuilding} />
                     </div>
                   </motion.div>
@@ -658,7 +658,7 @@ export function ChatArea({
       </div>
 
       {/* Input bar */}
-      <div className="border-t border-[#2a2a38] bg-[#111118] px-4 pt-2 pb-3">
+      <div className="border-t border-[#2a2a38] bg-[#08080F] px-4 pt-2 pb-3">
         <div className="max-w-2xl mx-auto">
 
           {/* Toolbar — simplified: 3 controls + ··· overflow */}
@@ -672,7 +672,7 @@ export function ChatArea({
                   "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all",
                   showAgents
                     ? "bg-[#5B5BD6]/15 border-[#5B5BD6]/40 text-white"
-                    : "bg-[#18181f] border-[#2a2a38] text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/30"
+                    : "bg-[#0D0D15] border-[#2a2a38] text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/30"
                 )}
               >
                 <activeAgent.icon className="w-3 h-3" />
@@ -728,7 +728,7 @@ export function ChatArea({
             </div>
 
             {/* 2 — Model toggle (Rapide / Intelligent) */}
-            <div className="flex items-center bg-[#18181f] border border-[#2a2a38] rounded-lg p-0.5">
+            <div className="flex items-center bg-[#0D0D15] border border-[#2a2a38] rounded-lg p-0.5">
               <button
                 onClick={() => setModel("haiku")}
                 className={cn(
@@ -760,7 +760,7 @@ export function ChatArea({
                   "flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all",
                   showMore || reflectionMode
                     ? "bg-[#5B5BD6]/15 border-[#5B5BD6]/40 text-white"
-                    : "bg-[#18181f] border-[#2a2a38] text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/30"
+                    : "bg-[#0D0D15] border-[#2a2a38] text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/30"
                 )}
               >
                 {reflectionMode && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />}
@@ -815,7 +815,7 @@ export function ChatArea({
                 rtl ? "mr-auto" : "ml-auto",
                 input.trim() && !isRunning
                   ? "bg-gradient-to-r from-[#8B5CF6]/20 to-[#5B5BD6]/20 border-[#7B5CF6]/50 text-white hover:from-[#8B5CF6]/30 hover:to-[#5B5BD6]/30 shadow-[0_0_12px_rgba(139,92,246,0.2)]"
-                  : "bg-[#18181f] border-[#2a2a38] text-[#8888A8]/50 cursor-not-allowed"
+                  : "bg-[#0D0D15] border-[#2a2a38] text-[#8888A8]/50 cursor-not-allowed"
               )}
               title={t.toolMultiAgents}
             >
@@ -892,7 +892,7 @@ export function ChatArea({
               {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </Button>
 
-            <div className="flex-1 bg-[#18181f] border border-[#2a2a38] rounded-xl focus-within:border-[#5B5BD6]/60 transition-colors">
+            <div className="flex-1 bg-[#0D0D15] border border-[#2a2a38] rounded-xl focus-within:border-[#5B5BD6]/60 transition-colors">
               <Textarea
                 ref={textareaRef}
                 value={input}

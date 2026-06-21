@@ -10,7 +10,7 @@ function SettingCard({ icon: Icon, title, children }: { icon: React.ElementType;
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-[#12121a] border border-[#1e1e2a] rounded-2xl p-6"
+      className="bg-[#0A0A12] border border-[#1e1e2a] rounded-2xl p-6"
     >
       <div className="flex items-center gap-3 mb-5">
         <Icon className="w-5 h-5 text-[#5B5BD6]" />
@@ -89,10 +89,10 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0D0D12] text-white">
+    <div className="min-h-screen bg-[#050508] text-white">
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[#5B5BD6]/8 rounded-full blur-[120px] pointer-events-none" />
 
-      <nav className="border-b border-[#1e1e2a]/80 bg-[#0D0D12]/90 backdrop-blur-md sticky top-0 z-10">
+      <nav className="border-b border-[#1e1e2a]/80 bg-[#050508]/90 backdrop-blur-md sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-5 h-14 flex items-center gap-3">
           <button onClick={() => navigate("/chat")} className="flex items-center gap-1.5 text-sm text-[#8888A8] hover:text-white transition-colors">
             <ArrowLeft className="w-4 h-4" /> Retour au chat
@@ -197,7 +197,7 @@ export default function SettingsPage() {
         </SettingCard>
 
         {/* Danger zone */}
-        <div className="bg-[#12121a] border border-red-500/15 rounded-2xl p-6">
+        <div className="bg-[#0A0A12] border border-red-500/15 rounded-2xl p-6">
           <h2 className="font-semibold text-red-400 mb-3">Zone danger</h2>
           <p className="text-sm text-[#8888A8] mb-4">Se déconnecter de tous les appareils.</p>
           <button onClick={() => { logout(); navigate("/"); }} className="text-sm px-4 py-2 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors">

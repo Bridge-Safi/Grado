@@ -31,7 +31,7 @@ export default function SharedConversationPage() {
   }, [slug]);
 
   return (
-    <div className="min-h-screen bg-[#0D0D12] text-white">
+    <div className="min-h-screen bg-[#050508] text-white">
       <div className="max-w-2xl mx-auto px-4 py-8">
         <div className="flex items-center gap-3 mb-8">
           <GradoLogo size={28} />
@@ -80,7 +80,7 @@ export default function SharedConversationPage() {
                           "rounded-2xl px-4 py-3 text-sm",
                           msg.role === "user"
                             ? "bg-[#5B5BD6] text-white rounded-br-sm"
-                            : "bg-[#18181f] border border-[#2a2a38] text-[#E8E8F0] rounded-bl-sm"
+                            : "bg-[#0D0D15] border border-[#2a2a38] text-[#E8E8F0] rounded-bl-sm"
                         )}>
                           {msg.role === "user"
                             ? <p className="whitespace-pre-wrap">{msg.content}</p>

@@ -43,7 +43,7 @@ function parseTable(lines: string[]): React.ReactNode | null {
         </thead>
         <tbody>
           {rows.map((row, ri) => (
-            <tr key={ri} className={ri % 2 === 0 ? "bg-[#111118]" : "bg-[#13131c]"}>
+            <tr key={ri} className={ri % 2 === 0 ? "bg-[#08080F]" : "bg-[#13131c]"}>
               {row.map((cell, ci) => (
                 <td key={ci} className="px-4 py-2 text-[#C0C0D8] border-b border-[#1e1e2a] last:border-b-0">
                   {parseInline(cell)}
@@ -258,8 +258,8 @@ function CodeBlock({ language, code }: { language?: string; code: string }) {
     setTimeout(() => setCopied(false), 2000);
   };
   return (
-    <div className="rounded-xl overflow-hidden bg-[#0D0D12] border border-[#2a2a38] my-2">
-      <div className="flex items-center justify-between px-4 py-2 bg-[#111118] border-b border-[#2a2a38]">
+    <div className="rounded-xl overflow-hidden bg-[#050508] border border-[#2a2a38] my-2">
+      <div className="flex items-center justify-between px-4 py-2 bg-[#08080F] border-b border-[#2a2a38]">
         <span className="text-xs text-[#8888A8] font-mono">{language || "code"}</span>
         <Button variant="ghost" size="icon" className="h-6 w-6 text-[#8888A8] hover:text-white" onClick={handleCopy}>
           {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}

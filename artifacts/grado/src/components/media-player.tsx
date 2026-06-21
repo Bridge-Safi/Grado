@@ -126,8 +126,8 @@ export function MediaPlayer({ type, mediaId, prompt, title, genre, lyrics }: Med
   // ─── VIDEO PLAYER ──────────────────────────────────────────────────────────
   if (type === "video") {
     return (
-      <div className="mt-3 rounded-xl border border-[#2a2a38] overflow-hidden bg-[#0D0D12]">
-        <div className="flex items-center gap-2 px-3 py-2 bg-[#18181f] border-b border-[#2a2a38]">
+      <div className="mt-3 rounded-xl border border-[#2a2a38] overflow-hidden bg-[#050508]">
+        <div className="flex items-center gap-2 px-3 py-2 bg-[#0D0D15] border-b border-[#2a2a38]">
           <div className="flex gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
             <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
@@ -158,7 +158,7 @@ export function MediaPlayer({ type, mediaId, prompt, title, genre, lyrics }: Med
           )}
         </div>
         {status === "done" && fileUrl && (
-          <div className="flex items-center gap-2 px-3 py-2.5 bg-[#18181f] border-t border-[#2a2a38]">
+          <div className="flex items-center gap-2 px-3 py-2.5 bg-[#0D0D15] border-t border-[#2a2a38]">
             <span className="text-[11px] text-[#8888A8] mr-auto">Vidéo générée par Grado</span>
             <Button size="sm" variant="ghost" className="h-7 gap-1.5 text-[#8888A8] hover:text-white text-xs px-2" onClick={handleDownload}>
               <Download className="w-3.5 h-3.5" />Télécharger
@@ -171,7 +171,7 @@ export function MediaPlayer({ type, mediaId, prompt, title, genre, lyrics }: Med
 
   // ─── MUSIC PLAYER (Suno-style) ─────────────────────────────────────────────
   return (
-    <div className="mt-3 rounded-2xl border border-[#2a2a38] overflow-hidden bg-[#111118]">
+    <div className="mt-3 rounded-2xl border border-[#2a2a38] overflow-hidden bg-[#08080F]">
       {/* Album cover + info header */}
       <div className="flex items-stretch gap-0">
         {/* Cover art */}
@@ -310,7 +310,7 @@ export function MediaPlayer({ type, mediaId, prompt, title, genre, lyrics }: Med
 
       {/* Lyrics panel */}
       {showLyrics && lyrics && (
-        <div className="px-4 py-4 bg-[#0D0D12] border-t border-[#1e1e2a]">
+        <div className="px-4 py-4 bg-[#050508] border-t border-[#1e1e2a]">
           <pre className="text-[12px] text-[#A0A0C0] leading-relaxed whitespace-pre-wrap font-sans">
             {lyrics}
           </pre>

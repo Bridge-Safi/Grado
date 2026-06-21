@@ -67,7 +67,7 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0D0D12] flex flex-col items-center justify-center px-4 relative overflow-hidden">
+    <div className="min-h-screen bg-[#050508] flex flex-col items-center justify-center px-4 relative overflow-hidden">
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#5B5BD6]/10 rounded-full blur-[120px] pointer-events-none" />
 
       <motion.div
@@ -82,7 +82,7 @@ export default function ForgotPasswordPage() {
           <ArrowLeft className="w-4 h-4" /> Retour à la connexion
         </button>
 
-        <div className="bg-[#111118] border border-[#5B5BD6]/20 rounded-2xl p-8 shadow-[0_0_60px_rgba(91,91,214,0.1)]">
+        <div className="bg-[#08080F] border border-[#5B5BD6]/20 rounded-2xl p-8 shadow-[0_0_60px_rgba(91,91,214,0.1)]">
           {step === "done" ? (
             <div className="text-center py-6 space-y-4">
               <CheckCircle2 className="w-12 h-12 text-green-400 mx-auto" />
@@ -114,7 +114,7 @@ export default function ForgotPasswordPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="ton@email.com"
                     required
-                    className="w-full bg-[#0D0D12] border border-[#2a2a38] rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#4a4a5a] focus:outline-none focus:border-[#5B5BD6]/70 transition-all"
+                    className="w-full bg-[#050508] border border-[#2a2a38] rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#4a4a5a] focus:outline-none focus:border-[#5B5BD6]/70 transition-all"
                   />
                 </div>
 
@@ -156,7 +156,7 @@ export default function ForgotPasswordPage() {
                     placeholder="123456"
                     required
                     maxLength={6}
-                    className="w-full bg-[#0D0D12] border border-[#2a2a38] rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#4a4a5a] focus:outline-none focus:border-[#5B5BD6]/70 transition-all tracking-[0.4em] text-center font-mono text-lg"
+                    className="w-full bg-[#050508] border border-[#2a2a38] rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#4a4a5a] focus:outline-none focus:border-[#5B5BD6]/70 transition-all tracking-[0.4em] text-center font-mono text-lg"
                   />
                 </div>
 
@@ -169,7 +169,7 @@ export default function ForgotPasswordPage() {
                     placeholder="Min. 6 caractères"
                     required
                     minLength={6}
-                    className="w-full bg-[#0D0D12] border border-[#2a2a38] rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#4a4a5a] focus:outline-none focus:border-[#5B5BD6]/70 transition-all"
+                    className="w-full bg-[#050508] border border-[#2a2a38] rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#4a4a5a] focus:outline-none focus:border-[#5B5BD6]/70 transition-all"
                   />
                 </div>
 
@@ -181,7 +181,7 @@ export default function ForgotPasswordPage() {
                     onChange={(e) => setConfirm(e.target.value)}
                     placeholder="Répète le mot de passe"
                     required
-                    className="w-full bg-[#0D0D12] border border-[#2a2a38] rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#4a4a5a] focus:outline-none focus:border-[#5B5BD6]/70 transition-all"
+                    className="w-full bg-[#050508] border border-[#2a2a38] rounded-xl px-4 py-3 text-sm text-white placeholder:text-[#4a4a5a] focus:outline-none focus:border-[#5B5BD6]/70 transition-all"
                   />
                 </div>
 

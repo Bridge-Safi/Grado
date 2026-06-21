@@ -67,7 +67,7 @@ export function ImagePlayer({ mediaId, prompt }: ImagePlayerProps) {
       <motion.div
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="mt-2 rounded-2xl overflow-hidden border border-[#2a2a38] bg-[#111118] max-w-lg"
+        className="mt-2 rounded-2xl overflow-hidden border border-[#2a2a38] bg-[#08080F] max-w-lg"
       >
         {/* Image area */}
         <div className="relative bg-[#0a0a10] min-h-[200px] flex items-center justify-center">

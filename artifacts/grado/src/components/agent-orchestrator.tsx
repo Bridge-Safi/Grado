@@ -236,12 +236,12 @@ export function AgentOrchestrator({ prompt, token, onPreview, onDone }: AgentOrc
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors",
                   isRunning
-                    ? "bg-gradient-to-r from-[#111118] to-[#111118]"
-                    : "bg-[#111118] hover:bg-[#16161f]",
+                    ? "bg-gradient-to-r from-[#08080F] to-[#08080F]"
+                    : "bg-[#08080F] hover:bg-[#0D0D15]",
                 )}
                 style={{
                   background: isRunning
-                    ? `linear-gradient(90deg, ${agent.color}10 0%, #111118 100%)`
+                    ? `linear-gradient(90deg, ${agent.color}10 0%, #08080F 100%)`
                     : undefined,
                 }}
               >
