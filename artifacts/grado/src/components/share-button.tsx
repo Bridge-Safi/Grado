@@ -98,7 +98,7 @@ export function ShareButton({ conversationId, token, label = "Partager", rtl = f
                     readOnly
                     value={shareUrl}
                     dir="ltr"
-                    className="flex-1 bg-[#050508] border border-[#2a2a38] rounded-lg px-2 py-1.5 text-[11px] text-[#E8E8F0] focus:outline-none truncate"
+                    className="flex-1 bg-[#000000] border border-[#2a2a38] rounded-lg px-2 py-1.5 text-[11px] text-[#E8E8F0] focus:outline-none truncate"
                   />
                   <button
                     onClick={copy}

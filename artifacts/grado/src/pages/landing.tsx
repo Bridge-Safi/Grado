@@ -22,9 +22,9 @@ export default function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#050508] text-white overflow-x-hidden" dir={rtl ? "rtl" : "ltr"}>
+    <div className="min-h-screen bg-[#000000] text-white overflow-x-hidden" dir={rtl ? "rtl" : "ltr"}>
       {/* Navbar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-[#1e1e2a]/80 bg-[#050508]/85 backdrop-blur-md">
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-[#1e1e2a]/80 bg-[#000000]/85 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-5 h-14 flex items-center gap-4">
           <div className="flex items-center gap-2.5">
             <GradoLogo size={30} />
@@ -117,9 +117,9 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
-            className="mt-16 rounded-2xl border border-[#5B5BD6]/20 bg-[#08080F] overflow-hidden shadow-[0_0_60px_rgba(91,91,214,0.12)] text-left"
+            className="mt-16 rounded-2xl border border-[#5B5BD6]/20 bg-[#050505] overflow-hidden shadow-[0_0_60px_rgba(91,91,214,0.12)] text-left"
           >
-            <div className="border-b border-[#2a2a38] px-4 py-3 flex items-center gap-2 bg-[#060610]">
+            <div className="border-b border-[#2a2a38] px-4 py-3 flex items-center gap-2 bg-[#020202]">
               <div className="w-3 h-3 rounded-full bg-red-500/60" />
               <div className="w-3 h-3 rounded-full bg-yellow-500/60" />
               <div className="w-3 h-3 rounded-full bg-green-500/60" />
@@ -136,12 +136,12 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="flex items-start gap-2">
-                <div className="w-7 h-7 rounded-full bg-[#0D0D15] border border-[#5B5BD6]/30 flex items-center justify-center shrink-0 shadow-[0_0_8px_rgba(91,91,214,0.2)]">
+                <div className="w-7 h-7 rounded-full bg-[#0A0A0A] border border-[#5B5BD6]/30 flex items-center justify-center shrink-0 shadow-[0_0_8px_rgba(91,91,214,0.2)]">
                   <GradoLogo size={18} />
                 </div>
-                <div className="bg-[#0D0D15] border border-[#2a2a38] text-[#E8E8F0] text-sm rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-sm">
+                <div className="bg-[#0A0A0A] border border-[#2a2a38] text-[#E8E8F0] text-sm rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-sm">
                   Voici ton app Todo avec dark mode, animations et localStorage ✨
-                  <div className="mt-2 rounded-lg bg-[#050508] border border-[#5B5BD6]/20 p-3 text-xs text-[#5B5BD6] font-mono">
+                  <div className="mt-2 rounded-lg bg-[#000000] border border-[#5B5BD6]/20 p-3 text-xs text-[#5B5BD6] font-mono">
                     ▶ Preview live chargée
                   </div>
                 </div>
@@ -152,12 +152,12 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="flex items-start gap-2">
-                <div className="w-7 h-7 rounded-full bg-[#0D0D15] border border-[#5B5BD6]/30 flex items-center justify-center shrink-0 shadow-[0_0_8px_rgba(91,91,214,0.2)]">
+                <div className="w-7 h-7 rounded-full bg-[#0A0A0A] border border-[#5B5BD6]/30 flex items-center justify-center shrink-0 shadow-[0_0_8px_rgba(91,91,214,0.2)]">
                   <GradoLogo size={18} />
                 </div>
-                <div className="bg-[#0D0D15] border border-[#2a2a38] text-[#E8E8F0] text-sm rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-sm">
+                <div className="bg-[#0A0A0A] border border-[#2a2a38] text-[#E8E8F0] text-sm rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-sm">
                   🎵 Musique générée — 22 secondes
-                  <div className="mt-2 flex items-center gap-2 bg-[#050508] rounded-lg p-2.5 border border-[#5B5BD6]/20">
+                  <div className="mt-2 flex items-center gap-2 bg-[#000000] rounded-lg p-2.5 border border-[#5B5BD6]/20">
                     <div className="w-7 h-7 rounded-full bg-[#5B5BD6] flex items-center justify-center shrink-0 shadow-[0_0_10px_rgba(91,91,214,0.4)] text-xs">▶</div>
                     <div className="flex-1 h-1 bg-[#2a2a38] rounded-full overflow-hidden">
                       <div className="w-1/3 h-full bg-gradient-to-r from-[#5B5BD6] to-[#8B8BFF] rounded-full" />
@@ -187,7 +187,7 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08 }}
-                className="bg-[#08080F] border border-[#2a2a38] rounded-2xl p-6 hover:border-[#5B5BD6]/50 hover:shadow-[0_0_24px_rgba(91,91,214,0.1)] transition-all group"
+                className="bg-[#050505] border border-[#2a2a38] rounded-2xl p-6 hover:border-[#5B5BD6]/50 hover:shadow-[0_0_24px_rgba(91,91,214,0.1)] transition-all group"
               >
                 <div className="w-10 h-10 rounded-xl bg-[#5B5BD6]/15 flex items-center justify-center mb-4 group-hover:bg-[#5B5BD6]/25 group-hover:shadow-[0_0_16px_rgba(91,91,214,0.25)] transition-all">
                   <f.icon className="w-5 h-5 text-[#5B5BD6]" />
@@ -215,7 +215,7 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.08 }}
-                className="bg-[#08080F] border border-[#2a2a38] rounded-2xl p-6 hover:border-[#5B5BD6]/30 transition-all"
+                className="bg-[#050505] border border-[#2a2a38] rounded-2xl p-6 hover:border-[#5B5BD6]/30 transition-all"
               >
                 <div className="flex gap-0.5 mb-3">
                   {Array.from({ length: item.stars }).map((_, j) => (

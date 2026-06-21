@@ -21,7 +21,7 @@ const PLANS = [
       "Hébergement 1 site",
       "Support communauté",
     ],
-    cta: "Commencer gratuitement",
+    cta: "Commencer",
     popular: false,
     paid: false,
     highlight: false,
@@ -135,7 +135,7 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050508] flex flex-col">
+    <div className="min-h-screen bg-[#000000] flex flex-col">
       {/* Payment Modal */}
       {paymentPlan && (
         <PaymentModal
@@ -146,7 +146,7 @@ export default function PricingPage() {
       )}
 
       {/* Navbar */}
-      <header className="h-12 border-b border-[#2a2a38] bg-[#08080F] flex items-center px-5 gap-3 shrink-0">
+      <header className="h-12 border-b border-[#2a2a38] bg-[#050505] flex items-center px-5 gap-3 shrink-0">
         <a href="/" className="flex items-center gap-2">
           <GradoLogo size={22} />
           <span className="text-sm font-semibold text-white tracking-tight">Grado</span>
@@ -227,8 +227,8 @@ export default function PricingPage() {
                 className={cn(
                   "relative rounded-2xl border p-5 flex flex-col gap-4",
                   plan.highlight
-                    ? "border-[#5B5BD6] bg-gradient-to-b from-[#0E0E28] to-[#08080F] shadow-[0_0_50px_rgba(91,91,214,0.25)]"
-                    : "border-[#2a2a38] bg-[#08080F]",
+                    ? "border-[#5B5BD6] bg-gradient-to-b from-[#0E0E28] to-[#050505] shadow-[0_0_50px_rgba(91,91,214,0.25)]"
+                    : "border-[#2a2a38] bg-[#050505]",
                   isCurrent && "ring-2 ring-[#5B5BD6]/50"
                 )}
               >
@@ -357,7 +357,7 @@ export default function PricingPage() {
           <div className="overflow-x-auto rounded-2xl border border-[#2a2a38]">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[#2a2a38] bg-[#08080F]">
+                <tr className="border-b border-[#2a2a38] bg-[#050505]">
                   <th className="text-left px-5 py-3 text-[#8888A8] font-medium">Fonctionnalité</th>
                   {PLANS.map(p => (
                     <th key={p.id} className={cn(
@@ -367,7 +367,7 @@ export default function PricingPage() {
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1e1e2a] bg-[#050508]">
+              <tbody className="divide-y divide-[#1e1e2a] bg-[#000000]">
                 {[
                   { label: "Créations / mois",       vals: ["5", "30", "150", "500", "∞"] },
                   { label: "Hébergement de sites",    vals: ["1 site", "5 sites", "∞", "∞", "∞"] },
@@ -378,7 +378,7 @@ export default function PricingPage() {
                   { label: "Modèles IA premium",      vals: ["✗", "✗", "✗", "✗", "✓"] },
                   { label: "Support",                 vals: ["Communauté", "Standard", "Prioritaire", "Prioritaire", "Dédié 24/7"] },
                 ].map(({ label, vals }) => (
-                  <tr key={label} className="hover:bg-[#08080F]/60 transition-colors">
+                  <tr key={label} className="hover:bg-[#050505]/60 transition-colors">
                     <td className="px-5 py-3 text-[#C8C8E8]">{label}</td>
                     {vals.map((v, i) => (
                       <td key={i} className={cn(

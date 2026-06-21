@@ -68,15 +68,15 @@ export function ProjectPreview({ html, conversationId }: ProjectPreviewProps) {
 
   return (
     <>
-      <div className="mt-3 rounded-xl border border-[#2a2a38] overflow-hidden bg-[#050508]">
+      <div className="mt-3 rounded-xl border border-[#2a2a38] overflow-hidden bg-[#000000]">
         {/* Preview bar */}
-        <div className="flex items-center gap-2 px-3 py-2 bg-[#0D0D15] border-b border-[#2a2a38]">
+        <div className="flex items-center gap-2 px-3 py-2 bg-[#0A0A0A] border-b border-[#2a2a38]">
           <div className="flex gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
             <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
             <span className="w-2.5 h-2.5 rounded-full bg-green-500/70" />
           </div>
-          <div className="flex-1 mx-2 bg-[#050508] rounded-md px-3 py-0.5 text-[11px] text-[#8888A8] font-mono truncate border border-[#2a2a38]">
+          <div className="flex-1 mx-2 bg-[#000000] rounded-md px-3 py-0.5 text-[11px] text-[#8888A8] font-mono truncate border border-[#2a2a38]">
             {fullUrl ?? "grado://preview"}
           </div>
           {fullUrl && (
@@ -97,7 +97,7 @@ export function ProjectPreview({ html, conversationId }: ProjectPreviewProps) {
         />
 
         {/* Action bar */}
-        <div className="flex items-center gap-2 px-3 py-2.5 bg-[#0D0D15] border-t border-[#2a2a38]">
+        <div className="flex items-center gap-2 px-3 py-2.5 bg-[#0A0A0A] border-t border-[#2a2a38]">
           <span className="text-[11px] text-[#8888A8] mr-auto">Projet construit par Grado Agent</span>
           <Button size="sm" variant="ghost"
             className="h-7 gap-1.5 text-[#8888A8] hover:text-white text-xs px-2"
@@ -129,7 +129,7 @@ export function ProjectPreview({ html, conversationId }: ProjectPreviewProps) {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}>
-          <div className="bg-[#08080F] border border-[#2a2a38] rounded-2xl shadow-[0_0_60px_rgba(91,91,214,0.2)] w-full max-w-md p-6">
+          <div className="bg-[#050505] border border-[#2a2a38] rounded-2xl shadow-[0_0_60px_rgba(91,91,214,0.2)] w-full max-w-md p-6">
             {/* Header */}
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2.5">
@@ -155,14 +155,14 @@ export function ProjectPreview({ html, conversationId }: ProjectPreviewProps) {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Mon projet Grado"
-                className="w-full bg-[#0D0D15] border border-[#2a2a38] focus:border-[#5B5BD6]/60 rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#555568] outline-none transition-colors"
+                className="w-full bg-[#0A0A0A] border border-[#2a2a38] focus:border-[#5B5BD6]/60 rounded-xl px-3 py-2.5 text-sm text-white placeholder-[#555568] outline-none transition-colors"
                 onKeyDown={(e) => e.key === "Enter" && handleConfirmPublish()}
                 autoFocus
               />
             </div>
 
             {/* Preview of URL */}
-            <div className="bg-[#050508] rounded-xl border border-[#2a2a38] px-3 py-2.5 mb-5">
+            <div className="bg-[#000000] rounded-xl border border-[#2a2a38] px-3 py-2.5 mb-5">
               <p className="text-[10px] text-[#8888A8] mb-1">Ton site sera accessible à :</p>
               <p className="text-xs text-[#5B5BD6] font-mono truncate">
                 {window.location.origin}/s/{title ? title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 30) + "-xxxxx" : "mon-site-xxxxx"}
@@ -172,7 +172,7 @@ export function ProjectPreview({ html, conversationId }: ProjectPreviewProps) {
             {/* Perks */}
             <div className="grid grid-cols-3 gap-2 mb-5">
               {["🌍 En ligne 24/7", "⚡ Hébergement gratuit", "🔗 Lien partageable"].map(p => (
-                <div key={p} className="text-center bg-[#0D0D15] rounded-xl p-2.5 border border-[#2a2a38]">
+                <div key={p} className="text-center bg-[#0A0A0A] rounded-xl p-2.5 border border-[#2a2a38]">
                   <p className="text-[11px] text-[#8888A8]">{p}</p>
                 </div>
               ))}

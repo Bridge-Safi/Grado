@@ -96,7 +96,7 @@ export function ProjectsPanel({ token, conversations, activeConvId, onSelectConv
                 onChange={e => setNewName(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") createProject(); if (e.key === "Escape") setCreating(false); }}
                 placeholder="Nom du projet"
-                className="w-full bg-[#050508] border border-[#2a2a38] rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-[#4a4a5a] focus:outline-none focus:border-[#5B5BD6]/60"
+                className="w-full bg-[#000000] border border-[#2a2a38] rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-[#4a4a5a] focus:outline-none focus:border-[#5B5BD6]/60"
               />
               <div className="flex gap-1.5 justify-end">
                 <button onClick={() => setCreating(false)} className="px-2 py-1 rounded text-xs text-[#8888A8] hover:text-white"><X className="w-3 h-3" /></button>

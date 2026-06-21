@@ -125,7 +125,7 @@ export default function AdminPage() {
 
   if (!loading && error === "403") {
     return (
-      <div className="min-h-screen bg-[#050508] flex flex-col items-center justify-center gap-4 text-center px-4">
+      <div className="min-h-screen bg-[#000000] flex flex-col items-center justify-center gap-4 text-center px-4">
         <div className="text-5xl">🔒</div>
         <h1 className="text-2xl font-bold text-white">Accès refusé</h1>
         <p className="text-sm text-[#8888A8] max-w-sm">
@@ -158,10 +158,10 @@ export default function AdminPage() {
   const pendingCount = payments.filter(p => p.status === "pending").length;
 
   return (
-    <div className="min-h-screen bg-[#050508] text-white">
+    <div className="min-h-screen bg-[#000000] text-white">
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#5B5BD6]/8 rounded-full blur-[120px] pointer-events-none" />
 
-      <nav className="border-b border-[#1e1e2a]/80 bg-[#050508]/90 backdrop-blur-md sticky top-0 z-10">
+      <nav className="border-b border-[#1e1e2a]/80 bg-[#000000]/90 backdrop-blur-md sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-5 h-14 flex items-center gap-3">
           <button onClick={() => navigate("/chat")} className="flex items-center gap-1.5 text-sm text-[#8888A8] hover:text-white transition-colors">
             <ArrowLeft className="w-4 h-4" />
@@ -178,28 +178,28 @@ export default function AdminPage() {
       <main className="max-w-5xl mx-auto px-5 py-8">
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-[#0A0A12] border border-[#1e1e2a] rounded-2xl p-5">
+          <div className="bg-[#080808] border border-[#1e1e2a] rounded-2xl p-5">
             <div className="flex items-center gap-2 text-[#8888A8] text-xs mb-2"><Users className="w-3.5 h-3.5" />Total</div>
             <p className="text-3xl font-bold text-white">{count}</p>
           </div>
-          <div className="bg-[#0A0A12] border border-[#1e1e2a] rounded-2xl p-5">
+          <div className="bg-[#080808] border border-[#1e1e2a] rounded-2xl p-5">
             <div className="flex items-center gap-2 text-[#8888A8] text-xs mb-2"><Mail className="w-3.5 h-3.5" />En essai</div>
             <p className="text-3xl font-bold text-yellow-400">
               {users.filter(u => u.trialEndsAt && new Date(u.trialEndsAt).getTime() > Date.now()).length}
             </p>
           </div>
-          <div className="bg-[#0A0A12] border border-[#1e1e2a] rounded-2xl p-5">
+          <div className="bg-[#080808] border border-[#1e1e2a] rounded-2xl p-5">
             <div className="flex items-center gap-2 text-[#8888A8] text-xs mb-2"><Calendar className="w-3.5 h-3.5" />Payants</div>
             <p className="text-3xl font-bold text-green-400">{users.filter(u => u.plan !== "gratuit").length}</p>
           </div>
-          <div className={cn("bg-[#0A0A12] border rounded-2xl p-5", pendingCount > 0 ? "border-yellow-500/40" : "border-[#1e1e2a]")}>
+          <div className={cn("bg-[#080808] border rounded-2xl p-5", pendingCount > 0 ? "border-yellow-500/40" : "border-[#1e1e2a]")}>
             <div className="flex items-center gap-2 text-[#8888A8] text-xs mb-2"><CreditCard className="w-3.5 h-3.5" />Paiements en attente</div>
             <p className={cn("text-3xl font-bold", pendingCount > 0 ? "text-yellow-400" : "text-white")}>{pendingCount}</p>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-[#0A0A12] border border-[#1e1e2a] rounded-xl p-1 w-fit">
+        <div className="flex gap-1 mb-6 bg-[#080808] border border-[#1e1e2a] rounded-xl p-1 w-fit">
           <button
             onClick={() => setTab("payments")}
             className={cn("flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors", tab === "payments" ? "bg-[#5B5BD6] text-white" : "text-[#8888A8] hover:text-white")}
@@ -235,14 +235,14 @@ export default function AdminPage() {
             Chargement…
           </div>
         ) : tab === "payments" ? (
-          <div className="bg-[#0A0A12] border border-[#1e1e2a] rounded-2xl overflow-hidden">
+          <div className="bg-[#080808] border border-[#1e1e2a] rounded-2xl overflow-hidden">
             {payments.length === 0 ? (
               <div className="px-5 py-12 text-center text-[#8888A8]">
                 <CreditCard className="w-8 h-8 mx-auto mb-3 opacity-30" />
                 <p>Aucune demande de paiement</p>
               </div>
             ) : (
-              <div className="divide-y divide-[#0F0F18]">
+              <div className="divide-y divide-[#0D0D0D]">
                 {payments.map((p) => (
                   <div key={p.id} className={cn("px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3", p.status === "pending" && "bg-yellow-500/5")}>
                     <div className="flex-1 min-w-0">
@@ -297,7 +297,7 @@ export default function AdminPage() {
             )}
           </div>
         ) : (
-          <div className="bg-[#0A0A12] border border-[#1e1e2a] rounded-2xl overflow-hidden">
+          <div className="bg-[#080808] border border-[#1e1e2a] rounded-2xl overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[#1e1e2a]">
@@ -312,7 +312,7 @@ export default function AdminPage() {
               </thead>
               <tbody>
                 {users.map((u, i) => (
-                  <tr key={u.id} className="border-b border-[#0F0F18] last:border-0 hover:bg-[#0D0D15] transition-colors">
+                  <tr key={u.id} className="border-b border-[#0D0D0D] last:border-0 hover:bg-[#0A0A0A] transition-colors">
                     <td className="px-5 py-3 text-[#5555A8]">{i + 1}</td>
                     <td className="px-5 py-3 font-medium text-white">{u.name}</td>
                     <td className="px-5 py-3 text-[#8888A8] font-mono text-xs hidden md:table-cell">{u.email}</td>
@@ -333,7 +333,7 @@ export default function AdminPage() {
                           Changer <ChevronDown className="w-3 h-3" />
                         </button>
                         {openPlanSelect === u.id && (
-                          <div className="absolute right-0 top-8 z-20 bg-[#0F0F18] border border-[#2a2a38] rounded-xl shadow-xl overflow-hidden min-w-[120px]">
+                          <div className="absolute right-0 top-8 z-20 bg-[#0D0D0D] border border-[#2a2a38] rounded-xl shadow-xl overflow-hidden min-w-[120px]">
                             {["gratuit", "essentiel", "createur", "fusion", "elite"].map(plan => (
                               <button
                                 key={plan}

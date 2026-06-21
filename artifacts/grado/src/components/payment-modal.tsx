@@ -101,7 +101,7 @@ export function PaymentModal({ plan, onClose, onSuccess }: PaymentModalProps) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="relative bg-[#08080F] border border-[#2a2a38] rounded-2xl w-full max-w-md shadow-[0_0_80px_rgba(91,91,214,0.2)] overflow-hidden"
+          className="relative bg-[#050505] border border-[#2a2a38] rounded-2xl w-full max-w-md shadow-[0_0_80px_rgba(91,91,214,0.2)] overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -139,7 +139,7 @@ export function PaymentModal({ plan, onClose, onSuccess }: PaymentModalProps) {
               <p className="text-sm text-[#8888A8] leading-relaxed mb-4">
                 Votre plan sera activé dans les <strong className="text-white">2 à 24 heures</strong> après vérification du virement par notre équipe.
               </p>
-              <div className="bg-[#050508] border border-[#2a2a38] rounded-xl p-3 mb-5">
+              <div className="bg-[#000000] border border-[#2a2a38] rounded-xl p-3 mb-5">
                 <p className="text-xs text-[#8888A8] mb-1">Votre référence de paiement</p>
                 <p className="font-mono text-sm font-bold text-[#7B7BFF]">{reference}</p>
               </div>
@@ -196,7 +196,7 @@ export function PaymentModal({ plan, onClose, onSuccess }: PaymentModalProps) {
                         </p>
                       </div>
                     )}
-                    <div className="w-full bg-[#050508] border border-[#2a2a38] rounded-xl p-3 space-y-2">
+                    <div className="w-full bg-[#000000] border border-[#2a2a38] rounded-xl p-3 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-[#8888A8]">Montant</span>
                         <span className="text-sm font-bold text-white">{plan.price} Dh</span>
@@ -223,7 +223,7 @@ export function PaymentModal({ plan, onClose, onSuccess }: PaymentModalProps) {
                       { label: "Montant", value: `${plan.price} Dh`, key: "amount", show: true },
                       { label: "Référence (obligatoire)", value: reference, key: "ref2", show: true },
                     ].filter(f => f.show).map(({ label, value, key }) => (
-                      <div key={key} className="bg-[#050508] border border-[#2a2a38] rounded-xl p-3">
+                      <div key={key} className="bg-[#000000] border border-[#2a2a38] rounded-xl p-3">
                         <p className="text-[10px] text-[#8888A8] mb-1">{label}</p>
                         <div className="flex items-center justify-between gap-2">
                           <span className={cn(

@@ -11,7 +11,7 @@ export default function SiteViewPage() {
   }, [slug]);
 
   return (
-    <div className="min-h-screen bg-[#050508] flex items-center justify-center">
+    <div className="min-h-screen bg-[#000000] flex items-center justify-center">
       <div className="text-[#8888A8] text-sm">Chargement du site...</div>
     </div>
   );

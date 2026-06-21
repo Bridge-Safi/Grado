@@ -57,7 +57,7 @@
 }
 
 :root, .dark {
-  --background: 240 20% 3%;     /* #050508 */
+  --background: 0 0% 0%;        /* #000000 */
   --foreground: 240 20% 93%;    /* #E8E8F0 */
 
   --border: 240 14% 19%;        /* #2a2a38 */

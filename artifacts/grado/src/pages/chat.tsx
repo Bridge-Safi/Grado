@@ -54,9 +54,9 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-[100dvh] w-full overflow-hidden bg-[#050508]">
+    <div className="flex flex-col h-[100dvh] w-full overflow-hidden bg-[#000000]">
       {/* ── Top navbar with red Run button ── */}
-      <header className="h-12 border-b border-[#2a2a38] bg-[#08080F] flex items-center px-3 gap-3 shrink-0 z-20">
+      <header className="h-12 border-b border-[#2a2a38] bg-[#050505] flex items-center px-3 gap-3 shrink-0 z-20">
         {/* Sidebar toggle */}
         {!isSidebarOpen && (
           <Button

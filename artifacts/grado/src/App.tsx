@@ -34,7 +34,7 @@ class ErrorBoundary extends React.Component<
   render() {
     if (this.state.error) {
       return (
-        <div className="min-h-screen bg-[#050508] flex flex-col items-center justify-center gap-4 text-center px-6">
+        <div className="min-h-screen bg-[#000000] flex flex-col items-center justify-center gap-4 text-center px-6">
           <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-2xl">⚡</div>
           <h2 className="text-white font-semibold text-lg">Une erreur inattendue est survenue</h2>
           <p className="text-[#8888A8] text-sm max-w-sm">{this.state.error.message}</p>
@@ -57,7 +57,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   const { user, loading } = useAuth();
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#050508] flex items-center justify-center">
+      <div className="min-h-screen bg-[#000000] flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-[#5B5BD6] animate-spin" />
       </div>
     );
@@ -70,7 +70,7 @@ function PublicOnlyRoute({ component: Component }: { component: React.ComponentT
   const { user, loading } = useAuth();
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#050508] flex items-center justify-center">
+      <div className="min-h-screen bg-[#000000] flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-[#5B5BD6] animate-spin" />
       </div>
     );

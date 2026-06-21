@@ -49,10 +49,10 @@ export default function MySitesPage() {
   const fmt = (d: string) => new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
 
   return (
-    <div className="min-h-screen bg-[#050508] text-white">
+    <div className="min-h-screen bg-[#000000] text-white">
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#5B5BD6]/8 rounded-full blur-[120px] pointer-events-none" />
 
-      <nav className="border-b border-[#1e1e2a]/80 bg-[#050508]/90 backdrop-blur-md sticky top-0 z-10">
+      <nav className="border-b border-[#1e1e2a]/80 bg-[#000000]/90 backdrop-blur-md sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-5 h-14 flex items-center gap-3">
           <button onClick={() => navigate("/chat")}
             className="flex items-center gap-1.5 text-sm text-[#8888A8] hover:text-white transition-colors">
@@ -101,7 +101,7 @@ export default function MySitesPage() {
                 <motion.div key={site.slug}
                   initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.97 }} transition={{ delay: i * 0.04 }}
-                  className="group rounded-2xl border border-[#2a2a38] bg-[#08080F] hover:border-[#5B5BD6]/30 transition-all p-5 flex items-center gap-4">
+                  className="group rounded-2xl border border-[#2a2a38] bg-[#050505] hover:border-[#5B5BD6]/30 transition-all p-5 flex items-center gap-4">
 
                   {/* Icon */}
                   <div className="w-10 h-10 rounded-xl bg-[#5B5BD6]/10 border border-[#5B5BD6]/20 flex items-center justify-center shrink-0">
@@ -150,7 +150,7 @@ export default function MySitesPage() {
         )}
 
         {/* Custom domain info */}
-        <div className="mt-10 rounded-2xl border border-[#2a2a38] bg-[#08080F] p-6">
+        <div className="mt-10 rounded-2xl border border-[#2a2a38] bg-[#050505] p-6">
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 rounded-xl bg-[#5B5BD6]/10 border border-[#5B5BD6]/20 flex items-center justify-center shrink-0 mt-0.5">
               <Globe className="w-5 h-5 text-[#5B5BD6]" />
@@ -160,7 +160,7 @@ export default function MySitesPage() {
               <p className="text-sm text-[#8888A8] mb-3">
                 Tu veux publier sur <strong className="text-white">tonsite.com</strong> ? Pointe ton domaine vers Grado avec un enregistrement CNAME.
               </p>
-              <div className="bg-[#050508] rounded-xl p-3 font-mono text-xs border border-[#2a2a38] space-y-1">
+              <div className="bg-[#000000] rounded-xl p-3 font-mono text-xs border border-[#2a2a38] space-y-1">
                 <p className="text-[#8888A8]">Enregistrement DNS à ajouter :</p>
                 <p><span className="text-[#7B7BFF]">Type :</span> <span className="text-white">CNAME</span></p>
                 <p><span className="text-[#7B7BFF]">Nom :</span> <span className="text-white">@ ou www</span></p>
