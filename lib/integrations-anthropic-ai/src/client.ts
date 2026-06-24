@@ -1,20 +1,21 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 function createClient(): Anthropic {
-  if (!process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL) {
-    throw new Error(
-      "AI_INTEGRATIONS_ANTHROPIC_BASE_URL must be set. Did you forget to provision the Anthropic AI integration?",
-    );
+  const replitKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+  const replitBase = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
+  const directKey = process.env.ANTHROPIC_API_KEY;
+
+  if (replitKey && replitBase) {
+    return new Anthropic({ apiKey: replitKey, baseURL: replitBase });
   }
-  if (!process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY) {
-    throw new Error(
-      "AI_INTEGRATIONS_ANTHROPIC_API_KEY must be set. Did you forget to provision the Anthropic AI integration?",
-    );
+
+  if (directKey) {
+    return new Anthropic({ apiKey: directKey });
   }
-  return new Anthropic({
-    apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
-    baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
-  });
+
+  throw new Error(
+    "Anthropic API key manquante. Configure ANTHROPIC_API_KEY dans les variables d'environnement Railway."
+  );
 }
 
 let _client: Anthropic | null = null;
