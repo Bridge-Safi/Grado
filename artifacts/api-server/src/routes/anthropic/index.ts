@@ -606,17 +606,25 @@ router.post("/conversations/:id/messages", async (req, res) => {
     : [];
   const isPaidUser = currentUser && currentUser.plan !== "gratuit";
 
-  const MODEL_MAP: Record<string, string> = {
+  // Models: haiku/sonnet via Anthropic (direct or Replit proxy), gemini/mistral/llama via OpenRouter
+  const ANTHROPIC_MODELS: Record<string, string> = {
     haiku: "claude-haiku-4-5",
     sonnet: "claude-sonnet-4-5",
   };
-  // Vision (images) requires a multimodal model — haiku-4-5 is text-only
-  // Free plan users are locked to haiku
+  const OPENROUTER_MODELS: Record<string, string> = {
+    gemini: "google/gemini-2.0-flash-001",
+    mistral: "mistralai/mistral-small-3.2-24b-instruct:free",
+    llama: "meta-llama/llama-3.3-70b-instruct:free",
+  };
+
+  const isOpenRouterModel = modelChoice in OPENROUTER_MODELS;
+  // Free users locked to haiku; vision requires sonnet (multimodal)
+  const effectiveModelChoice = !isPaidUser ? "haiku" : modelChoice;
   const selectedModel = imageData
     ? "claude-sonnet-4-5"
-    : isPaidUser
-      ? (MODEL_MAP[modelChoice] ?? "claude-haiku-4-5")
-      : "claude-haiku-4-5";
+    : isOpenRouterModel && isPaidUser
+      ? OPENROUTER_MODELS[effectiveModelChoice]
+      : (ANTHROPIC_MODELS[effectiveModelChoice] ?? "claude-haiku-4-5");
 
   const AGENT_PREFIXES: Record<string, string> = {
     dev: "Tu es un agent de développement expert. Priorité absolue: générer du code complet, fonctionnel et optimisé.\n\n",
@@ -730,23 +738,97 @@ Sois authentique, pas robotique.\n\n`,
     res.setHeader("X-Accel-Buffering", "no");
 
     let fullResponse = "";
+    const useOpenRouter = isOpenRouterModel && isPaidUser && !imageData;
 
-    const stream = anthropic.messages.stream({
-      model: selectedModel,
-      max_tokens: 8192,
-      system: finalSystem,
-      messages: chatMessages,
-    });
+    if (useOpenRouter) {
+      // OpenRouter uses OpenAI-compatible API
+      const openrouterKey = process.env.OPENROUTER_API_KEY;
+      if (!openrouterKey) {
+        res.write(`data: ${JSON.stringify({ error: "OPENROUTER_API_KEY manquante" })}\n\n`);
+        res.end();
+        return;
+      }
+      const orClient = new Anthropic({
+        apiKey: openrouterKey,
+        baseURL: "https://openrouter.ai/api/v1",
+        defaultHeaders: {
+          "HTTP-Referer": "https://grado.app",
+          "X-Title": "Grado AI",
+        },
+      });
+      // OpenRouter is OpenAI-compatible, use fetch directly for streaming
+      const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${openrouterKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://grado.app",
+          "X-Title": "Grado AI",
+        },
+        body: JSON.stringify({
+          model: selectedModel,
+          max_tokens: 8192,
+          stream: true,
+          messages: [
+            { role: "system", content: finalSystem },
+            ...chatMessages.map((m: any) => ({
+              role: m.role,
+              content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+            })),
+          ],
+        }),
+      });
 
-    for await (const event of stream) {
-      if (
-        event.type === "content_block_delta" &&
-        event.delta.type === "text_delta"
-      ) {
-        fullResponse += event.delta.text;
-        res.write(
-          `data: ${JSON.stringify({ content: event.delta.text })}\n\n`
-        );
+      if (!orRes.ok || !orRes.body) {
+        const errText = await orRes.text();
+        res.write(`data: ${JSON.stringify({ error: `OpenRouter error: ${errText}` })}\n\n`);
+        res.end();
+        return;
+      }
+
+      const reader = orRes.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6).trim();
+          if (data === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(data);
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) {
+              fullResponse += delta;
+              res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
+            }
+          } catch {}
+        }
+      }
+    } else {
+      // Anthropic (direct key or Replit proxy)
+      const stream = anthropic.messages.stream({
+        model: selectedModel,
+        max_tokens: 8192,
+        system: finalSystem,
+        messages: chatMessages,
+      });
+
+      for await (const event of stream) {
+        if (
+          event.type === "content_block_delta" &&
+          event.delta.type === "text_delta"
+        ) {
+          fullResponse += event.delta.text;
+          res.write(
+            `data: ${JSON.stringify({ content: event.delta.text })}\n\n`
+          );
+        }
       }
     }
 

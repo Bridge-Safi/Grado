@@ -48,7 +48,7 @@ interface MediaJob {
 
 
 type AgentMode = "general" | "dev" | "design" | "analyse" | "tutor" | "writer" | "translate" | "philosophy" | "casual";
-type ModelChoice = "haiku" | "sonnet";
+type ModelChoice = "haiku" | "sonnet" | "gemini" | "mistral" | "llama";
 
 const AGENTS: { id: AgentMode; label: string; icon: React.ElementType; desc: string; group?: string }[] = [
   { id: "general",    label: "Général",     icon: Sparkles,  desc: "Agent polyvalent",              group: "Création" },
@@ -730,30 +730,45 @@ export function ChatArea({
               </AnimatePresence>
             </div>
 
-            {/* 2 — Model toggle (Rapide / Intelligent) */}
-            <div className="flex items-center bg-[#0A0A0A] border border-[#2a2a38] rounded-lg p-0.5">
-              <button
-                onClick={() => setModel("haiku")}
-                className={cn(
-                  "flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all",
-                  model === "haiku" ? "bg-[#5B5BD6]/20 text-white" : "text-[#8888A8] hover:text-white"
-                )}
-              >
-                <Zap className="w-3 h-3" />
-                {t.toolFast}
-              </button>
-              <button
-                onClick={() => isPaidUser ? setModel("sonnet") : navigate("/pricing")}
-                title={isPaidUser ? undefined : "Plan payant requis"}
-                className={cn(
-                  "flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all",
-                  model === "sonnet" && isPaidUser ? "bg-[#5B5BD6]/20 text-white" : "text-[#8888A8] hover:text-white"
-                )}
-              >
-                {isPaidUser ? <Brain className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-                {t.toolSmart}
-              </button>
-            </div>
+            {/* 2 — Model selector */}
+            {(() => {
+              const MODELS: { id: ModelChoice; label: string; badge?: string; paid?: boolean }[] = [
+                { id: "haiku",   label: "Haiku",   badge: "Claude" },
+                { id: "sonnet",  label: "Sonnet",  badge: "Claude", paid: true },
+                { id: "gemini",  label: "Flash",   badge: "Gemini", paid: true },
+                { id: "mistral", label: "Mistral", badge: "Free",   paid: true },
+                { id: "llama",   label: "Llama",   badge: "Free",   paid: true },
+              ];
+              const current = MODELS.find(m => m.id === model) ?? MODELS[0];
+              return (
+                <div className="relative group">
+                  <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#0A0A0A] border border-[#2a2a38] text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/30 transition-all">
+                    <Zap className="w-3 h-3" />
+                    <span className="text-white/80">{current.label}</span>
+                    <span className="opacity-40 text-[10px]">{current.badge}</span>
+                    <ChevronDown className="w-3 h-3 opacity-50" />
+                  </button>
+                  <div className="absolute bottom-full mb-1.5 left-0 hidden group-hover:flex flex-col bg-[#0D0D0F] border border-[#2a2a38] rounded-xl shadow-xl overflow-hidden z-50 min-w-[150px]">
+                    {MODELS.map(m => (
+                      <button
+                        key={m.id}
+                        onClick={() => m.paid && !isPaidUser ? navigate("/pricing") : setModel(m.id)}
+                        className={cn(
+                          "flex items-center justify-between gap-2 px-3 py-2 text-xs transition-all hover:bg-[#5B5BD6]/10",
+                          model === m.id ? "text-white bg-[#5B5BD6]/15" : "text-[#8888A8]"
+                        )}
+                      >
+                        <span>{m.label}</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] opacity-50">{m.badge}</span>
+                          {m.paid && !isPaidUser && <Lock className="w-2.5 h-2.5 opacity-50" />}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* 3 — ··· More options (Réflexion + Partager) */}
             <div className="relative">
