@@ -16,15 +16,22 @@ export function GradoLogo({ size = 32, className = "" }: GradoLogoProps) {
       className={cn(className)}
     >
       <defs>
-        <linearGradient id="bolt-grad" x1="10" y1="2" x2="22" y2="30" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#A78BFF" />
-          <stop offset="100%" stopColor="#5B5BD6" />
-        </linearGradient>
+        <radialGradient id="bolt-shine" cx="42%" cy="46%" r="70%">
+          <stop offset="0%" stopColor="#F0EBFF" />
+          <stop offset="30%" stopColor="#C4AFFF" />
+          <stop offset="65%" stopColor="#8B6FF0" />
+          <stop offset="100%" stopColor="#5B21B6" />
+        </radialGradient>
       </defs>
-      {/* Lightning bolt */}
+      {/* Top wing of the bolt */}
       <path
-        d="M18.5 3L9 17.5H15.5L13.5 29L23 14.5H16.5L18.5 3Z"
-        fill="url(#bolt-grad)"
+        d="M18 2 L29 15.5 L16.5 15.5 L12 2 Z"
+        fill="url(#bolt-shine)"
+      />
+      {/* Bottom wing of the bolt */}
+      <path
+        d="M14 30 L3 16.5 L15.5 16.5 L20 30 Z"
+        fill="url(#bolt-shine)"
       />
     </svg>
   );
