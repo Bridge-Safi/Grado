@@ -618,6 +618,12 @@ router.post("/conversations/:id/messages", async (req, res) => {
     llama: "meta-llama/llama-3.3-70b-instruct:free",
   };
 
+  const FREE_FALLBACK_MODELS = [
+    "liquid/lfm-2.5-1.2b-instruct:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "openai/gpt-oss-20b:free",
+  ];
+
   const isOpenRouterModel = modelChoice in OPENROUTER_MODELS;
   // Free users get a free OpenRouter model for now (premium models arrive soon); vision requires sonnet (multimodal)
   const selectedModel = imageData
@@ -753,11 +759,6 @@ Sois authentique, pas robotique.\n\n`,
       }
       
       // OpenRouter is OpenAI-compatible, use fetch directly for streaming
-      const FREE_FALLBACK_MODELS = [
-        "liquid/lfm-2.5-1.2b-instruct:free",
-        "meta-llama/llama-3.3-70b-instruct:free",
-        "openai/gpt-oss-20b:free",
-      ];
       const candidateModels = !isPaidUser ? FREE_FALLBACK_MODELS : [selectedModel];
       let orRes: Response | null = null;
       let lastErrText = "";
@@ -826,25 +827,86 @@ Sois authentique, pas robotique.\n\n`,
       }
     } else {
       // Anthropic (direct key or Replit proxy)
-      const stream = anthropic.messages.stream({
-        model: selectedModel,
-        max_tokens: 8192,
-        system: finalSystem,
-        messages: chatMessages,
-      });
+      try {
+        const stream = anthropic.messages.stream({
+          model: selectedModel,
+          max_tokens: 8192,
+          system: finalSystem,
+          messages: chatMessages,
+        });
 
-      for await (const event of stream) {
-        if (
-          event.type === "content_block_delta" &&
-          event.delta.type === "text_delta"
-        ) {
-          fullResponse += event.delta.text;
-          res.write(
-            `data: ${JSON.stringify({ content: event.delta.text })}\n\n`
-          );
+        for await (const event of stream) {
+          if (
+            event.type === "content_block_delta" &&
+            event.delta.type === "text_delta"
+          ) {
+            fullResponse += event.delta.text;
+            res.write(
+              `data: ${JSON.stringify({ content: event.delta.text })}\n\n`
+            );
+          }
+        }
+      } catch (anthropicErr) {
+        console.error("Anthropic failed, falling back to OpenRouter:", anthropicErr);
+        const openrouterKey = process.env.OPENROUTER_API_KEY;
+        if (openrouterKey && !imageData) {
+          for (const candidateModel of FREE_FALLBACK_MODELS) {
+            try {
+              const attempt = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                  "Authorization": `Bearer ${openrouterKey}`,
+                  "Content-Type": "application/json",
+                  "HTTP-Referer": "https://grado.app",
+                  "X-Title": "Grado AI",
+                },
+                body: JSON.stringify({
+                  model: candidateModel,
+                  max_tokens: 8192,
+                  stream: true,
+                  messages: [
+                    { role: "system", content: finalSystem },
+                    ...chatMessages.map((m: any) => ({
+                      role: m.role,
+                      content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+                    })),
+                  ],
+                }),
+              });
+              if (attempt.ok && attempt.body) {
+                const reader2 = attempt.body.getReader();
+                const decoder2 = new TextDecoder();
+                let buffer2 = "";
+                while (true) {
+                  const { done, value } = await reader2.read();
+                  if (done) break;
+                  buffer2 += decoder2.decode(value, { stream: true });
+                  const lines2 = buffer2.split("\n");
+                  buffer2 = lines2.pop() ?? "";
+                  for (const line of lines2) {
+                    if (!line.startsWith("data: ")) continue;
+                    const data = line.slice(6).trim();
+                    if (data === "[DONE]") continue;
+                    try {
+                      const parsedLine = JSON.parse(data);
+                      const delta = parsedLine.choices?.[0]?.delta?.content;
+                      if (delta) {
+                        fullResponse += delta;
+                        res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
+                      }
+                    } catch {}
+                  }
+                }
+                break;
+              }
+            } catch {}
+          }
+        }
+        if (!fullResponse) {
+          res.write(`data: ${JSON.stringify({ error: "Le service premium est temporairement indisponible. Réessaie dans un instant." })}\n\n`);
         }
       }
-    }
+        }
 
     // Save assistant message
     await db.insert(messages).values({
