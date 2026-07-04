@@ -753,31 +753,49 @@ Sois authentique, pas robotique.\n\n`,
       }
       
       // OpenRouter is OpenAI-compatible, use fetch directly for streaming
-      const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${openrouterKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": "https://grado.app",
-          "X-Title": "Grado AI",
-        },
-        body: JSON.stringify({
-          model: selectedModel,
-          max_tokens: 8192,
-          stream: true,
-          messages: [
-            { role: "system", content: finalSystem },
-            ...chatMessages.map((m: any) => ({
-              role: m.role,
-              content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
-            })),
-          ],
-        }),
-      });
+      const FREE_FALLBACK_MODELS = [
+        "liquid/lfm-2.5-1.2b-instruct:free",
+        "meta-llama/llama-3.3-70b-instruct:free",
+        "openai/gpt-oss-20b:free",
+      ];
+      const candidateModels = !isPaidUser ? FREE_FALLBACK_MODELS : [selectedModel];
+      let orRes: Response | null = null;
+      let lastErrText = "";
+      for (const candidateModel of candidateModels) {
+        try {
+          const attempt = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${openrouterKey}`,
+              "Content-Type": "application/json",
+              "HTTP-Referer": "https://grado.app",
+              "X-Title": "Grado AI",
+            },
+            body: JSON.stringify({
+              model: candidateModel,
+              max_tokens: 8192,
+              stream: true,
+              messages: [
+                { role: "system", content: finalSystem },
+                ...chatMessages.map((m: any) => ({
+                  role: m.role,
+                  content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+                })),
+              ],
+            }),
+          });
+          if (attempt.ok && attempt.body) {
+            orRes = attempt;
+            break;
+          }
+          lastErrText = await attempt.text();
+        } catch (fetchErr) {
+          lastErrText = String(fetchErr);
+        }
+      }
 
-      if (!orRes.ok || !orRes.body) {
-        const errText = await orRes.text();
-        res.write(`data: ${JSON.stringify({ error: `OpenRouter error: ${errText}` })}\n\n`);
+      if (!orRes || !orRes.body) {
+        res.write(`data: ${JSON.stringify({ error: `OpenRouter error: ${lastErrText}` })}\n\n`);
         res.end();
         return;
       }
