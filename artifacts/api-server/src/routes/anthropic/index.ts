@@ -619,13 +619,14 @@ router.post("/conversations/:id/messages", async (req, res) => {
   };
 
   const isOpenRouterModel = modelChoice in OPENROUTER_MODELS;
-  // Free users locked to haiku; vision requires sonnet (multimodal)
-  const effectiveModelChoice = !isPaidUser ? "haiku" : modelChoice;
+  // Free users get a free OpenRouter model for now (premium models arrive soon); vision requires sonnet (multimodal)
   const selectedModel = imageData
     ? "claude-sonnet-4-5"
-    : isOpenRouterModel && isPaidUser
-      ? OPENROUTER_MODELS[effectiveModelChoice]
-      : (ANTHROPIC_MODELS[effectiveModelChoice] ?? "claude-haiku-4-5");
+    : !isPaidUser
+      ? OPENROUTER_MODELS["llama"]
+      : isOpenRouterModel
+        ? OPENROUTER_MODELS[modelChoice]
+        : (ANTHROPIC_MODELS[modelChoice] ?? "claude-haiku-4-5");
 
   const AGENT_PREFIXES: Record<string, string> = {
     dev: "Tu es un agent de développement expert. Priorité absolue: générer du code complet, fonctionnel et optimisé.\n\n",
@@ -691,6 +692,10 @@ Sois authentique, pas robotique.\n\n`,
 
     // Build dynamic system prompt with memory + custom instructions
     let dynamicPrefix = "";
+    if (!isPaidUser) {
+      dynamicPrefix += `[INFO SYSTEME - a mentionner seulement si on te le demande]: Tu utilises la version gratuite de Grado. Si on te demande pourquoi ou si on veut plus de puissance, dis avec enthousiasme que la version complete de Grado (modeles premium, generation avancee) arrive tres bientot. Ne le dis PAS spontanement.\n\n`;
+    }
+    
     if (userSettingsRow?.memoryNotes?.trim()) {
       dynamicPrefix += `[MÉMOIRE UTILISATEUR — faits importants à toujours garder en tête]:\n${userSettingsRow.memoryNotes.trim()}\n\n`;
     }
@@ -736,7 +741,7 @@ Sois authentique, pas robotique.\n\n`,
     res.setHeader("X-Accel-Buffering", "no");
 
     let fullResponse = "";
-    const useOpenRouter = isOpenRouterModel && isPaidUser && !imageData;
+    const useOpenRouter = !imageData && (!isPaidUser || isOpenRouterModel);
 
     if (useOpenRouter) {
       // OpenRouter uses OpenAI-compatible API
@@ -746,14 +751,7 @@ Sois authentique, pas robotique.\n\n`,
         res.end();
         return;
       }
-      const orClient = new Anthropic({
-        apiKey: openrouterKey,
-        baseURL: "https://openrouter.ai/api/v1",
-        defaultHeaders: {
-          "HTTP-Referer": "https://grado.app",
-          "X-Title": "Grado AI",
-        },
-      });
+      
       // OpenRouter is OpenAI-compatible, use fetch directly for streaming
       const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
