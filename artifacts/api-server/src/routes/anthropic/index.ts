@@ -614,7 +614,7 @@ router.post("/conversations/:id/messages", async (req, res) => {
   };
   const OPENROUTER_MODELS: Record<string, string> = {
     gemini: "google/gemini-2.0-flash-001",
-    mistral: "mistralai/mistral-small-3.2-24b-instruct:free",
+    mistral: "liquid/lfm-2.5-1.2b-instruct:free",
     llama: "meta-llama/llama-3.3-70b-instruct:free",
   };
 
