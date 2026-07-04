@@ -28,9 +28,9 @@ export function ProjectsPanel({ token, conversations, activeConvId, onSelectConv
 
   const load = () => {
     if (!token) return;
-    fetch("/api/projects", { headers: { Authorization: token } })
+    fetch("/api/projects", { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
-      .then(setProjects)
+      .then(data => setProjects(Array.isArray(data) ? data : []))
       .catch(() => {});
   };
 
@@ -40,7 +40,7 @@ export function ProjectsPanel({ token, conversations, activeConvId, onSelectConv
     if (!newName.trim()) return;
     const res = await fetch("/api/projects", {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: token ?? "" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token ?? ""}` },
       body: JSON.stringify({ name: newName.trim(), emoji: newEmoji }),
     });
     if (res.ok) {
@@ -52,7 +52,7 @@ export function ProjectsPanel({ token, conversations, activeConvId, onSelectConv
   };
 
   const deleteProject = async (id: number) => {
-    await fetch(`/api/projects/${id}`, { method: "DELETE", headers: { Authorization: token ?? "" } });
+    await fetch(`/api/projects/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token ?? ""}` } });
     setProjects(p => p.filter(x => x.id !== id));
   };
 
@@ -142,4 +142,3 @@ export function ProjectsPanel({ token, conversations, activeConvId, onSelectConv
     </div>
   );
 }
-
