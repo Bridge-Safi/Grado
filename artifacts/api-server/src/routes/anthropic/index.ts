@@ -623,7 +623,7 @@ router.post("/conversations/:id/messages", async (req, res) => {
   const selectedModel = imageData
     ? "claude-sonnet-4-5"
     : !isPaidUser
-      ? OPENROUTER_MODELS["llama"]
+      ? OPENROUTER_MODELS["mistral"]
       : isOpenRouterModel
         ? OPENROUTER_MODELS[modelChoice]
         : (ANTHROPIC_MODELS[modelChoice] ?? "claude-haiku-4-5");
