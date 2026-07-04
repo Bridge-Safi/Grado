@@ -48,7 +48,9 @@ app.use("/api", router);
 if (process.env.NODE_ENV === "production") {
   const frontendDist = path.resolve(__dirname, "../../grado/dist/public");
   app.use(express.static(frontendDist));
-  app.get("*", (_req, res) => {
+  // Express 5 / path-to-regexp v8 no longer accept a bare "*" wildcard route.
+  // Using a path-less middleware avoids path-to-regexp parsing entirely.
+  app.use((_req, res) => {
     res.sendFile(path.join(frontendDist, "index.html"));
   });
 }
