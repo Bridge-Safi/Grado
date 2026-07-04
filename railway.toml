@@ -1,6 +1,6 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm install -g pnpm@10.15.0 && npx pnpm@10.15.0 install --no-frozen-lockfile && npx pnpm@10.15.0 run build:railway"
+buildCommand = "npm install -g pnpm@10 && npx pnpm@10 install --no-frozen-lockfile && npx pnpm@10 run build:railway"
 
 [deploy]
-startCommand = "NODE_ENV=production npx pnpm@10.15.0 --filter @workspace/api-server run start"
+startCommand = "NODE_ENV=production npx pnpm@10 --filter @workspace/db run push-force && NODE_ENV=production npx pnpm@10 --filter @workspace/api-server run start"
