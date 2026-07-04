@@ -597,6 +597,7 @@ router.post("/conversations/:id/messages", async (req, res) => {
     | "image/png"
     | "image/gif"
     | "image/webp";
+  const userId = getUserId(req);
   const modelChoice = bodyParsed.data.model ?? "haiku";
   const agentMode = bodyParsed.data.agentMode;
 
@@ -668,9 +669,6 @@ Sois authentique, pas robotique.\n\n`,
   };
   const systemPrefix = agentMode ? (AGENT_PREFIXES[agentMode] ?? "") : "";
   const effectiveSystem = systemPrefix + SYSTEM_PROMPT;
-
-  // Get user ID for memory/settings
-  const userId = getUserId(req);
 
   try {
     // Verify conversation exists
