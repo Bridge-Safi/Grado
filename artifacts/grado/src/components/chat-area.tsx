@@ -17,7 +17,7 @@ import { ProjectPreview } from "./project-preview";
 import { MediaPlayer } from "./media-player";
 import { ImagePlayer } from "./image-player";
 import { GradoLogo } from "./grado-logo";
-import { extractHtml } from "@/lib/extract-html";
+import { extractHtml, extractHtmlLoose } from "@/lib/extract-html";
 import { extractMediaTag, stripMediaTag } from "@/lib/extract-media";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
@@ -173,6 +173,7 @@ export function ChatArea({
   const { t, rtl } = useI18n();
   const isPaidUser = user?.plan && user.plan !== "gratuit";
 
+  const [streamText, setStreamText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
@@ -275,6 +276,7 @@ export function ChatArea({
     if (!content || isRunning) return;
 
     setIsMultiAgent(false);
+    setStreamText("");
     setInput("");
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -339,6 +341,7 @@ export function ChatArea({
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let fullText = "";
+      let lastPreviewUpdate = 0;
 
       while (true) {
         const { value, done } = await reader.read();
@@ -353,6 +356,11 @@ export function ChatArea({
               // ignore partial JSON
             }
           }
+        }
+        const now = Date.now();
+        if (now - lastPreviewUpdate > 300) {
+          lastPreviewUpdate = now;
+          setStreamText(fullText);
         }
       }
 
@@ -385,6 +393,7 @@ export function ChatArea({
         },
       ]);
     } finally {
+      setStreamText("");
       onRunEnd();
       queryClient.invalidateQueries({ queryKey: getListAnthropicMessagesQueryKey(currentId!) });
       queryClient.invalidateQueries({ queryKey: getListAnthropicConversationsQueryKey() });
@@ -431,11 +440,26 @@ export function ChatArea({
     e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
   };
 
+  // Écran divisé : HTML en cours de génération (live) ou dernier HTML généré
+  const liveStreamHtml = isRunning && streamText ? extractHtmlLoose(streamText) : null;
+  const lastMessageHtml = (() => {
+    for (let i = localMessages.length - 1; i >= 0; i--) {
+      const m = localMessages[i];
+      if (m.role === "assistant") {
+        const h = extractHtml(m.content);
+        if (h) return h;
+      }
+    }
+    return null;
+  })();
+  const previewHtml = liveStreamHtml ?? lastMessageHtml;
+
   const showWelcome = !activeId && localMessages.length === 0 && !isRunning;
   const activeAgent = AGENTS.find((a) => a.id === agentMode)!;
 
   return (
-    <div className="flex flex-col h-full bg-[#000000]">
+    <div className="flex h-full bg-[#000000]">
+    <div className="flex flex-col h-full flex-1 min-w-0">
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-5">
         <div className="max-w-2xl w-full mx-auto flex flex-col gap-4">
@@ -486,7 +510,7 @@ export function ChatArea({
                   const contentWithoutThink = thinkContent ? rawDisplay.replace(/<think>[\s\S]*?<\/think>/i, "").trim() : rawDisplay;
                   // When HTML is present, only show text before the code block (hide the raw code)
                   const displayContent = html
-                    ? contentWithoutThink.split(/```html/i)[0].trim()
+                    ? contentWithoutThink.split(/```|<!DOCTYPE|<html[\s>]/i)[0].trim()
                     : contentWithoutThink;
                   const mediaJob = mediaTag ? mediaJobs.find((j) => j.prompt === mediaTag.prompt) : undefined;
                   const msgImagePreview = (msg as any).imagePreview as string | undefined;
@@ -958,6 +982,41 @@ export function ChatArea({
           </p>
         </div>
       </div>
+    </div>
+
+    {/* ── Aperçu en direct (écran divisé) ── */}
+    {previewHtml && (
+      <div className="hidden lg:flex flex-col w-[50%] xl:w-[54%] shrink-0 border-l border-[#1e1e2a] bg-[#030306]">
+        <div className="h-11 flex items-center gap-2 px-4 border-b border-[#1e1e2a] bg-[#050508] shrink-0">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
+            <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
+            <div className="w-2.5 h-2.5 rounded-full bg-green-500/70" />
+          </div>
+          <span className="text-xs font-semibold text-[#C8C8E8] ml-2">Aperçu en direct</span>
+          <div className="flex-1" />
+          {isRunning ? (
+            <span className="flex items-center gap-1.5 text-[10px] font-semibold text-[#7B7BFF]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#5B5BD6] animate-pulse" />
+              Construction en cours…
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 text-[10px] font-semibold text-green-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+              Prêt
+            </span>
+          )}
+        </div>
+        <div className="flex-1 p-3 min-h-0">
+          <iframe
+            srcDoc={previewHtml}
+            sandbox="allow-scripts allow-forms allow-modals allow-popups"
+            className="w-full h-full rounded-xl border border-[#1e1e2a] bg-white shadow-[0_0_40px_rgba(91,91,214,0.08)]"
+            title="Aperçu en direct"
+          />
+        </div>
+      </div>
+    )}
     </div>
   );
 }
