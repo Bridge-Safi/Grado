@@ -603,9 +603,12 @@ router.post("/conversations/:id/messages", async (req, res) => {
 
   // Check plan — free users limited to haiku (fast) model
   const [currentUser] = userId
-    ? await db.select({ plan: users.plan }).from(users).where(eq(users.id, userId))
+    ? await db.select({ plan: users.plan, email: users.email }).from(users).where(eq(users.id, userId))
     : [];
-  const isPaidUser = currentUser && currentUser.plan !== "gratuit";
+  // L'admin (ADMIN_EMAIL) a un accès complet : modèles premium + aucun quota
+  const CHAT_ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
+  const isAdminUser = !!(CHAT_ADMIN_EMAIL && currentUser?.email && currentUser.email.toLowerCase().trim() === CHAT_ADMIN_EMAIL);
+  const isPaidUser = currentUser && (currentUser.plan !== "gratuit" || isAdminUser);
 
   // Quota du plan gratuit : 5 créations / mois (appliqué côté serveur)
   const FREE_CREATIONS_QUOTA = 5;
