@@ -6,18 +6,23 @@
 export function extractHtml(text: string, imageDataUrls?: string[]): string | null {
   let html: string | null = null;
 
-  // 1. Fenced code block: ```html ... ```
-  const fencedMatch = text.match(/```html\s*([\s\S]*?)```/i);
-  if (fencedMatch) {
-    const candidate = fencedMatch[1].trim();
-    if (/<html/i.test(candidate) || /<!DOCTYPE/i.test(candidate)) {
+  // 1. Fenced code blocks: ```html ... ``` — or any fence containing a full document
+  //    (certains modèles utilisent ``` sans le mot "html")
+  const fenceRe = /```[a-zA-Z]*[ \t]*\r?\n?([\s\S]*?)```/g;
+  let fenceMatch: RegExpExecArray | null;
+  while ((fenceMatch = fenceRe.exec(text)) !== null) {
+    const candidate = fenceMatch[1].trim();
+    if (/<!DOCTYPE/i.test(candidate) || /<html[\s>]/i.test(candidate)) {
       html = candidate;
+      break;
     }
   }
 
-  // 2. Bare HTML document fallback
+  // 2. Bare HTML document fallback (avec ou sans DOCTYPE)
   if (!html) {
-    const docMatch = text.match(/(<!DOCTYPE\s+html[\s\S]*<\/html>)/i);
+    const docMatch =
+      text.match(/(<!DOCTYPE\s+html[\s\S]*<\/html>)/i) ||
+      text.match(/(<html[\s\S]*<\/html>)/i);
     if (docMatch) {
       html = docMatch[1].trim();
     }
@@ -57,4 +62,28 @@ export function extractHtml(text: string, imageDataUrls?: string[]): string | nu
   );
 
   return html;
+}
+
+/**
+ * Version tolérante pour l'aperçu en temps réel : accepte un document HTML
+ * encore incomplet (bloc de code non fermé pendant le streaming).
+ */
+export function extractHtmlLoose(text: string, imageDataUrls?: string[]): string | null {
+  const complete = extractHtml(text, imageDataUrls);
+  if (complete) return complete;
+
+  // Bloc de code non terminé (le modèle est en train d'écrire)
+  const lastFence = text.lastIndexOf("```");
+  if (lastFence >= 0) {
+    const after = text.slice(lastFence + 3).replace(/^[a-zA-Z]*[ \t]*\r?\n?/, "");
+    if (/<!DOCTYPE/i.test(after) || /<html[\s>]/i.test(after)) {
+      return after;
+    }
+  }
+
+  // Document nu encore incomplet
+  const bare = text.match(/(<!DOCTYPE\s+html[\s\S]*|<html[\s>][\s\S]*)$/i);
+  if (bare) return bare[1];
+
+  return null;
 }
