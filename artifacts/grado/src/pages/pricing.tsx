@@ -16,6 +16,7 @@ const PLANS = [
     price: 0,
     features: [
       "5 créations / mois",
+      "3 chansons IA / mois",
       "Aperçu en direct",
       "App web, jeux, dashboards",
       "Hébergement 1 site",
@@ -33,6 +34,7 @@ const PLANS = [
     price: 39,
     features: [
       "30 créations / mois",
+      "Génération musicale IA",
       "Tous les types de projets",
       "Hébergement 5 sites",
       "Téléchargement du code",
@@ -371,7 +373,7 @@ export default function PricingPage() {
                 {[
                   { label: "Créations / mois",       vals: ["5", "30", "150", "500", "∞"] },
                   { label: "Hébergement de sites",    vals: ["1 site", "5 sites", "∞", "∞", "∞"] },
-                  { label: "Génération musicale IA",  vals: ["✗", "✗", "✓", "✓", "✓"] },
+                  { label: "Génération musicale IA",  vals: ["3/mois", "✓", "✓", "✓", "✓"] },
                   { label: "Génération vidéo IA",     vals: ["✗", "✗", "✗", "✓", "✓"] },
                   { label: "Domaine personnalisé",    vals: ["✗", "✗", "✓", "✓", "✓"] },
                   { label: "Accès API Grado",         vals: ["✗", "✗", "✗", "✓", "✓"] },

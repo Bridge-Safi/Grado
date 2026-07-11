@@ -45,9 +45,7 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="pt-36 pb-24 px-5 relative overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-[#5B5BD6]/12 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute top-10 left-10 w-[300px] h-[300px] bg-[#8B5CF6]/8 rounded-full blur-[100px] pointer-events-none" />
-        <div className="absolute top-10 right-10 w-[300px] h-[300px] bg-[#6366f1]/8 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-[#5B5BD6]/[0.04] rounded-full blur-[120px] pointer-events-none" />
 
         <div className="max-w-4xl mx-auto text-center relative">
           <motion.div
@@ -173,7 +171,7 @@ export default function LandingPage() {
 
       {/* Features */}
       <section className="py-20 px-5 border-t border-[#1e1e2a] relative overflow-hidden">
-        <div className="absolute bottom-0 left-1/4 w-[400px] h-[300px] bg-[#5B5BD6]/6 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-0 left-1/4 w-[400px] h-[300px] bg-[#5B5BD6]/[0.03] rounded-full blur-[100px] pointer-events-none" />
         <div className="max-w-5xl mx-auto relative">
           <div className="text-center mb-14">
             <h2 className="text-3xl md:text-4xl font-bold mb-3">{t.featuresTitle}</h2>
@@ -202,7 +200,7 @@ export default function LandingPage() {
 
       {/* Testimonials */}
       <section className="py-20 px-5 border-t border-[#1e1e2a] relative overflow-hidden">
-        <div className="absolute top-0 right-1/4 w-[400px] h-[300px] bg-[#8B5CF6]/6 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute top-0 right-1/4 w-[400px] h-[300px] bg-[#8B5CF6]/[0.03] rounded-full blur-[100px] pointer-events-none" />
         <div className="max-w-5xl mx-auto relative">
           <div className="text-center mb-14">
             <h2 className="text-3xl md:text-4xl font-bold mb-3">{t.testimonialsTitle}</h2>
@@ -236,7 +234,7 @@ export default function LandingPage() {
       {/* CTA */}
       <section className="py-24 px-5 border-t border-[#1e1e2a] relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#5B5BD6]/5 to-transparent pointer-events-none" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-[#5B5BD6]/10 rounded-full blur-[80px] pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-[#5B5BD6]/[0.04] rounded-full blur-[80px] pointer-events-none" />
         <div className="max-w-2xl mx-auto text-center relative">
           <div className="flex justify-center mb-6">
             <div className="relative">
