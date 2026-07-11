@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db, mediaGenerations } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, mediaGenerations, conversations, users } from "@workspace/db";
+import { and, eq, gte, inArray } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
 
@@ -29,6 +29,38 @@ router.post("/music", async (req, res) => {
   if (!falKey && !elevenKey) {
     res.status(503).json({ error: "No music API configured" });
     return;
+  }
+
+  // Chansons gratuites : le plan gratuit a droit à 3 chansons par mois
+  const FREE_MUSIC_QUOTA = 3;
+  try {
+    const [conv] = await db.select().from(conversations).where(eq(conversations.id, Number(conversationId)));
+    if (conv?.userId) {
+      const [u] = await db.select({ plan: users.plan }).from(users).where(eq(users.id, conv.userId));
+      if (u?.plan === "gratuit") {
+        const monthStart = new Date();
+        monthStart.setDate(1);
+        monthStart.setHours(0, 0, 0, 0);
+        const userConvs = await db.select({ id: conversations.id }).from(conversations).where(eq(conversations.userId, conv.userId));
+        const convIds = userConvs.map((c) => c.id);
+        const used = convIds.length
+          ? await db
+              .select({ id: mediaGenerations.id })
+              .from(mediaGenerations)
+              .where(and(
+                eq(mediaGenerations.type, "music"),
+                gte(mediaGenerations.createdAt, monthStart),
+                inArray(mediaGenerations.conversationId, convIds),
+              ))
+          : [];
+        if (used.length >= FREE_MUSIC_QUOTA) {
+          res.status(403).json({ error: "FREE_MUSIC_QUOTA_REACHED" });
+          return;
+        }
+      }
+    }
+  } catch (quotaErr) {
+    console.error("music quota check error:", quotaErr);
   }
 
   const [record] = await db
