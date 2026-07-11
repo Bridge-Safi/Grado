@@ -712,6 +712,11 @@ Sois authentique, pas robotique.\n\n`,
   const systemPrefix = agentMode ? (AGENT_PREFIXES[agentMode] ?? "") : "";
   const effectiveSystem = systemPrefix + SYSTEM_PROMPT;
 
+  let fullResponse = "";
+  const safeWrite = (payload: string) => {
+    if (res.destroyed || res.writableEnded) return;
+    try { res.write(payload); } catch { /* client déconnecté — on continue en arrière-plan */ }
+  };
   try {
     // Verify conversation exists
     const [conv] = await db
@@ -784,7 +789,7 @@ Sois authentique, pas robotique.\n\n`,
     res.setHeader("Connection", "keep-alive");
     res.setHeader("X-Accel-Buffering", "no");
 
-    let fullResponse = "";
+    fullResponse = "";
     const useOpenRouter = !imageData && (!isPaidUser || isOpenRouterModel);
 
     if (useOpenRouter) {
@@ -792,8 +797,8 @@ Sois authentique, pas robotique.\n\n`,
       const openrouterKey = process.env.OPENROUTER_API_KEY;
       const geminiKey = process.env.GEMINI_API_KEY;
       if (!openrouterKey && !geminiKey) {
-        res.write(`data: ${JSON.stringify({ error: "Aucune clé IA configurée (GEMINI_API_KEY ou OPENROUTER_API_KEY)" })}\n\n`);
-        res.end();
+        safeWrite(`data: ${JSON.stringify({ error: "Aucune clé IA configurée (GEMINI_API_KEY ou OPENROUTER_API_KEY)" })}\n\n`);
+        try { res.end(); } catch {}
         return;
       }
       
@@ -851,8 +856,8 @@ Sois authentique, pas robotique.\n\n`,
       }
 
       if (!orRes || !orRes.body) {
-        res.write(`data: ${JSON.stringify({ error: `OpenRouter error: ${lastErrText}` })}\n\n`);
-        res.end();
+        safeWrite(`data: ${JSON.stringify({ error: `OpenRouter error: ${lastErrText}` })}\n\n`);
+        try { res.end(); } catch {}
         return;
       }
 
@@ -875,7 +880,7 @@ Sois authentique, pas robotique.\n\n`,
             const delta = parsed.choices?.[0]?.delta?.content;
             if (delta) {
               fullResponse += delta;
-              res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
+              safeWrite(`data: ${JSON.stringify({ content: delta })}\n\n`);
             }
           } catch {}
         }
@@ -896,7 +901,7 @@ Sois authentique, pas robotique.\n\n`,
             event.delta.type === "text_delta"
           ) {
             fullResponse += event.delta.text;
-            res.write(
+            safeWrite(
               `data: ${JSON.stringify({ content: event.delta.text })}\n\n`
             );
           }
@@ -947,7 +952,7 @@ Sois authentique, pas robotique.\n\n`,
                       const delta = parsedLine.choices?.[0]?.delta?.content;
                       if (delta) {
                         fullResponse += delta;
-                        res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
+                        safeWrite(`data: ${JSON.stringify({ content: delta })}\n\n`);
                       }
                     } catch {}
                   }
@@ -958,7 +963,7 @@ Sois authentique, pas robotique.\n\n`,
           }
         }
         if (!fullResponse) {
-          res.write(`data: ${JSON.stringify({ error: "Le service premium est temporairement indisponible. Réessaie dans un instant." })}\n\n`);
+          safeWrite(`data: ${JSON.stringify({ error: "Le service premium est temporairement indisponible. Réessaie dans un instant." })}\n\n`);
         }
       }
         }
@@ -970,15 +975,23 @@ Sois authentique, pas robotique.\n\n`,
       content: fullResponse,
     });
 
-    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
-    res.end();
+    safeWrite(`data: ${JSON.stringify({ done: true })}\n\n`);
+    try { res.end(); } catch {}
   } catch (err) {
     console.error("Streaming error:", err);
+    // Sauvegarder quand même ce qui a été généré (ex: utilisateur parti en cours de génération)
+    if (fullResponse) {
+      try {
+        await db.insert(messages).values({ conversationId, role: "assistant", content: fullResponse });
+      } catch (saveErr) {
+        console.error("save-after-disconnect error:", saveErr);
+      }
+    }
     if (!res.headersSent) {
       res.status(500).json({ error: "Failed to stream response" });
     } else {
-      res.write(`data: ${JSON.stringify({ error: "Stream failed" })}\n\n`);
-      res.end();
+      safeWrite(`data: ${JSON.stringify({ error: "Stream failed" })}\n\n`);
+      try { res.end(); } catch {}
     }
   }
 });
