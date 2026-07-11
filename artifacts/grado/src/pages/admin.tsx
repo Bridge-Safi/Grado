@@ -159,7 +159,6 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-[#000000] text-white">
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#5B5BD6]/8 rounded-full blur-[120px] pointer-events-none" />
 
       <nav className="border-b border-[#1e1e2a]/80 bg-[#000000]/90 backdrop-blur-md sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-5 h-14 flex items-center gap-3">

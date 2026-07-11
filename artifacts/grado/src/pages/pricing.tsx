@@ -177,19 +177,6 @@ export default function PricingPage() {
           </motion.div>
         )}
 
-        {/* Promo banner */}
-        {!isOnboarding && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8 flex items-center gap-2 bg-[#5B5BD6]/15 border border-[#5B5BD6]/30 rounded-full px-5 py-2"
-          >
-            <Zap className="w-3.5 h-3.5 text-[#5B5BD6]" />
-            <span className="text-xs font-semibold text-[#5B5BD6]">-50% les 3 premiers mois</span>
-            <span className="text-xs text-[#8888A8]">· Offre de lancement</span>
-          </motion.div>
-        )}
-
         <motion.h1
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -281,11 +268,6 @@ export default function PricingPage() {
                       <span className="text-sm font-semibold text-[#8888A8] mb-0.5">Dh</span>
                     )}
                   </div>
-                  {plan.price > 0 && (
-                    <p className="text-[10px] text-green-400 mt-0.5">
-                      → {Math.round(plan.price * 0.5)} Dh/mois · 3 mois offerts
-                    </p>
-                  )}
                 </div>
 
                 {/* Payment badge */}

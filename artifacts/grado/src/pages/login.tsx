@@ -35,9 +35,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#000000] flex flex-col items-center justify-center px-4 relative overflow-hidden" dir={rtl ? "rtl" : "ltr"}>
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#5B5BD6]/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-0 left-10 w-[300px] h-[300px] bg-[#8B5CF6]/8 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute top-0 right-10 w-[300px] h-[300px] bg-[#6366f1]/8 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Lang switcher top right */}
       <div className="absolute top-4 right-4">
