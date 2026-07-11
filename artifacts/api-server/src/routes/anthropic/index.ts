@@ -610,6 +610,16 @@ router.post("/conversations/:id/messages", async (req, res) => {
   const isAdminUser = !!(CHAT_ADMIN_EMAIL && currentUser?.email && currentUser.email.toLowerCase().trim() === CHAT_ADMIN_EMAIL);
   const isPaidUser = currentUser && (currentUser.plan !== "gratuit" || isAdminUser);
 
+  // Mode hors ligne : seul l'admin peut utiliser le chat (GRADO_OFFLINE=0 pour rouvrir)
+  const GRADO_OFFLINE = (process.env.GRADO_OFFLINE ?? "1") !== "0";
+  if (GRADO_OFFLINE && !isAdminUser) {
+    res.status(403).json({ error: "🚀 Grado arrive très bientôt ! L'accès n'est pas encore ouvert au public." });
+    return;
+  }
+
+  // Sonnet (le modèle le plus coûteux) est réservé aux plans Créateur et plus
+  const canUseSonnet = isAdminUser || !!(currentUser && ["createur", "fusion", "elite"].includes(currentUser.plan));
+
   // Quota du plan gratuit : 5 créations / mois (appliqué côté serveur)
   const FREE_CREATIONS_QUOTA = 5;
   let freeQuotaReached = false;
@@ -667,7 +677,9 @@ router.post("/conversations/:id/messages", async (req, res) => {
       ? OPENROUTER_MODELS["mistral"]
       : isOpenRouterModel
         ? OPENROUTER_MODELS[modelChoice]
-        : (ANTHROPIC_MODELS[modelChoice] ?? "claude-haiku-4-5");
+        : (modelChoice === "sonnet" && !canUseSonnet
+            ? "claude-haiku-4-5"
+            : ANTHROPIC_MODELS[modelChoice] ?? "claude-haiku-4-5");
 
   const AGENT_PREFIXES: Record<string, string> = {
     dev: "Tu es un agent de développement expert. Priorité absolue: générer du code complet, fonctionnel et optimisé.\n\n",
