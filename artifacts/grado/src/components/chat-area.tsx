@@ -984,9 +984,9 @@ export function ChatArea({
       </div>
     </div>
 
-    {/* ── Aperçu en direct (écran divisé) ── */}
-    {previewHtml && (
-      <div className="hidden lg:flex flex-col w-[50%] xl:w-[54%] shrink-0 border-l border-[#1e1e2a] bg-[#030306]">
+    {/* ── Aperçu en direct (écran divisé 50/50) ── */}
+    {(previewHtml || isRunning) && (
+      <div className="hidden lg:flex flex-col w-[50%] shrink-0 border-l border-[#1e1e2a] bg-[#030306]">
         <div className="h-11 flex items-center gap-2 px-4 border-b border-[#1e1e2a] bg-[#050508] shrink-0">
           <div className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
@@ -1008,12 +1008,19 @@ export function ChatArea({
           )}
         </div>
         <div className="flex-1 p-3 min-h-0">
-          <iframe
-            srcDoc={previewHtml}
-            sandbox="allow-scripts allow-forms allow-modals allow-popups"
-            className="w-full h-full rounded-xl border border-[#1e1e2a] bg-white shadow-[0_0_40px_rgba(91,91,214,0.08)]"
-            title="Aperçu en direct"
-          />
+          {previewHtml ? (
+            <iframe
+              srcDoc={previewHtml}
+              sandbox="allow-scripts allow-forms allow-modals allow-popups"
+              className="w-full h-full rounded-xl border border-[#1e1e2a] bg-white shadow-[0_0_40px_rgba(91,91,214,0.08)]"
+              title="Aperçu en direct"
+            />
+          ) : (
+            <div className="w-full h-full rounded-xl border border-[#1e1e2a] bg-[#050508] flex flex-col items-center justify-center gap-4">
+              <div className="w-9 h-9 border-2 border-[#5B5BD6] border-t-transparent rounded-full animate-spin" />
+              <p className="text-xs text-[#8888A8]">Grado prépare ton projet… l'aperçu va apparaître ici</p>
+            </div>
+          )}
         </div>
       </div>
     )}
