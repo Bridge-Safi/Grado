@@ -11,6 +11,9 @@ const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const RESEND_FROM = process.env.RESEND_FROM_EMAIL || "noreply@grado.safi-bridge.ma";
 const isAdmin = (email: string) => !!ADMIN_EMAIL && email.toLowerCase() === ADMIN_EMAIL;
+// Mode hors ligne : le site reste visible mais inscriptions/connexions bloquées (sauf admin).
+// Pour ouvrir l'accès au public : ajouter la variable GRADO_OFFLINE=0 sur Railway.
+const GRADO_OFFLINE = (process.env.GRADO_OFFLINE ?? "1") !== "0";
 
 function generateCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -50,6 +53,10 @@ async function sendResetEmail(to: string, code: string): Promise<void> {
 
 // POST /auth/register
 router.post("/register", async (req, res) => {
+  if (GRADO_OFFLINE) {
+    res.status(403).json({ error: "🚀 Grado arrive très bientôt ! Les inscriptions ne sont pas encore ouvertes." });
+    return;
+  }
   const { name, email, password } = req.body;
   if (!name || !email || !password) {
     res.status(400).json({ error: "Nom, email et mot de passe requis" });
@@ -102,6 +109,11 @@ router.post("/login", async (req, res) => {
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
     res.status(401).json({ error: "Email ou mot de passe incorrect" });
+    return;
+  }
+
+  if (GRADO_OFFLINE && !isAdmin(user.email)) {
+    res.status(403).json({ error: "🚀 Grado arrive très bientôt ! L'accès n'est pas encore ouvert au public." });
     return;
   }
 
