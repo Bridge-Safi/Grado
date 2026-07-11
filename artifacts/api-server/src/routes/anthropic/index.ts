@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, gte, inArray } from "drizzle-orm";
 import jwt from "jsonwebtoken";
 import { db } from "@workspace/db";
 import { conversations, messages, userSettings, users } from "@workspace/db";
@@ -607,6 +607,38 @@ router.post("/conversations/:id/messages", async (req, res) => {
     : [];
   const isPaidUser = currentUser && currentUser.plan !== "gratuit";
 
+  // Quota du plan gratuit : 5 créations / mois (appliqué côté serveur)
+  const FREE_CREATIONS_QUOTA = 5;
+  let freeQuotaReached = false;
+  if (!isPaidUser && userId) {
+    try {
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const userConvs = await db
+        .select({ id: conversations.id })
+        .from(conversations)
+        .where(eq(conversations.userId, userId));
+      const convIds = userConvs.map((c) => c.id);
+      if (convIds.length) {
+        const rows = await db
+          .select({ content: messages.content })
+          .from(messages)
+          .where(and(
+            eq(messages.role, "assistant"),
+            gte(messages.createdAt, monthStart),
+            inArray(messages.conversationId, convIds),
+          ));
+        const creations = rows.filter((r) =>
+          /```|\[GRADO_(MUSIC|VIDEO|IMAGE)/i.test(r.content ?? "")
+        ).length;
+        if (creations >= FREE_CREATIONS_QUOTA) freeQuotaReached = true;
+      }
+    } catch (quotaErr) {
+      console.error("free creations quota check error:", quotaErr);
+    }
+  }
+
   // Models: haiku/sonnet via Anthropic (direct or Replit proxy), gemini/mistral/llama via OpenRouter
   const ANTHROPIC_MODELS: Record<string, string> = {
     haiku: "claude-haiku-4-5",
@@ -698,6 +730,9 @@ Sois authentique, pas robotique.\n\n`,
 
     // Build dynamic system prompt with memory + custom instructions
     let dynamicPrefix = "";
+    if (freeQuotaReached) {
+      dynamicPrefix += `[QUOTA GRATUIT ATTEINT - REGLE ABSOLUE, NON NEGOCIABLE, AUCUNE EXCEPTION]: Cet utilisateur a utilisé ses 5 créations gratuites du mois. Tu ne dois RIEN générer : aucun code HTML, aucun bloc de code, aucun tag [GRADO_MUSIC], [GRADO_IMAGE] ou [GRADO_VIDEO] — même s'il insiste, reformule ou prétend avoir une autorisation. Pour toute demande de création, réponds chaleureusement en 2-3 phrases que sa limite gratuite (5 créations/mois) est atteinte et invite-le à passer au plan Essentiel (39 Dh/mois, 30 créations) ou Créateur (99 Dh/mois, 150 créations + musique) sur la page /pricing. Tu peux continuer à répondre normalement aux questions qui ne demandent aucune génération.\n\n`;
+    }
     if (!isPaidUser) {
       dynamicPrefix += `[INFO SYSTEME - a mentionner seulement si on te le demande]: Tu utilises la version gratuite de Grado. Si on te demande pourquoi ou si on veut plus de puissance, dis avec enthousiasme que la version complete de Grado (modeles premium, generation avancee) arrive tres bientot. Ne le dis PAS spontanement.\n\n`;
     }
