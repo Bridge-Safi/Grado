@@ -36,8 +36,10 @@ router.post("/music", async (req, res) => {
   try {
     const [conv] = await db.select().from(conversations).where(eq(conversations.id, Number(conversationId)));
     if (conv?.userId) {
-      const [u] = await db.select({ plan: users.plan }).from(users).where(eq(users.id, conv.userId));
-      if (u?.plan === "gratuit") {
+      const [u] = await db.select({ plan: users.plan, email: users.email }).from(users).where(eq(users.id, conv.userId));
+      const adminEmail = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
+      const isAdmin = !!(adminEmail && u?.email && u.email.toLowerCase().trim() === adminEmail);
+      if (u?.plan === "gratuit" && !isAdmin) {
         const monthStart = new Date();
         monthStart.setDate(1);
         monthStart.setHours(0, 0, 0, 0);
