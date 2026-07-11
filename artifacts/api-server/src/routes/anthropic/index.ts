@@ -791,7 +791,7 @@ Sois authentique, pas robotique.\n\n`,
             },
             body: JSON.stringify({
               model: candidate.model,
-              max_tokens: 8192,
+              max_tokens: candidate.url === GEMINI_CHAT_URL ? 32768 : 8192,
               stream: true,
               messages: [
                 { role: "system", content: finalSystem },
