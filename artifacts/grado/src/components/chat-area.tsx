@@ -172,8 +172,10 @@ export function ChatArea({
   const { token, user } = useAuth();
   const { t, rtl } = useI18n();
   const isPaidUser = user?.plan && user.plan !== "gratuit";
+  const sonnetAllowed = !!((user as any)?.isAdmin || (user?.plan && ["createur", "fusion", "elite"].includes(user.plan)));
 
   const [streamText, setStreamText] = useState("");
+  const [previewTab, setPreviewTab] = useState<"apercu" | "code">("apercu");
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
@@ -786,7 +788,7 @@ export function ChatArea({
                     {MODELS.map(m => (
                       <button
                         key={m.id}
-                        onClick={() => m.paid && !isPaidUser ? navigate("/pricing") : setModel(m.id)}
+                        onClick={() => (m.paid && !isPaidUser) || (m.id === "sonnet" && !sonnetAllowed) ? navigate("/pricing") : setModel(m.id)}
                         className={cn(
                           "flex items-center justify-between gap-2 px-3 py-2 text-xs transition-all hover:bg-[#5B5BD6]/10",
                           model === m.id ? "text-white bg-[#5B5BD6]/15" : "text-[#8888A8]"
@@ -795,7 +797,7 @@ export function ChatArea({
                         <span>{m.label}</span>
                         <div className="flex items-center gap-1">
                           <span className="text-[10px] opacity-50">{m.badge}</span>
-                          {m.paid && !isPaidUser && <Lock className="w-2.5 h-2.5 opacity-50" />}
+                          {((m.paid && !isPaidUser) || (m.id === "sonnet" && !sonnetAllowed)) && <Lock className="w-2.5 h-2.5 opacity-50" />}
                         </div>
                       </button>
                     ))}
@@ -994,6 +996,26 @@ export function ChatArea({
             <div className="w-2.5 h-2.5 rounded-full bg-green-500/70" />
           </div>
           <span className="text-xs font-semibold text-[#C8C8E8] ml-2">Aperçu en direct</span>
+          <div className="flex items-center gap-1 ml-3 bg-[#0A0A0C] border border-[#1e1e2a] rounded-lg p-0.5">
+            <button
+              onClick={() => setPreviewTab("apercu")}
+              className={cn(
+                "px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all",
+                previewTab === "apercu" ? "bg-[#5B5BD6] text-white" : "text-[#8888A8] hover:text-white"
+              )}
+            >
+              Aperçu
+            </button>
+            <button
+              onClick={() => setPreviewTab("code")}
+              className={cn(
+                "px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all",
+                previewTab === "code" ? "bg-[#5B5BD6] text-white" : "text-[#8888A8] hover:text-white"
+              )}
+            >
+              Code
+            </button>
+          </div>
           <div className="flex-1" />
           {isRunning ? (
             <span className="flex items-center gap-1.5 text-[10px] font-semibold text-[#7B7BFF]">
@@ -1008,7 +1030,11 @@ export function ChatArea({
           )}
         </div>
         <div className="flex-1 p-3 min-h-0">
-          {previewHtml ? (
+          {previewHtml && previewTab === "code" ? (
+            <pre className="w-full h-full rounded-xl border border-[#1e1e2a] bg-[#0A0A0C] text-[#9ecbff] text-[11px] leading-relaxed p-4 overflow-auto font-mono whitespace-pre-wrap">
+              {previewHtml}
+            </pre>
+          ) : previewHtml ? (
             <iframe
               srcDoc={previewHtml}
               sandbox="allow-scripts allow-forms allow-modals allow-popups"
