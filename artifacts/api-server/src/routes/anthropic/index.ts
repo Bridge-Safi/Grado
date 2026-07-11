@@ -619,9 +619,9 @@ router.post("/conversations/:id/messages", async (req, res) => {
   };
 
   const FREE_FALLBACK_MODELS = [
-    "liquid/lfm-2.5-1.2b-instruct:free",
     "meta-llama/llama-3.3-70b-instruct:free",
     "openai/gpt-oss-20b:free",
+    "liquid/lfm-2.5-1.2b-instruct:free",
   ];
 
   const isOpenRouterModel = modelChoice in OPENROUTER_MODELS;
@@ -752,28 +752,45 @@ Sois authentique, pas robotique.\n\n`,
     if (useOpenRouter) {
       // OpenRouter uses OpenAI-compatible API
       const openrouterKey = process.env.OPENROUTER_API_KEY;
-      if (!openrouterKey) {
-        res.write(`data: ${JSON.stringify({ error: "OPENROUTER_API_KEY manquante" })}\n\n`);
+      const geminiKey = process.env.GEMINI_API_KEY;
+      if (!openrouterKey && !geminiKey) {
+        res.write(`data: ${JSON.stringify({ error: "Aucune clé IA configurée (GEMINI_API_KEY ou OPENROUTER_API_KEY)" })}\n\n`);
         res.end();
         return;
       }
       
       // OpenRouter is OpenAI-compatible, use fetch directly for streaming
-      const candidateModels = !isPaidUser ? FREE_FALLBACK_MODELS : [selectedModel];
+      // Agent gratuit : Gemini (Google, gratuit et puissant) en priorité, puis les modèles gratuits OpenRouter
+      const GEMINI_CHAT_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+      const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
+      const OR_HEADERS: Record<string, string> = { "HTTP-Referer": "https://grado.app", "X-Title": "Grado AI" };
+      type ChatCandidate = { url: string; key: string; model: string; extraHeaders?: Record<string, string> };
+      const candidates: ChatCandidate[] = [];
+      if (!isPaidUser) {
+        if (geminiKey) {
+          candidates.push({ url: GEMINI_CHAT_URL, key: geminiKey, model: process.env.GEMINI_MODEL || "gemini-flash-latest" });
+        }
+        if (openrouterKey) {
+          for (const m of FREE_FALLBACK_MODELS) {
+            candidates.push({ url: OPENROUTER_CHAT_URL, key: openrouterKey, model: m, extraHeaders: OR_HEADERS });
+          }
+        }
+      } else if (openrouterKey) {
+        candidates.push({ url: OPENROUTER_CHAT_URL, key: openrouterKey, model: selectedModel, extraHeaders: OR_HEADERS });
+      }
       let orRes: Response | null = null;
       let lastErrText = "";
-      for (const candidateModel of candidateModels) {
+      for (const candidate of candidates) {
         try {
-          const attempt = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          const attempt = await fetch(candidate.url, {
             method: "POST",
             headers: {
-              "Authorization": `Bearer ${openrouterKey}`,
+              "Authorization": `Bearer ${candidate.key}`,
               "Content-Type": "application/json",
-              "HTTP-Referer": "https://grado.app",
-              "X-Title": "Grado AI",
+              ...(candidate.extraHeaders || {}),
             },
             body: JSON.stringify({
-              model: candidateModel,
+              model: candidate.model,
               max_tokens: 8192,
               stream: true,
               messages: [
