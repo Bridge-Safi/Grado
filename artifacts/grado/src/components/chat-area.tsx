@@ -337,12 +337,17 @@ export function ChatArea({
         body: JSON.stringify(body),
       });
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        let msg = "Une erreur est survenue. Réessaie.";
+        try { const errData = await res.json(); if (errData?.error) msg = String(errData.error); } catch {}
+        throw new Error(msg);
+      }
       if (!res.body) throw new Error("No response body");
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let fullText = "";
+      let streamError = "";
       let lastPreviewUpdate = 0;
 
       while (true) {
@@ -354,6 +359,7 @@ export function ChatArea({
             try {
               const data = JSON.parse(line.slice(6));
               if (data.content) fullText += data.content;
+              if (data.error && !streamError) streamError = String(data.error);
             } catch {
               // ignore partial JSON
             }
@@ -364,6 +370,10 @@ export function ChatArea({
           lastPreviewUpdate = now;
           setStreamText(fullText);
         }
+      }
+
+      if (!fullText && streamError) {
+        throw new Error(streamError);
       }
 
       if (fullText) {
@@ -390,7 +400,7 @@ export function ChatArea({
           id: Date.now() + 1,
           conversationId: currentId!,
           role: "assistant",
-          content: "Une erreur est survenue. Réessaie.",
+          content: `⚠️ ${error instanceof Error && error.message ? error.message : "Une erreur est survenue. Réessaie."}`,
           createdAt: new Date().toISOString(),
         },
       ]);
