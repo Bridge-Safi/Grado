@@ -1,7 +1,7 @@
 import { Router } from "express";
 import jwt from "jsonwebtoken";
-import { db, users, conversations, messages, mediaGenerations, userSettings } from "@workspace/db";
-import { desc, eq, inArray } from "drizzle-orm";
+import { db, users, conversations, messages, mediaGenerations, userSettings, pageVisits } from "@workspace/db";
+import { desc, eq, inArray, gte, sql } from "drizzle-orm";
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-change-me";
@@ -93,6 +93,30 @@ router.delete("/users/:id", async (req, res) => {
   } catch (err) {
     console.error("admin delete user error:", err);
     res.status(500).json({ error: "Erreur lors de la suppression" });
+  }
+});
+
+// GET /admin/stats — visitor counts (admin only)
+router.get("/stats", async (req, res) => {
+  const ok = await requireAdmin(req, res);
+  if (!ok) return;
+
+  try {
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const [{ since24h }] = await db
+      .select({ since24h: sql<number>`count(*)::int` })
+      .from(pageVisits)
+      .where(gte(pageVisits.visitedAt, yesterday));
+
+    const [{ total }] = await db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(pageVisits);
+
+    res.json({ since24h, total });
+  } catch (err) {
+    console.error("admin stats error:", err);
+    res.status(500).json({ error: "Erreur stats" });
   }
 });
 

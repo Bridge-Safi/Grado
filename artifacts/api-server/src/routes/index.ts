@@ -12,6 +12,7 @@ import settingsRouter from "./settings";
 import projectsRouter from "./projects";
 import shareRouter from "./share";
 import githubRouter from "./github";
+import visitsRouter from "./visits";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use("/user-settings", settingsRouter);
 router.use("/projects", projectsRouter);
 router.use("/share", shareRouter);
 router.use("/github", githubRouter);
+router.use("/visits", visitsRouter);
 
 export default router;

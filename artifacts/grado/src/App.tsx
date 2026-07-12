@@ -21,7 +21,21 @@ import TermsPage from "@/pages/terms";
 import PrivacyPage from "@/pages/privacy";
 import ContactPage from "@/pages/contact";
 import { Loader2 } from "lucide-react";
-import React from "react";
+import React, { useEffect } from "react";
+
+// Enregistre une visite au chargement de l'app (une seule fois par session)
+function useVisitTracking() {
+  useEffect(() => {
+    const key = "grado_visit_" + new Date().toDateString();
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    fetch("/api/visits", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ page: window.location.pathname }),
+    }).catch(() => {});
+  }, []);
+}
 
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -117,6 +131,7 @@ function Router() {
 }
 
 function App() {
+  useVisitTracking();
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark" storageKey="grado-theme">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, Users, Mail, Calendar, RefreshCw, CreditCard, Check, X, AlertCircle, ChevronDown } from "lucide-react";
+import { ArrowLeft, Users, Mail, Calendar, RefreshCw, CreditCard, Check, X, AlertCircle, ChevronDown, Eye } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { GradoLogo } from "@/components/grado-logo";
 import { cn } from "@/lib/utils";
@@ -43,6 +43,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [count, setCount] = useState(0);
+  const [visitors, setVisitors] = useState<{ since24h: number; total: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState<number | null>(null);
@@ -53,17 +54,20 @@ export default function AdminPage() {
     setLoading(true);
     setError("");
     try {
-      const [usersRes, paymentsRes] = await Promise.all([
+      const [usersRes, paymentsRes, statsRes] = await Promise.all([
         fetch("/api/admin/users", { headers: { Authorization: `Bearer ${token}` } }),
         fetch("/api/payments/admin", { headers: { Authorization: `Bearer ${token}` } }),
+        fetch("/api/admin/stats", { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       if (usersRes.status === 403) throw new Error("403");
       if (!usersRes.ok) throw new Error("Erreur de chargement");
       const usersData = await usersRes.json();
       const paymentsData = paymentsRes.ok ? await paymentsRes.json() : [];
+      const statsData = statsRes.ok ? await statsRes.json() : null;
       setUsers(usersData.users);
       setCount(usersData.count);
       setPayments(Array.isArray(paymentsData) ? paymentsData : []);
+      if (statsData) setVisitors(statsData);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -197,9 +201,9 @@ export default function AdminPage() {
 
       <main className="max-w-5xl mx-auto px-5 py-8">
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           <div className="bg-[#080808] border border-[#1e1e2a] rounded-2xl p-5">
-            <div className="flex items-center gap-2 text-[#8888A8] text-xs mb-2"><Users className="w-3.5 h-3.5" />Total</div>
+            <div className="flex items-center gap-2 text-[#8888A8] text-xs mb-2"><Users className="w-3.5 h-3.5" />Total inscrits</div>
             <p className="text-3xl font-bold text-white">{count}</p>
           </div>
           <div className="bg-[#080808] border border-[#1e1e2a] rounded-2xl p-5">
@@ -215,6 +219,30 @@ export default function AdminPage() {
           <div className={cn("bg-[#080808] border rounded-2xl p-5", pendingCount > 0 ? "border-yellow-500/40" : "border-[#1e1e2a]")}>
             <div className="flex items-center gap-2 text-[#8888A8] text-xs mb-2"><CreditCard className="w-3.5 h-3.5" />Paiements en attente</div>
             <p className={cn("text-3xl font-bold", pendingCount > 0 ? "text-yellow-400" : "text-white")}>{pendingCount}</p>
+          </div>
+        </div>
+
+        {/* Visiteurs */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="bg-[#080808] border border-[#5B5BD6]/30 rounded-2xl p-5">
+            <div className="flex items-center gap-2 text-[#8888A8] text-xs mb-2">
+              <Eye className="w-3.5 h-3.5 text-[#7B7BFF]" />
+              Visites dernières 24h
+            </div>
+            <p className="text-3xl font-bold text-[#7B7BFF]">
+              {visitors ? visitors.since24h.toLocaleString("fr-FR") : "—"}
+            </p>
+            <p className="text-[10px] text-[#5555A8] mt-1">depuis hier jusqu'à maintenant</p>
+          </div>
+          <div className="bg-[#080808] border border-[#5B5BD6]/20 rounded-2xl p-5">
+            <div className="flex items-center gap-2 text-[#8888A8] text-xs mb-2">
+              <Eye className="w-3.5 h-3.5" />
+              Visites totales
+            </div>
+            <p className="text-3xl font-bold text-white">
+              {visitors ? visitors.total.toLocaleString("fr-FR") : "—"}
+            </p>
+            <p className="text-[10px] text-[#5555A8] mt-1">depuis le lancement jusqu'à l'infini</p>
           </div>
         </div>
 
