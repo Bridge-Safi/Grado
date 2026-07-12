@@ -106,6 +106,27 @@ export default function AdminPage() {
     }
   };
 
+  const deleteUser = async (userId: number, name: string) => {
+    if (!window.confirm(`Supprimer définitivement le client « ${name} » et toutes ses données ? Cette action est irréversible.`)) return;
+    setActionLoading(userId);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setUsers(prev => prev.filter(u => u.id !== userId));
+      } else {
+        const d = await res.json().catch(() => null);
+        alert(d?.error || "Erreur lors de la suppression");
+      }
+    } catch {
+      alert("Erreur lors de la suppression");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const changePlan = async (userId: number, plan: string) => {
     setPlanLoading(userId);
     setOpenPlanSelect(null);
@@ -323,7 +344,7 @@ export default function AdminPage() {
                     <td className="px-5 py-3 hidden sm:table-cell">{trialStatus(u) ?? <span className="text-[#4444A8] text-xs">—</span>}</td>
                     <td className="px-5 py-3 text-[#8888A8] text-xs hidden sm:table-cell">{fmt(u.createdAt)}</td>
                     <td className="px-5 py-3">
-                      <div className="relative">
+                      <div className="relative flex items-center gap-2">
                         <button
                           onClick={() => setOpenPlanSelect(openPlanSelect === u.id ? null : u.id)}
                           disabled={planLoading === u.id}
@@ -347,6 +368,13 @@ export default function AdminPage() {
                             ))}
                           </div>
                         )}
+                        <button
+                          onClick={() => deleteUser(u.id, u.name)}
+                          disabled={actionLoading === u.id}
+                          className="text-xs px-2.5 py-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                        >
+                          Supprimer
+                        </button>
                       </div>
                     </td>
                   </tr>
