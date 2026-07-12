@@ -1131,6 +1131,7 @@ export function ChatArea({
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             )}
+            <ShareButton conversationId={activeId} token={token} label="Partager" rtl={rtl} compact align="bottom" />
             <button
               onClick={handlePreviewDownload}
               title="Télécharger le HTML"
