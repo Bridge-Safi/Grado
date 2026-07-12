@@ -13,6 +13,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { MarkdownRenderer } from "./markdown";
 import { SharkCoding, AgentAvatar } from "./shark-coding";
+import { PreviewLoadingScreen } from "./preview-loading";
 import { MediaPlayer } from "./media-player";
 import { ImagePlayer } from "./image-player";
 import { GradoLogo } from "./grado-logo";
@@ -1097,10 +1098,16 @@ export function ChatArea({
           )}
         </div>
         <div className="flex-1 p-3 min-h-0">
-          {previewHtml && previewTab === "code" ? (
-            <pre className="w-full h-full rounded-xl border border-[#1e1e2a] bg-[#0A0A0C] text-[#9ecbff] text-[11px] leading-relaxed p-4 overflow-auto font-mono whitespace-pre-wrap">
-              {previewHtml}
-            </pre>
+          {previewTab === "code" ? (
+            previewHtml && !isRunning ? (
+              <pre className="w-full h-full rounded-xl border border-[#1e1e2a] bg-[#0A0A0C] text-[#9ecbff] text-[11px] leading-relaxed p-4 overflow-auto font-mono whitespace-pre-wrap">
+                {previewHtml}
+              </pre>
+            ) : (
+              <PreviewLoadingScreen />
+            )
+          ) : isRunning ? (
+            <PreviewLoadingScreen />
           ) : previewHtml ? (
             <iframe
               key={previewKey}
@@ -1110,10 +1117,7 @@ export function ChatArea({
               title="Aperçu en direct"
             />
           ) : (
-            <div className="w-full h-full rounded-xl border border-[#1e1e2a] bg-[#050508] flex flex-col items-center justify-center gap-4">
-              <div className="w-9 h-9 border-2 border-[#5B5BD6] border-t-transparent rounded-full animate-spin" />
-              <p className="text-xs text-[#8888A8]">Grado prépare ton projet… l'aperçu va apparaître ici</p>
-            </div>
+            <PreviewLoadingScreen />
           )}
         </div>
       </div>
