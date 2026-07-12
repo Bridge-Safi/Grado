@@ -140,6 +140,8 @@ export function ChatArea({
   const [activeId, setActiveId] = useState<number | null>(null);
   const [mediaJobs, setMediaJobs] = useState<MediaJob[]>([]);
   const [msgImageMap, setMsgImageMap] = useState<Record<number, string>>({});
+  const [liveAgentCode, setLiveAgentCode] = useState<string>("");
+  const liveCodeRef = useRef<HTMLPreElement>(null);
 
   // Image upload state
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -479,6 +481,7 @@ export function ChatArea({
       } as AnthropicMessage,
     ]);
 
+    setLiveAgentCode("");
     setMultiAgentPrompt(content);
     setIsMultiAgent(true);
     onRunStart();
@@ -760,6 +763,12 @@ export function ChatArea({
                       onDone={() => {
                         onRunEnd();
                         // don't clear isMultiAgent here — keep preview visible
+                      }}
+                      onStream={(_agentId, text) => {
+                        setLiveAgentCode(text);
+                        setTimeout(() => {
+                          if (liveCodeRef.current) liveCodeRef.current.scrollTop = liveCodeRef.current.scrollHeight;
+                        }, 0);
                       }}
                     />
                   </motion.div>
@@ -1202,7 +1211,11 @@ export function ChatArea({
 
         <div className="flex-1 p-3 min-h-0">
           {previewTab === "code" ? (
-            previewHtml && !isRunning ? (
+            isMultiAgent && isRunning && liveAgentCode ? (
+              <pre ref={liveCodeRef} className="w-full h-full rounded-xl border border-[#1e1e2a] bg-[#0A0A0C] text-[#9ecbff] text-[11px] leading-relaxed p-4 overflow-auto font-mono whitespace-pre-wrap">
+                {liveAgentCode}
+              </pre>
+            ) : previewHtml && !isRunning ? (
               <pre className="w-full h-full rounded-xl border border-[#1e1e2a] bg-[#0A0A0C] text-[#9ecbff] text-[11px] leading-relaxed p-4 overflow-auto font-mono whitespace-pre-wrap">
                 {previewHtml}
               </pre>
@@ -1351,7 +1364,11 @@ export function ChatArea({
 
           <div className="flex-1 p-2.5 min-h-0">
             {previewTab === "code" ? (
-              previewHtml && !isRunning ? (
+              isMultiAgent && isRunning && liveAgentCode ? (
+                <pre className="w-full h-full rounded-xl border border-[#1e1e2a] bg-[#0A0A0C] text-[#9ecbff] text-[11px] leading-relaxed p-4 overflow-auto font-mono whitespace-pre-wrap">
+                  {liveAgentCode}
+                </pre>
+              ) : previewHtml && !isRunning ? (
                 <pre className="w-full h-full rounded-xl border border-[#1e1e2a] bg-[#0A0A0C] text-[#9ecbff] text-[11px] leading-relaxed p-4 overflow-auto font-mono whitespace-pre-wrap">
                   {previewHtml}
                 </pre>

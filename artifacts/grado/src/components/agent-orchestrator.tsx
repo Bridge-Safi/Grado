@@ -19,9 +19,10 @@ interface AgentOrchestratorProps {
   token: string | null;
   onPreview?: (html: string) => void;
   onDone?: () => void;
+  onStream?: (agentId: string, text: string) => void;
 }
 
-export function AgentOrchestrator({ prompt, token, onPreview, onDone }: AgentOrchestratorProps) {
+export function AgentOrchestrator({ prompt, token, onPreview, onDone, onStream }: AgentOrchestratorProps) {
   const [agents, setAgents] = useState<AgentState[]>([]);
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
@@ -140,6 +141,7 @@ export function AgentOrchestrator({ prompt, token, onPreview, onDone }: AgentOrc
             const el = outputRefs.current[ev.agentId];
             if (el) el.scrollTop = el.scrollHeight;
           }, 0);
+          onStream?.(ev.agentId, newOutput);
           return { ...a, output: newOutput };
         }));
         break;
