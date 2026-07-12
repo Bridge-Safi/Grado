@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Paperclip, SendHorizonal, Globe, Palette, GalleryHorizontal, Sparkles, BarChart3, Gamepad2, FileText, X, Zap, Brain, Code2, Lightbulb, BarChart2, Users, Mic, MicOff, ChevronDown, ChevronUp, Lock } from "lucide-react";
+import { Paperclip, SendHorizonal, Globe, Palette, GalleryHorizontal, Sparkles, BarChart3, Gamepad2, FileText, X, Zap, Brain, Code2, Lightbulb, BarChart2, Users, Mic, MicOff, ChevronDown, ChevronUp, Lock, RefreshCw } from "lucide-react";
 import { AgentOrchestrator } from "./agent-orchestrator";
 import { AnthropicMessage } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -176,6 +176,7 @@ export function ChatArea({
 
   const [streamText, setStreamText] = useState("");
   const [previewTab, setPreviewTab] = useState<"apercu" | "code">("apercu");
+  const [previewKey, setPreviewKey] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
@@ -1027,6 +1028,16 @@ export function ChatArea({
             </button>
           </div>
           <div className="flex-1" />
+          {previewHtml && previewTab === "apercu" && (
+            <button
+              onClick={() => setPreviewKey((k) => k + 1)}
+              title="Actualiser l'aperçu"
+              className="flex items-center gap-1 mr-2 text-[10px] font-semibold text-[#8888A8] hover:text-white border border-[#1e1e2a] hover:border-[#5B5BD6]/40 rounded-md px-1.5 py-1 transition-colors"
+              data-testid="button-refresh-preview"
+            >
+              <RefreshCw className="w-3 h-3" />
+            </button>
+          )}
           {isRunning ? (
             <span className="flex items-center gap-1.5 text-[10px] font-semibold text-[#7B7BFF]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#5B5BD6] animate-pulse" />
@@ -1046,6 +1057,7 @@ export function ChatArea({
             </pre>
           ) : previewHtml ? (
             <iframe
+              key={previewKey}
               srcDoc={previewHtml}
               sandbox="allow-scripts allow-forms allow-modals allow-popups"
               className="w-full h-full rounded-xl border border-[#1e1e2a] bg-white shadow-[0_0_40px_rgba(91,91,214,0.08)]"
