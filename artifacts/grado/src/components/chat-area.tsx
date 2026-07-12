@@ -145,6 +145,8 @@ export function ChatArea({
   const [msgImageMap, setMsgImageMap] = useState<Record<number, string>>({});
   const [liveAgentCode, setLiveAgentCode] = useState<string>("");
   const liveCodeRef = useRef<HTMLPreElement>(null);
+  // Dernier HTML généré avec succès — évite le clignotement entre live et final
+  const [lastCompletedHtml, setLastCompletedHtml] = useState<string | null>(null);
 
   // Image upload state
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -225,6 +227,7 @@ export function ChatArea({
 
   useEffect(() => {
     setActiveId(conversationId);
+    setLastCompletedHtml(null); // reset preview on conversation switch
   }, [conversationId]);
 
   useEffect(() => {
@@ -439,6 +442,10 @@ export function ChatArea({
           content: fullText,
           createdAt: new Date().toISOString(),
         };
+        // Persist HTML immediately so the preview never flickers to blank
+        const completedHtml = extractHtml(fullText);
+        if (completedHtml) setLastCompletedHtml(completedHtml);
+
         setLocalMessages((prev) => [...prev, newMsg]);
 
         const mediaTag = extractMediaTag(fullText);
@@ -507,7 +514,7 @@ export function ChatArea({
     e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
   };
 
-  // Écran divisé : HTML en cours de génération (live) ou dernier HTML généré
+  // Écran divisé : HTML en cours de génération (live) → HTML de session → HTML des messages DB
   const liveStreamHtml = isRunning && streamText ? extractHtmlLoose(streamText) : null;
   const lastMessageHtml = (() => {
     for (let i = localMessages.length - 1; i >= 0; i--) {
@@ -519,7 +526,8 @@ export function ChatArea({
     }
     return null;
   })();
-  const previewHtml = liveStreamHtml ?? lastMessageHtml;
+  // lastCompletedHtml évite le clignotement entre la fin du stream et la mise à jour de localMessages
+  const previewHtml = liveStreamHtml ?? lastCompletedHtml ?? lastMessageHtml;
 
   const {
     publishedUrl,
