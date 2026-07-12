@@ -833,90 +833,141 @@ Sois authentique, pas robotique.\n\n`,
       } else if (openrouterKey) {
         candidates.push({ url: OPENROUTER_CHAT_URL, key: openrouterKey, model: selectedModel, extraHeaders: OR_HEADERS });
       }
-      let orRes: Response | null = null;
-      let lastErrText = "";
-      for (const candidate of candidates) {
-        try {
-          const attempt = await fetch(candidate.url, {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${candidate.key}`,
-              "Content-Type": "application/json",
-              ...(candidate.extraHeaders || {}),
-            },
-            body: JSON.stringify({
-              model: candidate.model,
-              max_tokens: candidate.url === GEMINI_CHAT_URL ? 32768 : 8192,
-              stream: true,
-              messages: [
-                { role: "system", content: finalSystem },
-                ...chatMessages.map((m: any) => ({
-                  role: m.role,
-                  content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
-                })),
-              ],
-            }),
-          });
-          if (attempt.ok && attempt.body) {
-            orRes = attempt;
-            break;
-          }
-          lastErrText = await attempt.text();
-        } catch (fetchErr) {
-          lastErrText = String(fetchErr);
-        }
-      }
-
-      if (!orRes || !orRes.body) {
-        safeWrite(`data: ${JSON.stringify({ error: `OpenRouter error: ${lastErrText}` })}\n\n`);
-        try { res.end(); } catch {}
-        return;
-      }
-
-      const reader = orRes.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6).trim();
-          if (data === "[DONE]") continue;
+      const MAX_CONTINUATIONS = 4;
+      const runningMessages = chatMessages.map((m: any) => ({
+        role: m.role,
+        content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+      }));
+      let round = 0;
+      let gotAnyContent = false;
+      while (round <= MAX_CONTINUATIONS) {
+        let orRes: Response | null = null;
+        let lastErrText = "";
+        for (const candidate of candidates) {
           try {
-            const parsed = JSON.parse(data);
-            const delta = parsed.choices?.[0]?.delta?.content;
-            if (delta) {
-              fullResponse += delta;
-              safeWrite(`data: ${JSON.stringify({ content: delta })}\n\n`);
+            const attempt = await fetch(candidate.url, {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${candidate.key}`,
+                "Content-Type": "application/json",
+                ...(candidate.extraHeaders || {}),
+              },
+              body: JSON.stringify({
+                model: candidate.model,
+                max_tokens: candidate.url === GEMINI_CHAT_URL ? 32768 : 8192,
+                stream: true,
+                messages: [
+                  { role: "system", content: finalSystem },
+                  ...runningMessages,
+                ],
+              }),
+            });
+            if (attempt.ok && attempt.body) {
+              orRes = attempt;
+              break;
             }
-          } catch {}
+            lastErrText = await attempt.text();
+          } catch (fetchErr) {
+            lastErrText = String(fetchErr);
+          }
         }
+
+        if (!orRes || !orRes.body) {
+          if (!gotAnyContent) {
+            safeWrite(`data: ${JSON.stringify({ error: `OpenRouter error: ${lastErrText}` })}\n\n`);
+            try { res.end(); } catch {}
+            return;
+          }
+          break; // continuation attempt failed but we already have partial content — serve what we have
+        }
+
+        const reader = orRes.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let roundText = "";
+        let finishReason = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const data = line.slice(6).trim();
+            if (data === "[DONE]") continue;
+            try {
+              const parsed = JSON.parse(data);
+              const delta = parsed.choices?.[0]?.delta?.content;
+              if (delta) {
+                roundText += delta;
+                fullResponse += delta;
+                gotAnyContent = true;
+                safeWrite(`data: ${JSON.stringify({ content: delta })}\n\n`);
+              }
+              const fr = parsed.choices?.[0]?.finish_reason;
+              if (fr) finishReason = fr;
+            } catch {}
+          }
+        }
+
+        // Réponse tronquée car la limite de tokens a été atteinte : on continue automatiquement
+        // pour éviter que le chat/la génération de code ne se coupe en plein milieu.
+        if (finishReason === "length" && roundText.trim()) {
+          runningMessages.push({ role: "assistant", content: roundText });
+          runningMessages.push({
+            role: "user",
+            content: "Continue exactement là où tu t'es arrêté, sans rien répéter de ce que tu as déjà écrit et sans réintroduction.",
+          });
+          round++;
+          continue;
+        }
+        break;
       }
     } else {
       // Anthropic (direct key or Replit proxy)
       try {
-        const stream = anthropic.messages.stream({
-          model: selectedModel,
-          max_tokens: 8192,
-          system: finalSystem,
-          messages: chatMessages,
-        });
+        const MAX_CONTINUATIONS = 4;
+        const runningAnthropicMessages: Array<{ role: "user" | "assistant"; content: any }> = [...chatMessages];
+        let round = 0;
+        while (round <= MAX_CONTINUATIONS) {
+          const stream = anthropic.messages.stream({
+            model: selectedModel,
+            max_tokens: 8192,
+            system: finalSystem,
+            messages: runningAnthropicMessages,
+          });
 
-        for await (const event of stream) {
-          if (
-            event.type === "content_block_delta" &&
-            event.delta.type === "text_delta"
-          ) {
-            fullResponse += event.delta.text;
-            safeWrite(
-              `data: ${JSON.stringify({ content: event.delta.text })}\n\n`
-            );
+          let roundText = "";
+          let stopReason: string | null = null;
+          for await (const event of stream) {
+            if (
+              event.type === "content_block_delta" &&
+              event.delta.type === "text_delta"
+            ) {
+              roundText += event.delta.text;
+              fullResponse += event.delta.text;
+              safeWrite(
+                `data: ${JSON.stringify({ content: event.delta.text })}\n\n`
+              );
+            } else if (event.type === "message_delta") {
+              stopReason = (event.delta as any)?.stop_reason ?? stopReason;
+            }
           }
+
+          // Réponse tronquée car la limite de tokens a été atteinte : on continue automatiquement
+          // pour éviter que le chat/la génération de code ne se coupe en plein milieu.
+          if (stopReason === "max_tokens" && roundText.trim()) {
+            runningAnthropicMessages.push({ role: "assistant", content: roundText });
+            runningAnthropicMessages.push({
+              role: "user",
+              content: "Continue exactement là où tu t'es arrêté, sans rien répéter de ce que tu as déjà écrit et sans réintroduction.",
+            });
+            round++;
+            continue;
+          }
+          break;
         }
       } catch (anthropicErr) {
         console.error("Anthropic failed, falling back to OpenRouter:", anthropicErr);
