@@ -13,7 +13,6 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { MarkdownRenderer } from "./markdown";
 import { SharkCoding, AgentAvatar } from "./shark-coding";
-import { ProjectPreview } from "./project-preview";
 import { MediaPlayer } from "./media-player";
 import { ImagePlayer } from "./image-player";
 import { GradoLogo } from "./grado-logo";
@@ -635,11 +634,6 @@ export function ChatArea({
                               <MarkdownRenderer content={displayContent} />
                             )}
                           </div>
-                        )}
-
-                        {/* Live project preview */}
-                        {html && activeId && (
-                          <ProjectPreview html={html} conversationId={activeId} />
                         )}
 
                         {/* Image player */}
