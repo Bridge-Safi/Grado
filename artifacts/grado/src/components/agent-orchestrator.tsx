@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ChevronRight, ExternalLink, Download, Loader2, CheckCircle2, Circle, Maximize2 } from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink, Download, Loader2, CheckCircle2, Circle, Maximize2, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AgentState {
@@ -26,6 +26,7 @@ export function AgentOrchestrator({ prompt, token, onPreview, onDone }: AgentOrc
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [previewExpanded, setPreviewExpanded] = useState(false);
+  const [previewKey, setPreviewKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isDone, setIsDone] = useState(false);
   const [connecting, setConnecting] = useState(true);
@@ -364,6 +365,14 @@ export function AgentOrchestrator({ prompt, token, onPreview, onDone }: AgentOrc
                   HTML
                 </button>
                 <button
+                  onClick={() => setPreviewKey((k) => k + 1)}
+                  title="Actualiser l'aperçu"
+                  data-testid="button-refresh-preview-orchestrator"
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-[#2a2a38] text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/40 transition-colors"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                </button>
+                <button
                   onClick={() => setPreviewExpanded(v => !v)}
                   className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-[#2a2a38] text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/40 transition-colors"
                 >
@@ -381,6 +390,7 @@ export function AgentOrchestrator({ prompt, token, onPreview, onDone }: AgentOrc
               )}
             >
               <iframe
+                key={previewKey}
                 srcDoc={previewHtml}
                 className="w-full h-full bg-white"
                 sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads"

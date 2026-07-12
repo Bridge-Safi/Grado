@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Paperclip, SendHorizonal, Globe, Palette, GalleryHorizontal, Sparkles, BarChart3, Gamepad2, FileText, X, Zap, Brain, Code2, Lightbulb, BarChart2, Users, Mic, MicOff, ChevronDown, ChevronUp, Lock, RefreshCw } from "lucide-react";
+import { Paperclip, SendHorizonal, Globe, Palette, GalleryHorizontal, Sparkles, BarChart3, Gamepad2, FileText, X, Zap, Brain, Code2, Lightbulb, BarChart2, Users, Mic, MicOff, ChevronDown, ChevronUp, Lock, RefreshCw, GripVertical } from "lucide-react";
 import { AgentOrchestrator } from "./agent-orchestrator";
 import { AnthropicMessage } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -177,6 +177,40 @@ export function ChatArea({
   const [streamText, setStreamText] = useState("");
   const [previewTab, setPreviewTab] = useState<"apercu" | "code">("apercu");
   const [previewKey, setPreviewKey] = useState(0);
+  const [previewWidth, setPreviewWidth] = useState<number>(() => {
+    if (typeof window === "undefined") return 550;
+    const saved = Number(localStorage.getItem("grado_preview_width"));
+    return saved && saved > 0 ? saved : 550;
+  });
+  const resizingRef = useRef(false);
+  const handlePreviewResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    resizingRef.current = true;
+    const startX = e.clientX;
+    const startWidth = previewWidth;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    const onMove = (ev: MouseEvent) => {
+      if (!resizingRef.current) return;
+      const delta = ev.clientX - startX;
+      const maxWidth = Math.max(360, window.innerWidth - 420);
+      const next = Math.min(Math.max(startWidth - delta, 320), maxWidth);
+      setPreviewWidth(next);
+    };
+    const onUp = () => {
+      resizingRef.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      setPreviewWidth((w) => {
+        localStorage.setItem("grado_preview_width", String(w));
+        return w;
+      });
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
@@ -1001,9 +1035,23 @@ export function ChatArea({
       </div>
     </div>
 
-    {/* ── Aperçu en direct (écran divisé 50/50) ── */}
+    {/* ── Aperçu en direct (redimensionnable) ── */}
     {(previewHtml || isRunning) && (
-      <div className="hidden lg:flex flex-col w-[50%] shrink-0 border-l border-[#1e1e2a] bg-[#030306]">
+      <>
+        <div
+          onMouseDown={handlePreviewResizeStart}
+          title="Glisser pour redimensionner"
+          className="hidden lg:flex items-center justify-center w-2 shrink-0 cursor-col-resize group relative z-10"
+        >
+          <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-[#1e1e2a] group-hover:bg-[#5B5BD6]/50 transition-colors" />
+          <div className="relative z-10 flex items-center justify-center w-3.5 h-8 rounded-full bg-[#0e0e16] border border-[#2a2a38] group-hover:border-[#5B5BD6]/50 opacity-0 group-hover:opacity-100 transition-opacity">
+            <GripVertical className="w-2.5 h-2.5 text-[#8888A8]" />
+          </div>
+        </div>
+        <div
+          className="hidden lg:flex flex-col shrink-0 border-l border-[#1e1e2a] bg-[#030306]"
+          style={{ width: previewWidth }}
+        >
         <div className="h-11 flex items-center gap-2 px-4 border-b border-[#1e1e2a] bg-[#050508] shrink-0">
           <div className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
@@ -1075,6 +1123,7 @@ export function ChatArea({
           )}
         </div>
       </div>
+      </>
     )}
     </div>
   );
