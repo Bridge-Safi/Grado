@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Paperclip, SendHorizonal, Globe, Palette, GalleryHorizontal, Sparkles, BarChart3, Gamepad2, FileText, X, Zap, Brain, Code2, Lightbulb, BarChart2, Users, Mic, MicOff, ChevronDown, ChevronUp, Lock, RefreshCw, GripVertical } from "lucide-react";
+import { Paperclip, SendHorizonal, Globe, Palette, GalleryHorizontal, Sparkles, BarChart3, Gamepad2, FileText, X, Zap, Brain, Code2, Lightbulb, BarChart2, Users, Mic, MicOff, ChevronDown, ChevronUp, Lock, RefreshCw, GripVertical, Download, ExternalLink, CheckCheck, Rocket } from "lucide-react";
 import { AgentOrchestrator } from "./agent-orchestrator";
 import { AnthropicMessage } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MarkdownRenderer } from "./markdown";
 import { SharkCoding, AgentAvatar } from "./shark-coding";
 import { PreviewLoadingScreen } from "./preview-loading";
+import { PublishModal } from "./publish-modal";
+import { usePublish } from "@/hooks/use-publish";
 import { MediaPlayer } from "./media-player";
 import { ImagePlayer } from "./image-player";
 import { GradoLogo } from "./grado-logo";
@@ -500,6 +502,20 @@ export function ChatArea({
     return null;
   })();
   const previewHtml = liveStreamHtml ?? lastMessageHtml;
+
+  const {
+    publishedUrl,
+    isPublishing,
+    copied,
+    showModal: showPublishModal,
+    setShowModal: setShowPublishModal,
+    title: publishTitle,
+    setTitle: setPublishTitle,
+    fullUrl: publishedFullUrl,
+    handleDownload: handlePreviewDownload,
+    handlePublishClick,
+    handleConfirmPublish,
+  } = usePublish(previewHtml ?? "");
 
   const showWelcome = !activeId && localMessages.length === 0 && !isRunning;
   const activeAgent = AGENTS.find((a) => a.id === agentMode)!;
@@ -1097,6 +1113,55 @@ export function ChatArea({
             </span>
           )}
         </div>
+
+        {/* Address bar */}
+        {previewHtml && (
+          <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[#1e1e2a] bg-[#050508] shrink-0">
+            <div className="flex-1 bg-[#0A0A0C] rounded-md px-3 py-1 text-[11px] text-[#8888A8] font-mono truncate border border-[#1e1e2a]">
+              {publishedFullUrl ?? "grado://preview"}
+            </div>
+            {publishedFullUrl && (
+              <a
+                href={publishedUrl!}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Ouvrir le site publié"
+                className="text-[#8888A8] hover:text-white transition-colors shrink-0"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
+            <button
+              onClick={handlePreviewDownload}
+              title="Télécharger le HTML"
+              className="flex items-center gap-1 text-[10px] font-semibold text-[#8888A8] hover:text-white border border-[#1e1e2a] hover:border-[#5B5BD6]/40 rounded-md px-2 py-1 transition-colors shrink-0"
+              data-testid="button-download-preview"
+            >
+              <Download className="w-3 h-3" /> Télécharger
+            </button>
+            <button
+              onClick={handlePublishClick}
+              disabled={isPublishing}
+              title={publishedUrl ? "Copier le lien" : "Publier ce site"}
+              className={cn(
+                "flex items-center gap-1 text-[10px] font-semibold rounded-md px-2.5 py-1 transition-all shrink-0",
+                publishedUrl
+                  ? "bg-green-600 hover:bg-green-500 text-white"
+                  : "bg-[#5B5BD6] hover:bg-[#4a4ac4] text-white shadow-[0_0_10px_rgba(91,91,214,0.4)]"
+              )}
+              data-testid="button-publish-preview"
+            >
+              {copied ? (
+                <><CheckCheck className="w-3 h-3" /> Copié !</>
+              ) : publishedUrl ? (
+                <><Globe className="w-3 h-3" /> Copier le lien</>
+              ) : (
+                <><Rocket className="w-3 h-3" /> Publier</>
+              )}
+            </button>
+          </div>
+        )}
+
         <div className="flex-1 p-3 min-h-0">
           {previewTab === "code" ? (
             previewHtml && !isRunning ? (
@@ -1122,6 +1187,15 @@ export function ChatArea({
         </div>
       </div>
       </>
+    )}
+    {showPublishModal && (
+      <PublishModal
+        title={publishTitle}
+        setTitle={setPublishTitle}
+        isPublishing={isPublishing}
+        onClose={() => setShowPublishModal(false)}
+        onConfirm={handleConfirmPublish}
+      />
     )}
     </div>
   );
