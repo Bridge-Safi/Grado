@@ -1209,8 +1209,6 @@ export function ChatArea({
             ) : (
               <PreviewLoadingScreen />
             )
-          ) : isRunning ? (
-            <PreviewLoadingScreen />
           ) : previewHtml ? (
             <iframe
               key={previewKey}
@@ -1360,8 +1358,6 @@ export function ChatArea({
               ) : (
                 <PreviewLoadingScreen />
               )
-            ) : isRunning ? (
-              <PreviewLoadingScreen />
             ) : previewHtml ? (
               <iframe
                 key={previewKey}
