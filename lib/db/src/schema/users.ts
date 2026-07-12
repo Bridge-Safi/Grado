@@ -10,6 +10,8 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   resetToken: text("reset_token"),
   resetTokenExpires: timestamp("reset_token_expires"),
+  githubAccessToken: text("github_access_token"),
+  githubUsername: text("github_username"),
 });
 
 export type User = typeof users.$inferSelect;

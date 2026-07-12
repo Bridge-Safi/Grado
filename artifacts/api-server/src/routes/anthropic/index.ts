@@ -577,6 +577,33 @@ router.get("/conversations/:id/messages", async (req, res) => {
   }
 });
 
+// POST /anthropic/conversations/:id/messages/manual — insert a preformatted assistant
+// message directly (no AI call). Used e.g. by the GitHub import feature to drop an
+// imported site's HTML straight into the conversation/preview.
+router.post("/conversations/:id/messages/manual", async (req, res) => {
+  const parsed = ListAnthropicMessagesParams.safeParse({ id: Number(req.params.id) });
+  if (!parsed.success) { res.status(400).json({ error: "Invalid id" }); return; }
+  const { content } = req.body;
+  if (!content || typeof content !== "string") { res.status(400).json({ error: "content requis" }); return; }
+  try {
+    const [msg] = await db.insert(messages).values({
+      conversationId: parsed.data.id,
+      role: "assistant",
+      content,
+    }).returning();
+    res.status(201).json({
+      id: msg.id,
+      conversationId: msg.conversationId,
+      role: msg.role,
+      content: msg.content,
+      createdAt: msg.createdAt.toISOString(),
+    });
+  } catch (err) {
+    console.error("manual message insert error:", err);
+    res.status(500).json({ error: "Échec de l'insertion du message" });
+  }
+});
+
 // POST /anthropic/conversations/:id/messages  (SSE stream)
 router.post("/conversations/:id/messages", async (req, res) => {
   const paramsParsed = SendAnthropicMessageParams.safeParse({

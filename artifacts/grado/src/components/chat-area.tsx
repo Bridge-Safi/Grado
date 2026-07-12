@@ -26,6 +26,7 @@ import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { useVoiceInput } from "@/hooks/use-voice-input";
 import { ShareButton } from "./share-button";
+import { GithubMenu } from "./github-menu";
 
 interface ChatAreaProps {
   conversationId: number | null;
@@ -516,6 +517,41 @@ export function ChatArea({
     handlePublishClick,
     handleConfirmPublish,
   } = usePublish(previewHtml ?? "");
+
+  const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
+
+  const handleGithubImport = async (importedHtml: string, sourceLabel: string) => {
+    let currentId = activeId;
+    if (!currentId) {
+      const title = `Import GitHub — ${sourceLabel}`;
+      const newId = await onTitleCreate(title);
+      currentId = newId;
+      setActiveId(newId);
+      setConversationId(newId);
+    }
+    const content = `Site importé depuis GitHub (\`${sourceLabel}\`) :\n\n\`\`\`html\n${importedHtml}\n\`\`\``;
+    const newMsg: AnthropicMessage = {
+      id: Date.now(),
+      conversationId: currentId!,
+      role: "assistant",
+      content,
+      createdAt: new Date().toISOString(),
+    };
+    setLocalMessages((prev) => [...prev, newMsg]);
+    setPreviewTab("apercu");
+    try {
+      const t = localStorage.getItem("grado_token");
+      await fetch(`/api/anthropic/conversations/${currentId}/messages/manual`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(t ? { Authorization: `Bearer ${t}` } : {}) },
+        body: JSON.stringify({ content }),
+      });
+      queryClient.invalidateQueries({ queryKey: getListAnthropicMessagesQueryKey(currentId!) });
+      queryClient.invalidateQueries({ queryKey: getListAnthropicConversationsQueryKey() });
+    } catch (err) {
+      console.error("github import persist error:", err);
+    }
+  };
 
   const showWelcome = !activeId && localMessages.length === 0 && !isRunning;
   const activeAgent = AGENTS.find((a) => a.id === agentMode)!;
@@ -1132,6 +1168,7 @@ export function ChatArea({
               </a>
             )}
             <ShareButton conversationId={activeId} token={token} label="Partager" rtl={rtl} compact align="bottom" />
+            <GithubMenu token={token} html={previewHtml} conversationId={activeId} onImport={handleGithubImport} compact align="bottom" />
             <button
               onClick={handlePreviewDownload}
               title="Télécharger le HTML"
@@ -1198,6 +1235,148 @@ export function ChatArea({
         onConfirm={handleConfirmPublish}
       />
     )}
+
+    {/* ── Bouton flottant Aperçu (mobile uniquement) ── */}
+    {(previewHtml || isRunning) && !mobilePreviewOpen && (
+      <button
+        onClick={() => setMobilePreviewOpen(true)}
+        className={cn(
+          "lg:hidden fixed bottom-24 right-4 z-40 flex items-center gap-2 pl-3 pr-4 py-3 rounded-full shadow-[0_4px_24px_rgba(91,91,214,0.5)] text-white text-xs font-semibold transition-transform active:scale-95",
+          isRunning ? "bg-gradient-to-r from-[#5B5BD6] to-[#8B5CF6]" : "bg-[#5B5BD6]"
+        )}
+        data-testid="button-open-mobile-preview"
+      >
+        <span className="relative flex items-center justify-center w-5 h-5">
+          {isRunning && <span className="absolute inline-flex h-full w-full rounded-full bg-white/40 animate-ping" />}
+          <span className="relative text-base">👁️</span>
+        </span>
+        {isRunning ? "Construction…" : "Voir l'aperçu"}
+      </button>
+    )}
+
+    {/* ── Aperçu en direct plein écran (mobile) ── */}
+    <AnimatePresence>
+      {mobilePreviewOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 40 }}
+          transition={{ duration: 0.2 }}
+          className="lg:hidden fixed inset-0 z-50 flex flex-col bg-[#030306]"
+        >
+          <div className="h-12 flex items-center gap-2 px-3 border-b border-[#1e1e2a] bg-[#050508] shrink-0">
+            <button
+              onClick={() => setMobilePreviewOpen(false)}
+              className="flex items-center gap-1 text-xs font-semibold text-[#8888A8] hover:text-white px-2 py-1.5 rounded-lg transition-colors"
+              data-testid="button-close-mobile-preview"
+            >
+              <X className="w-4 h-4" /> Fermer
+            </button>
+            <span className="text-xs font-semibold text-[#C8C8E8] ml-1">Aperçu en direct</span>
+            <div className="flex items-center gap-1 ml-2 bg-[#0A0A0C] border border-[#1e1e2a] rounded-lg p-0.5">
+              <button
+                onClick={() => setPreviewTab("apercu")}
+                className={cn(
+                  "px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all",
+                  previewTab === "apercu" ? "bg-[#5B5BD6] text-white" : "text-[#8888A8] hover:text-white"
+                )}
+              >
+                Aperçu
+              </button>
+              <button
+                onClick={() => setPreviewTab("code")}
+                className={cn(
+                  "px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all",
+                  previewTab === "code" ? "bg-[#5B5BD6] text-white" : "text-[#8888A8] hover:text-white"
+                )}
+              >
+                Code
+              </button>
+            </div>
+            <div className="flex-1" />
+            {isRunning ? (
+              <span className="flex items-center gap-1.5 text-[10px] font-semibold text-[#7B7BFF]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#5B5BD6] animate-pulse" />
+                En cours…
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 text-[10px] font-semibold text-green-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                Prêt
+              </span>
+            )}
+          </div>
+
+          {previewHtml && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-[#1e1e2a] bg-[#050508] shrink-0 overflow-x-auto">
+              <div className="flex-1 min-w-0 bg-[#0A0A0C] rounded-md px-3 py-1 text-[11px] text-[#8888A8] font-mono truncate border border-[#1e1e2a]">
+                {publishedFullUrl ?? "grado://preview"}
+              </div>
+              {publishedFullUrl && (
+                <a
+                  href={publishedUrl!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center w-6 h-6 shrink-0 text-[#8888A8] hover:text-white transition-colors"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
+              <ShareButton conversationId={activeId} token={token} label="Partager" rtl={rtl} compact align="bottom" />
+              <GithubMenu token={token} html={previewHtml} conversationId={activeId} onImport={handleGithubImport} compact align="bottom" />
+              <button
+                onClick={handlePreviewDownload}
+                className="flex items-center justify-center gap-1 text-[10px] font-semibold text-[#8888A8] hover:text-white border border-[#1e1e2a] hover:border-[#5B5BD6]/40 rounded-md px-2 py-1 transition-colors shrink-0 whitespace-nowrap"
+              >
+                <Download className="w-3 h-3" />
+              </button>
+              <button
+                onClick={handlePublishClick}
+                disabled={isPublishing}
+                className={cn(
+                  "flex items-center justify-center gap-1 text-[10px] font-semibold rounded-md px-2.5 py-1 transition-all shrink-0 whitespace-nowrap",
+                  publishedUrl
+                    ? "bg-green-600 hover:bg-green-500 text-white"
+                    : "bg-[#5B5BD6] hover:bg-[#4a4ac4] text-white shadow-[0_0_10px_rgba(91,91,214,0.4)]"
+                )}
+              >
+                {copied ? (
+                  <><CheckCheck className="w-3 h-3" /> Copié !</>
+                ) : publishedUrl ? (
+                  <><Globe className="w-3 h-3" /> Copier</>
+                ) : (
+                  <><Rocket className="w-3 h-3" /> Publier</>
+                )}
+              </button>
+            </div>
+          )}
+
+          <div className="flex-1 p-2.5 min-h-0">
+            {previewTab === "code" ? (
+              previewHtml && !isRunning ? (
+                <pre className="w-full h-full rounded-xl border border-[#1e1e2a] bg-[#0A0A0C] text-[#9ecbff] text-[11px] leading-relaxed p-4 overflow-auto font-mono whitespace-pre-wrap">
+                  {previewHtml}
+                </pre>
+              ) : (
+                <PreviewLoadingScreen />
+              )
+            ) : isRunning ? (
+              <PreviewLoadingScreen />
+            ) : previewHtml ? (
+              <iframe
+                key={previewKey}
+                srcDoc={previewHtml}
+                sandbox="allow-scripts allow-forms allow-modals allow-popups"
+                className="w-full h-full rounded-xl border border-[#1e1e2a] bg-white shadow-[0_0_40px_rgba(91,91,214,0.08)]"
+                title="Aperçu en direct mobile"
+              />
+            ) : (
+              <PreviewLoadingScreen />
+            )}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
     </div>
   );
 }

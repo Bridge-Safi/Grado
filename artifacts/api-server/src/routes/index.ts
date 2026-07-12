@@ -11,6 +11,7 @@ import agentsRouter from "./agents";
 import settingsRouter from "./settings";
 import projectsRouter from "./projects";
 import shareRouter from "./share";
+import githubRouter from "./github";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use("/agents", agentsRouter);
 router.use("/user-settings", settingsRouter);
 router.use("/projects", projectsRouter);
 router.use("/share", shareRouter);
+router.use("/github", githubRouter);
 
 export default router;
