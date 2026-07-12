@@ -1,0 +1,1 @@
+- [Imported project DB tables missing](imported-db-missing-tables.md) — after importing this project, Postgres tables defined in schema can be absent (never migrated); run drizzle push before assuming a 500 is a code bug.
