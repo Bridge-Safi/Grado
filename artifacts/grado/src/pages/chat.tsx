@@ -11,6 +11,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Sidebar } from "@/components/chat-sidebar";
 import { ChatArea } from "@/components/chat-area";
 import { Play, PanelLeftOpen, Zap, LogOut } from "lucide-react";
+import { UsageWidget } from "@/components/usage-widget";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useLocation } from "wouter";
@@ -24,7 +25,7 @@ export default function ChatPage() {
   const [isRunning, setIsRunning] = useState(false);
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
 
   const { data: conversations = [] } = useListAnthropicConversations();
   const createConv = useCreateAnthropicConversation();
@@ -85,13 +86,7 @@ export default function ChatPage() {
               <span className="text-xs text-white font-medium leading-none">{user.name}</span>
               <span className="text-[10px] text-[#5B5BD6] leading-none mt-0.5 capitalize">{user.plan}</span>
             </div>
-            <button
-              onClick={() => navigate("/pricing")}
-              className="flex items-center gap-1 h-7 px-2.5 rounded-lg text-xs font-medium text-[#5B5BD6] hover:bg-[#5B5BD6]/10 transition-all border border-[#5B5BD6]/30"
-            >
-              <Zap className="w-3 h-3" />
-              Upgrade
-            </button>
+            <UsageWidget token={token} />
             <button
               onClick={() => { logout(); navigate("/"); }}
               className="h-7 w-7 flex items-center justify-center rounded-lg text-[#8888A8] hover:text-white hover:bg-[#1e1e2a] transition-all"
