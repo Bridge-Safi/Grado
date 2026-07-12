@@ -256,10 +256,13 @@ export default function LandingPage() {
             <GradoLogo size={24} />
             <span className="text-sm font-semibold">Grado</span>
           </div>
-          <div className="flex gap-6">
+          <div className="flex flex-wrap justify-center gap-6">
             <button onClick={() => navigate("/pricing")} className="text-xs text-[#8888A8] hover:text-white transition-colors">{t.navPricing}</button>
             <button onClick={() => navigate("/login")} className="text-xs text-[#8888A8] hover:text-white transition-colors">{t.navLogin}</button>
             <button onClick={() => navigate("/register")} className="text-xs text-[#8888A8] hover:text-white transition-colors">{t.navSignup}</button>
+            <button onClick={() => navigate("/contact")} className="text-xs text-[#8888A8] hover:text-white transition-colors">Contact</button>
+            <button onClick={() => navigate("/terms")} className="text-xs text-[#8888A8] hover:text-white transition-colors">CGU</button>
+            <button onClick={() => navigate("/privacy")} className="text-xs text-[#8888A8] hover:text-white transition-colors">Confidentialité</button>
           </div>
           <p className="text-xs text-[#8888A8]">{t.footerRights}</p>
         </div>
