@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { ArrowLeft, Mail, MessageCircle, Send } from "lucide-react";
 import { GradoLogo } from "@/components/grado-logo";
 
-const SUPPORT_EMAIL = "support@grado.app";
+const SUPPORT_EMAIL = "grado.safi@gmail.com";
 
 export default function ContactPage() {
   const [, navigate] = useLocation();
