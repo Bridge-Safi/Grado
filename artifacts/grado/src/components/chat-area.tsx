@@ -38,6 +38,8 @@ interface ChatAreaProps {
   onRunStart: () => void;
   onRunEnd: () => void;
   isRunning: boolean;
+  /** Increment to re-run the last user message */
+  runTrigger?: number;
 }
 
 interface MediaJob {
@@ -133,6 +135,7 @@ export function ChatArea({
   onRunStart,
   onRunEnd,
   isRunning,
+  runTrigger,
 }: ChatAreaProps) {
   const [, navigate] = useLocation();
   const [input, setInput] = useState("");
@@ -235,6 +238,17 @@ export function ChatArea({
     }
   }, [localMessages, isRunning]);
 
+  // Re-run last user message when Run button is clicked from parent
+  useEffect(() => {
+    if (!runTrigger) return;
+    const lastUserMsg = [...localMessages].reverse().find(m => m.role === "user");
+    if (lastUserMsg) {
+      handleSend(lastUserMsg.content);
+    } else if (input.trim()) {
+      handleSend();
+    }
+  }, [runTrigger]);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -313,15 +327,15 @@ export function ChatArea({
     }
   };
 
-  const handleSend = async () => {
-    const content = input.trim();
+  const handleSend = async (overrideContent?: string) => {
+    const content = (overrideContent ?? input).trim();
     if (!content || isRunning) return;
 
     setIsMultiAgent(false);
     setStreamText("");
-    setInput("");
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
+    if (!overrideContent) {
+      setInput("");
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
     }
 
     // Snapshot & clear image

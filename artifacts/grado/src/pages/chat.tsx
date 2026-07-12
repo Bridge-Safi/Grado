@@ -23,6 +23,7 @@ export default function ChatPage() {
   const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
+  const [runCount, setRunCount] = useState(0);
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
   const { user, logout, token } = useAuth();
@@ -102,6 +103,7 @@ export default function ChatPage() {
         {/* Red Run button */}
         <button
           data-testid="button-run-header"
+          onClick={() => !isRunning && setRunCount(c => c + 1)}
           className={cn(
             "flex items-center gap-1.5 h-8 px-3 rounded-lg text-sm font-medium transition-all duration-150 select-none",
             isRunning
@@ -138,6 +140,7 @@ export default function ChatPage() {
             onRunStart={() => setIsRunning(true)}
             onRunEnd={() => setIsRunning(false)}
             isRunning={isRunning}
+            runTrigger={runCount}
           />
         </main>
       </div>
