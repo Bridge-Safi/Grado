@@ -1116,8 +1116,8 @@ export function ChatArea({
 
         {/* Address bar */}
         {previewHtml && (
-          <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[#1e1e2a] bg-[#050508] shrink-0">
-            <div className="flex-1 bg-[#0A0A0C] rounded-md px-3 py-1 text-[11px] text-[#8888A8] font-mono truncate border border-[#1e1e2a]">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-[#1e1e2a] bg-[#050508] shrink-0 overflow-x-auto">
+            <div className="flex-1 min-w-0 bg-[#0A0A0C] rounded-md px-3 py-1 text-[11px] text-[#8888A8] font-mono truncate border border-[#1e1e2a]">
               {publishedFullUrl ?? "grado://preview"}
             </div>
             {publishedFullUrl && (
@@ -1126,7 +1126,7 @@ export function ChatArea({
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Ouvrir le site publié"
-                className="text-[#8888A8] hover:text-white transition-colors shrink-0"
+                className="flex items-center justify-center w-6 h-6 shrink-0 text-[#8888A8] hover:text-white transition-colors"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
@@ -1134,17 +1134,17 @@ export function ChatArea({
             <button
               onClick={handlePreviewDownload}
               title="Télécharger le HTML"
-              className="flex items-center gap-1 text-[10px] font-semibold text-[#8888A8] hover:text-white border border-[#1e1e2a] hover:border-[#5B5BD6]/40 rounded-md px-2 py-1 transition-colors shrink-0"
+              className="flex items-center justify-center gap-1 text-[10px] font-semibold text-[#8888A8] hover:text-white border border-[#1e1e2a] hover:border-[#5B5BD6]/40 rounded-md px-2 py-1 transition-colors shrink-0 whitespace-nowrap"
               data-testid="button-download-preview"
             >
-              <Download className="w-3 h-3" /> Télécharger
+              <Download className="w-3 h-3" /> <span className="hidden xl:inline">Télécharger</span>
             </button>
             <button
               onClick={handlePublishClick}
               disabled={isPublishing}
               title={publishedUrl ? "Copier le lien" : "Publier ce site"}
               className={cn(
-                "flex items-center gap-1 text-[10px] font-semibold rounded-md px-2.5 py-1 transition-all shrink-0",
+                "flex items-center justify-center gap-1 text-[10px] font-semibold rounded-md px-2.5 py-1 transition-all shrink-0 whitespace-nowrap",
                 publishedUrl
                   ? "bg-green-600 hover:bg-green-500 text-white"
                   : "bg-[#5B5BD6] hover:bg-[#4a4ac4] text-white shadow-[0_0_10px_rgba(91,91,214,0.4)]"
