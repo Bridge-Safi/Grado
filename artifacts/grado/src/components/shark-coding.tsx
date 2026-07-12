@@ -1,4 +1,41 @@
 import { useEffect, useState } from "react";
+import { GradoLogo } from "./grado-logo";
+
+export function AgentAvatar({ size = 20, boxSize = 28 }: { size?: number; boxSize?: number }) {
+  return (
+    <div
+      className="relative shrink-0 mr-2 mt-1"
+      style={{ width: boxSize, height: boxSize }}
+    >
+      {/* rotating aura ring */}
+      <div
+        className="absolute inset-[-3px] rounded-full"
+        style={{
+          background:
+            "conic-gradient(from 0deg, #5B5BD6, #7B7BFF, transparent 40%, transparent 60%, #5B5BD6)",
+          animation: "agent-spin 2.2s linear infinite",
+          filter: "blur(2px)",
+          opacity: 0.85,
+        }}
+      />
+      {/* breathing glow */}
+      <div
+        className="absolute inset-[-6px] rounded-full"
+        style={{
+          background: "radial-gradient(circle, rgba(123,123,255,0.35), transparent 70%)",
+          animation: "agent-breathe 1.8s ease-in-out infinite",
+        }}
+      />
+      <div className="absolute inset-0 rounded-full bg-[#0e0e16] border border-[#5B5BD6]/40 flex items-center justify-center">
+        <GradoLogo size={size} />
+      </div>
+      <style>{`
+        @keyframes agent-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes agent-breathe { 0%, 100% { opacity: 0.35; transform: scale(0.9); } 50% { opacity: 0.75; transform: scale(1.15); } }
+      `}</style>
+    </div>
+  );
+}
 
 const BUILD_STEPS = [
   { icon: "🧠", label: "Analyse de ta demande..." },
@@ -18,21 +55,43 @@ export function SharkCoding({ isBuilding = true }: { isBuilding?: boolean }) {
 
 function ThinkingDots() {
   return (
-    <div className="flex items-center gap-1.5 py-1 px-1">
-      {[0, 1, 2].map((i) => (
-        <div
-          key={i}
-          className="w-2 h-2 rounded-full bg-[#5B5BD6]/60"
-          style={{
-            animation: "thinking-bounce 1.2s ease-in-out infinite",
-            animationDelay: `${i * 0.18}s`,
-          }}
-        />
-      ))}
+    <div className="flex items-center gap-2.5 py-0.5 px-1">
+      <div className="flex items-center gap-1.5">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="rounded-full"
+            style={{
+              width: 6,
+              height: 6,
+              background: "linear-gradient(135deg, #7B7BFF, #5B5BD6)",
+              boxShadow: "0 0 6px rgba(123,123,255,0.7)",
+              animation: "thinking-wave 1.1s ease-in-out infinite",
+              animationDelay: `${i * 0.15}s`,
+            }}
+          />
+        ))}
+      </div>
+      <span
+        className="text-[11px] font-medium tracking-wide"
+        style={{
+          background: "linear-gradient(90deg, #8888A8, #b0b0ff, #8888A8)",
+          backgroundSize: "200% auto",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          animation: "shimmer-text 2s linear infinite",
+        }}
+      >
+        Grado réfléchit...
+      </span>
       <style>{`
-        @keyframes thinking-bounce {
-          0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-          40% { transform: scale(1); opacity: 1; }
+        @keyframes thinking-wave {
+          0%, 60%, 100% { transform: translateY(0) scale(0.75); opacity: 0.5; }
+          30% { transform: translateY(-4px) scale(1); opacity: 1; }
+        }
+        @keyframes shimmer-text {
+          0% { background-position: 0% center; }
+          100% { background-position: -200% center; }
         }
       `}</style>
     </div>

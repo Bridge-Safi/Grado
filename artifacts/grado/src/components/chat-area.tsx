@@ -12,7 +12,7 @@ import {
 } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MarkdownRenderer } from "./markdown";
-import { SharkCoding } from "./shark-coding";
+import { SharkCoding, AgentAvatar } from "./shark-coding";
 import { ProjectPreview } from "./project-preview";
 import { MediaPlayer } from "./media-player";
 import { ImagePlayer } from "./image-player";
@@ -659,9 +659,7 @@ export function ChatArea({
                     exit={{ opacity: 0 }}
                     className="flex justify-start"
                   >
-                    <div className="w-7 h-7 rounded-full bg-[#0e0e16] border border-[#5B5BD6]/30 flex items-center justify-center mr-2 mt-1 shrink-0 shadow-[0_0_8px_rgba(91,91,214,0.2)]">
-                      <GradoLogo size={20} />
-                    </div>
+                    <AgentAvatar />
                     <AgentOrchestrator
                       prompt={multiAgentPrompt}
                       token={localStorage.getItem("grado_token")}
@@ -693,10 +691,16 @@ export function ChatArea({
                     exit={{ opacity: 0 }}
                     className="flex justify-start"
                   >
-                    <div className="w-7 h-7 rounded-full bg-[#0e0e16] border border-[#5B5BD6]/30 flex items-center justify-center mr-2 mt-1 shrink-0 shadow-[0_0_8px_rgba(91,91,214,0.2)]">
-                      <GradoLogo size={20} />
-                    </div>
-                    <div className="bg-[#0A0A0A] border border-[#2a2a38] rounded-2xl rounded-bl-sm px-4 py-3">
+                    <AgentAvatar />
+                    <div
+                      className="rounded-2xl rounded-bl-sm px-4 py-3 relative overflow-hidden"
+                      style={{
+                        background: "rgba(10,10,10,0.85)",
+                        backdropFilter: "blur(8px)",
+                        border: "1px solid rgba(91,91,214,0.25)",
+                        boxShadow: "0 0 16px rgba(91,91,214,0.08)",
+                      }}
+                    >
                       <SharkCoding isBuilding={isBuilding} />
                     </div>
                   </motion.div>
