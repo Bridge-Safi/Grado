@@ -13,6 +13,7 @@ export interface AnthropicConversation {
   id: number;
   title: string;
   createdAt: string;
+  projectId?: number | null;
 }
 
 export interface AnthropicMessage {
