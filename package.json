@@ -19,5 +19,9 @@
 
   "dependencies": {
     "qrcode.react": "^4.2.0"
+  },
+
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
   }
 }

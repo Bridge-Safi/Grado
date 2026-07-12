@@ -1,15 +1,16 @@
-# [Project name]
+# Grado
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+An AI chat / site-builder web app with an Express API and a React frontend, imported from GitHub (also deployed separately on Railway).
 
 ## Run & Operate
 
+- Two Replit workflows are configured and running: `Start application` (Vite frontend, port 23509) and `API Server` (Express, port 5000).
 - `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Required env: `DATABASE_URL` — Postgres connection string (currently Replit's built-in dev Postgres; schema has been pushed but it starts empty — see Gotchas)
 
 ## Stack
 
@@ -38,7 +39,9 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- `GRADO_OFFLINE` (env var, shared) gates public signup/login in `artifacts/api-server/src/routes/auth/index.ts`. It defaults to `"1"` (blocked, admin-only) in code, but is now explicitly set to `"0"` here on Replit so clients can register and log in.
+- Root `package.json` sets `"pnpm": { "onlyBuiltDependencies": ["esbuild"] }` so esbuild's postinstall script (native binary download) actually runs — without it, `vite`/`build.mjs` fail with "not found" after `pnpm install`.
+- The project is also deployed on Railway with its own Postgres database. The `DATABASE_URL` the user has (using host `postgres.railway.internal`) is Railway's **private network** address and is not reachable from Replit. Replit is currently running against its own built-in dev Postgres (schema pushed, but empty — no data from the Railway deployment). To point Replit at the real Railway data, get the **public/proxy** connection string from Railway's Postgres service → "Connect" tab → "Public Network", then set it as `DATABASE_URL`.
 
 ## Pointers
 
