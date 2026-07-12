@@ -317,8 +317,8 @@ export default function AdminPage() {
             )}
           </div>
         ) : (
-          <div className="bg-[#080808] border border-[#1e1e2a] rounded-2xl overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-[#080808] border border-[#1e1e2a] rounded-2xl overflow-x-auto">
+            <table className="w-full text-sm min-w-[720px]">
               <thead>
                 <tr className="border-b border-[#1e1e2a]">
                   <th className="text-left px-5 py-3 text-[#8888A8] font-medium">#</th>
@@ -327,7 +327,7 @@ export default function AdminPage() {
                   <th className="text-left px-5 py-3 text-[#8888A8] font-medium">Plan</th>
                   <th className="text-left px-5 py-3 text-[#8888A8] font-medium hidden sm:table-cell">Essai</th>
                   <th className="text-left px-5 py-3 text-[#8888A8] font-medium hidden sm:table-cell">Inscrit le</th>
-                  <th className="text-left px-5 py-3 text-[#8888A8] font-medium">Action</th>
+                  <th className="text-left px-5 py-3 text-[#8888A8] font-medium whitespace-nowrap">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -343,7 +343,7 @@ export default function AdminPage() {
                     </td>
                     <td className="px-5 py-3 hidden sm:table-cell">{trialStatus(u) ?? <span className="text-[#4444A8] text-xs">—</span>}</td>
                     <td className="px-5 py-3 text-[#8888A8] text-xs hidden sm:table-cell">{fmt(u.createdAt)}</td>
-                    <td className="px-5 py-3">
+                    <td className="px-5 py-3 whitespace-nowrap">
                       <div className="relative flex items-center gap-2">
                         <button
                           onClick={() => setOpenPlanSelect(openPlanSelect === u.id ? null : u.id)}
