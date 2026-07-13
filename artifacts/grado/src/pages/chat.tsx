@@ -19,11 +19,42 @@ import { useAuth } from "@/lib/auth";
 import { GradoLogo } from "@/components/grado-logo";
 import { LangSwitcher } from "@/components/lang-switcher";
 
+const ACTIVE_CONV_KEY = "grado_active_conversation";
+const SIDEBAR_OPEN_KEY = "grado_sidebar_open";
+
+function getStoredConversationId(): number | null {
+  const raw = localStorage.getItem(ACTIVE_CONV_KEY);
+  const id = raw ? Number(raw) : NaN;
+  return Number.isFinite(id) ? id : null;
+}
+
+function getStoredSidebarOpen(): boolean {
+  const raw = localStorage.getItem(SIDEBAR_OPEN_KEY);
+  return raw === null ? true : raw === "1";
+}
+
 export default function ChatPage() {
-  const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [activeConversationId, setActiveConversationIdState] = useState<number | null>(getStoredConversationId);
+  const [isSidebarOpen, setIsSidebarOpenState] = useState(getStoredSidebarOpen);
   const [isRunning, setIsRunning] = useState(false);
   const [runCount, setRunCount] = useState(0);
+
+  // Garde la page (conversation active + état de la sidebar) même après un
+  // rechargement ou un retour sur /chat, pour que l'utilisateur retrouve
+  // exactement là où il était.
+  const setActiveConversationId = (id: number | null) => {
+    setActiveConversationIdState(id);
+    if (id === null) localStorage.removeItem(ACTIVE_CONV_KEY);
+    else localStorage.setItem(ACTIVE_CONV_KEY, String(id));
+  };
+
+  const setIsSidebarOpen = (open: boolean | ((prev: boolean) => boolean)) => {
+    setIsSidebarOpenState((prev) => {
+      const next = typeof open === "function" ? open(prev) : open;
+      localStorage.setItem(SIDEBAR_OPEN_KEY, next ? "1" : "0");
+      return next;
+    });
+  };
 
   // Safety: if isRunning stays true for more than 60s, force-reset it
   useEffect(() => {
@@ -38,6 +69,16 @@ export default function ChatPage() {
   const { data: conversations = [] } = useListAnthropicConversations();
   const createConv = useCreateAnthropicConversation();
   const deleteConv = useDeleteAnthropicConversation();
+
+  // Si la conversation mémorisée a été supprimée entre-temps, on revient
+  // proprement à "Nouvelle conversation" au lieu de rester bloqué.
+  useEffect(() => {
+    if (activeConversationId === null) return;
+    if (conversations.length === 0) return;
+    const stillExists = conversations.some((c: any) => c.id === activeConversationId);
+    if (!stillExists) setActiveConversationId(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversations]);
 
   const { data: messages = [] } = useListAnthropicMessages(
     activeConversationId || 0,
@@ -96,7 +137,11 @@ export default function ChatPage() {
             </div>
             <UsageWidget token={token} />
             <button
-              onClick={() => { logout(); navigate("/"); }}
+              onClick={() => {
+                localStorage.removeItem(ACTIVE_CONV_KEY);
+                logout();
+                navigate("/");
+              }}
               className="h-7 w-7 flex items-center justify-center rounded-lg text-[#8888A8] hover:text-white hover:bg-[#1e1e2a] transition-all"
               title="Déconnexion"
             >
