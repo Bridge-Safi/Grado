@@ -890,32 +890,41 @@ Sois authentique, pas robotique.\n\n`,
         let orRes: Response | null = null;
         let lastErrText = "";
         for (const candidate of candidates) {
-          try {
-            const attempt = await fetch(candidate.url, {
-              method: "POST",
-              headers: {
-                "Authorization": `Bearer ${candidate.key}`,
-                "Content-Type": "application/json",
-                ...(candidate.extraHeaders || {}),
-              },
-              body: JSON.stringify({
-                model: candidate.model,
-                max_tokens: candidate.url === GEMINI_CHAT_URL ? 32768 : 8192,
-                stream: true,
-                messages: [
-                  { role: "system", content: finalSystem },
-                  ...runningMessages,
-                ],
-              }),
-            });
-            if (attempt.ok && attempt.body) {
-              orRes = attempt;
-              break;
+          // Transient overload (503/429) is common on free-tier models — retry the same
+          // candidate a couple of times with a short backoff before moving to the next one.
+          const RETRIES = 3;
+          for (let attemptNum = 0; attemptNum < RETRIES; attemptNum++) {
+            try {
+              const attempt = await fetch(candidate.url, {
+                method: "POST",
+                headers: {
+                  "Authorization": `Bearer ${candidate.key}`,
+                  "Content-Type": "application/json",
+                  ...(candidate.extraHeaders || {}),
+                },
+                body: JSON.stringify({
+                  model: candidate.model,
+                  max_tokens: candidate.url === GEMINI_CHAT_URL ? 32768 : 8192,
+                  stream: true,
+                  messages: [
+                    { role: "system", content: finalSystem },
+                    ...runningMessages,
+                  ],
+                }),
+              });
+              if (attempt.ok && attempt.body) {
+                orRes = attempt;
+                break;
+              }
+              lastErrText = await attempt.text();
+              const retriable = attempt.status === 503 || attempt.status === 429 || attempt.status >= 500;
+              if (!retriable || attemptNum === RETRIES - 1) break;
+            } catch (fetchErr) {
+              lastErrText = String(fetchErr);
             }
-            lastErrText = await attempt.text();
-          } catch (fetchErr) {
-            lastErrText = String(fetchErr);
+            await new Promise((r) => setTimeout(r, 600 * (attemptNum + 1)));
           }
+          if (orRes) break;
         }
 
         if (!orRes || !orRes.body) {
