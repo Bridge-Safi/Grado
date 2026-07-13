@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Paperclip, SendHorizonal, Globe, Palette, GalleryHorizontal, Sparkles, BarChart3, Gamepad2, FileText, X, Zap, Brain, Code2, Lightbulb, BarChart2, Users, Mic, MicOff, ChevronDown, ChevronUp, Lock, RefreshCw, GripVertical, Download, ExternalLink, CheckCheck, Rocket } from "lucide-react";
+import { Paperclip, SendHorizonal, Globe, Palette, GalleryHorizontal, Sparkles, BarChart3, Gamepad2, FileText, X, Zap, Brain, Code2, Lightbulb, BarChart2, Users, Mic, MicOff, ChevronDown, ChevronUp, Lock, RefreshCw, GripVertical, Download, ExternalLink, CheckCheck, Rocket, Maximize2, Minimize2 } from "lucide-react";
 import { AgentOrchestrator } from "./agent-orchestrator";
 import { AnthropicMessage } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -187,6 +187,7 @@ export function ChatArea({
   const [streamText, setStreamText] = useState("");
   const [previewTab, setPreviewTab] = useState<"apercu" | "code">("apercu");
   const [previewKey, setPreviewKey] = useState(0);
+  const [previewFullscreen, setPreviewFullscreen] = useState(false);
   const [previewWidth, setPreviewWidth] = useState<number>(() => {
     if (typeof window === "undefined") return 550;
     const saved = Number(localStorage.getItem("grado_preview_width"));
@@ -1159,14 +1160,23 @@ export function ChatArea({
           </div>
           <div className="flex-1" />
           {previewHtml && previewTab === "apercu" && (
-            <button
-              onClick={() => setPreviewKey((k) => k + 1)}
-              title="Actualiser l'aperçu"
-              className="flex items-center gap-1 mr-2 text-[10px] font-semibold text-[#8888A8] hover:text-white border border-[#1e1e2a] hover:border-[#5B5BD6]/40 rounded-md px-1.5 py-1 transition-colors"
-              data-testid="button-refresh-preview"
-            >
-              <RefreshCw className="w-3 h-3" />
-            </button>
+            <div className="flex items-center gap-1 mr-2">
+              <button
+                onClick={() => setPreviewKey((k) => k + 1)}
+                title="Actualiser l'aperçu"
+                className="flex items-center gap-1 text-[10px] font-semibold text-[#8888A8] hover:text-white border border-[#1e1e2a] hover:border-[#5B5BD6]/40 rounded-md px-1.5 py-1 transition-colors"
+                data-testid="button-refresh-preview"
+              >
+                <RefreshCw className="w-3 h-3" />
+              </button>
+              <button
+                onClick={() => setPreviewFullscreen(true)}
+                title="Plein écran"
+                className="flex items-center gap-1 text-[10px] font-semibold text-[#8888A8] hover:text-white border border-[#1e1e2a] hover:border-[#5B5BD6]/40 rounded-md px-1.5 py-1 transition-colors"
+              >
+                <Maximize2 className="w-3 h-3" />
+              </button>
+            </div>
           )}
           {isRunning ? (
             <span className="flex items-center gap-1.5 text-[10px] font-semibold text-[#7B7BFF]">
@@ -1409,6 +1419,45 @@ export function ChatArea({
               <PreviewLoadingScreen />
             )}
           </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+
+    {/* ── Aperçu plein écran ── */}
+    <AnimatePresence>
+      {previewFullscreen && previewHtml && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[100] bg-black/90 flex flex-col"
+        >
+          {/* Header */}
+          <div className="h-11 flex items-center gap-2 px-4 bg-[#050508] border-b border-[#1e1e2a] shrink-0">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
+              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
+              <div className="w-2.5 h-2.5 rounded-full bg-green-500/70" />
+            </div>
+            <span className="text-xs font-semibold text-[#C8C8E8] ml-2">Aperçu plein écran</span>
+            <div className="flex-1" />
+            <button
+              onClick={() => setPreviewFullscreen(false)}
+              title="Quitter le plein écran"
+              className="flex items-center gap-1.5 text-[10px] font-semibold text-[#8888A8] hover:text-white border border-[#1e1e2a] hover:border-[#5B5BD6]/40 rounded-md px-2 py-1 transition-colors"
+            >
+              <Minimize2 className="w-3 h-3" />
+              <span>Fermer</span>
+            </button>
+          </div>
+          {/* Full iframe */}
+          <iframe
+            key={`fs-${previewKey}`}
+            srcDoc={previewHtml}
+            sandbox="allow-scripts allow-forms allow-modals allow-popups"
+            className="flex-1 w-full border-0 bg-white"
+            title="Aperçu plein écran"
+          />
         </motion.div>
       )}
     </AnimatePresence>
