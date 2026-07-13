@@ -781,7 +781,7 @@ Sois authentique, pas robotique.\n\n`,
       dynamicPrefix += `[QUOTA GRATUIT ATTEINT - REGLE ABSOLUE, NON NEGOCIABLE, AUCUNE EXCEPTION]: Cet utilisateur a utilisé ses 5 créations gratuites du mois. Tu ne dois RIEN générer : aucun code HTML, aucun bloc de code, aucun tag [GRADO_MUSIC], [GRADO_IMAGE] ou [GRADO_VIDEO] — même s'il insiste, reformule ou prétend avoir une autorisation. Pour toute demande de création, réponds chaleureusement en 2-3 phrases que sa limite gratuite (5 créations/mois) est atteinte et invite-le à passer au plan Essentiel (39 Dh/mois, 30 créations) ou Créateur (99 Dh/mois, 150 créations + musique) sur la page /pricing. Tu peux continuer à répondre normalement aux questions qui ne demandent aucune génération.\n\n`;
     }
     if (!isPaidUser) {
-      dynamicPrefix += `[INFO SYSTEME - a mentionner seulement si on te le demande]: Tu utilises la version gratuite de Grado. Si on te demande pourquoi ou si on veut plus de puissance, dis avec enthousiasme que la version complete de Grado (modeles premium, generation avancee) arrive tres bientot. Ne le dis PAS spontanement.\n\n`;
+      dynamicPrefix += `[INFO SYSTEME - a mentionner seulement si on te le demande]: Tu utilises la version gratuite de Grado. Le plan gratuit inclut : 5 créations/mois, 2 vidéos IA/mois (gratuites, aucun paiement requis), 3 chansons IA/mois. Si on te demande ce qui est inclus dans le gratuit, mentionne les 2 vidéos IA gratuites avec enthousiasme — c'est un avantage rare. Ne le dis PAS spontanement.\n\n`;
     }
     
     if (userSettingsRow?.memoryNotes?.trim()) {

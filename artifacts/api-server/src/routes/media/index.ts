@@ -202,6 +202,40 @@ router.post("/video", async (req, res) => {
     return;
   }
 
+  // Vidéos gratuites : 2 vidéos par mois pour le plan gratuit
+  const FREE_VIDEO_QUOTA = 2;
+  try {
+    const [conv] = await db.select().from(conversations).where(eq(conversations.id, Number(conversationId)));
+    if (conv?.userId) {
+      const [u] = await db.select({ plan: users.plan, email: users.email }).from(users).where(eq(users.id, conv.userId));
+      const adminEmail = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
+      const isAdmin = !!(adminEmail && u?.email && u.email.toLowerCase().trim() === adminEmail);
+      if (u?.plan === "gratuit" && !isAdmin) {
+        const monthStart = new Date();
+        monthStart.setDate(1);
+        monthStart.setHours(0, 0, 0, 0);
+        const userConvs = await db.select({ id: conversations.id }).from(conversations).where(eq(conversations.userId, conv.userId));
+        const convIds = userConvs.map((c) => c.id);
+        const used = convIds.length
+          ? await db
+              .select({ id: mediaGenerations.id })
+              .from(mediaGenerations)
+              .where(and(
+                eq(mediaGenerations.type, "video"),
+                gte(mediaGenerations.createdAt, monthStart),
+                inArray(mediaGenerations.conversationId, convIds),
+              ))
+          : [];
+        if (used.length >= FREE_VIDEO_QUOTA) {
+          res.status(403).json({ error: "FREE_VIDEO_QUOTA_REACHED" });
+          return;
+        }
+      }
+    }
+  } catch (quotaErr) {
+    console.error("video quota check error:", quotaErr);
+  }
+
   const [record] = await db
     .insert(mediaGenerations)
     .values({ conversationId: Number(conversationId), type: "video", prompt, status: "pending" })

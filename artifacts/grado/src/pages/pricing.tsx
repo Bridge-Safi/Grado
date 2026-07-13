@@ -16,6 +16,7 @@ const PLANS = [
     price: 0,
     features: [
       "5 créations / mois",
+      "2 vidéos IA / mois",
       "3 chansons IA / mois",
       "Aperçu en direct",
       "App web, jeux, dashboards",
@@ -69,7 +70,7 @@ const PLANS = [
     price: 189,
     features: [
       "500 créations / mois",
-      "Génération vidéo IA",
+      "Vidéos IA illimitées",
       "Modèles IA avancés",
       "Accès API Grado",
       "Tout du plan Créateur",
