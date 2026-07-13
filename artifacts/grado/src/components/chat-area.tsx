@@ -348,34 +348,34 @@ export function ChatArea({
     const sentImagePreview = imagePreview;
     clearImage();
 
-    let currentId = activeId;
-    if (!currentId) {
-      const title = content.length > 40 ? content.substring(0, 40) + "..." : content;
-      const newId = await onTitleCreate(title);
-      currentId = newId;
-      setActiveId(newId);
-      setConversationId(newId);
-    }
-
+    // Add the user message immediately so the chat never feels frozen
     const userMsgId = Date.now();
     const userMsg: AnthropicMessage & { imagePreview?: string } = {
       id: userMsgId,
-      conversationId: currentId,
+      conversationId: activeId ?? 0,
       role: "user",
       content,
       createdAt: new Date().toISOString(),
       imagePreview: sentImagePreview ?? undefined,
     } as any;
-    // Store data URL so assistant HTML can resolve __USER_IMAGE_1__
     if (sentImagePreview) {
       setMsgImageMap((prev) => ({ ...prev, [userMsgId]: sentImagePreview }));
     }
     setLocalMessages((prev) => [...prev, userMsg]);
-    // Detect if this is a build request or a quick question
     setIsBuilding(BUILD_KEYWORDS.test(content) || agentMode === "dev" || agentMode === "design");
     onRunStart();
 
+    let currentId = activeId;
+
     try {
+      // Create conversation if needed — inside try so errors are caught and shown
+      if (!currentId) {
+        const title = content.length > 40 ? content.substring(0, 40) + "..." : content;
+        const newId = await onTitleCreate(title);
+        currentId = newId;
+        setActiveId(newId);
+        setConversationId(newId);
+      }
       const reflectPrefix = reflectionMode
         ? "[MODE RÉFLEXION] Avant de répondre, pense étape par étape entre des balises <think>...</think>, puis donne ta réponse finale après.\n\n"
         : "";
