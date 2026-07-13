@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { db } from "@workspace/db";
 import { users, paymentRequests } from "@workspace/db";
 import { eq, desc, and } from "drizzle-orm";
+import { sendPlanActivatedEmail } from "../../lib/email.js";
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-change-me";
@@ -125,6 +126,13 @@ router.put("/admin/:id/approve", async (req, res) => {
   await db.update(users)
     .set({ plan: request.plan, trialEndsAt: null })
     .where(eq(users.id, request.userId));
+
+  // Email de confirmation au client — fire-and-forget
+  const [activatedUser] = await db.select({ email: users.email, name: users.name })
+    .from(users).where(eq(users.id, request.userId)).limit(1);
+  if (activatedUser) {
+    sendPlanActivatedEmail(activatedUser.email, activatedUser.name, request.plan).catch(() => {});
+  }
 
   res.json({ ok: true, plan: request.plan });
 });

@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { db } from "@workspace/db";
 import { users } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { sendWelcomeEmail } from "../../lib/email.js";
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-change-me";
@@ -85,6 +86,9 @@ router.post("/register", async (req, res) => {
   }).returning();
 
   const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: "30d" });
+
+  // Email de bienvenue — fire-and-forget
+  sendWelcomeEmail(user.email, user.name).catch(() => {});
 
   res.status(201).json({
     token,

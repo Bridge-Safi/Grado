@@ -332,7 +332,7 @@ export function ChatArea({
   };
 
   const handleSend = async (overrideContent?: string) => {
-    const content = (overrideContent ?? input).trim();
+    const content = (typeof overrideContent === "string" ? overrideContent : input).trim();
     if (!content || isRunning) return;
 
     setIsMultiAgent(false);
@@ -1104,7 +1104,7 @@ export function ChatArea({
                   : "bg-[#1e1e2a] text-[#8888A8] cursor-not-allowed"
               )}
               disabled={!input.trim() || isRunning}
-              onClick={handleSend}
+              onClick={() => handleSend()}
               data-testid="button-send"
             >
               <SendHorizonal className="w-4 h-4" />

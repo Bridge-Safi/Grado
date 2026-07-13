@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { db } from "@workspace/db";
 import { conversations, messages, userSettings, users } from "@workspace/db";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
+import { sendQuotaReachedEmail } from "../../lib/email.js";
 import {
   GetAnthropicConversationParams,
   DeleteAnthropicConversationParams,
@@ -672,7 +673,14 @@ router.post("/conversations/:id/messages", async (req, res) => {
         const creations = rows.filter((r) =>
           /```|\[GRADO_(MUSIC|VIDEO|IMAGE)/i.test(r.content ?? "")
         ).length;
-        if (creations >= FREE_CREATIONS_QUOTA) freeQuotaReached = true;
+        if (creations >= FREE_CREATIONS_QUOTA) {
+          freeQuotaReached = true;
+          // Envoyer l'email seulement quand la limite vient d'être atteinte (pas à chaque message suivant)
+          if (creations === FREE_CREATIONS_QUOTA && currentUser?.email) {
+            const [u] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId!)).limit(1);
+            sendQuotaReachedEmail(currentUser.email, u?.name ?? "toi", "creations").catch(() => {});
+          }
+        }
       }
     } catch (quotaErr) {
       console.error("free creations quota check error:", quotaErr);
