@@ -1291,7 +1291,7 @@ export function ChatArea({
       >
         <span className="relative flex items-center justify-center w-5 h-5">
           {isRunning && <span className="absolute inline-flex h-full w-full rounded-full bg-white/40 animate-ping" />}
-          <span className="relative text-base">👁️</span>
+          <span className="relative text-base">🤖</span>
         </span>
         {isRunning ? "Construction…" : "Voir l'aperçu"}
       </button>
