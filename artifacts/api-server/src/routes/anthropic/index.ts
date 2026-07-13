@@ -833,8 +833,8 @@ Sois authentique, pas robotique.\n\n`,
 
     if (useOpenRouter) {
       // OpenRouter uses OpenAI-compatible API
-      const openrouterKey = process.env.OPENROUTER_API_KEY;
-      const geminiKey = process.env.GEMINI_API_KEY;
+      const openrouterKey = process.env.OPENROUTER_API_KEY || process.env["CLÉ_API_OPENROUTER"] || process.env.CLE_API_OPENROUTER;
+      const geminiKey = process.env.GEMINI_API_KEY || process.env["Clé API GEMINI"] || process.env.CLE_API_GEMINI || process.env.GEMINI_KEY;
       if (!openrouterKey && !geminiKey) {
         safeWrite(`data: ${JSON.stringify({ error: "Aucune clé IA configurée (GEMINI_API_KEY ou OPENROUTER_API_KEY)" })}\n\n`);
         try { res.end(); } catch {}
@@ -998,7 +998,7 @@ Sois authentique, pas robotique.\n\n`,
         }
       } catch (anthropicErr) {
         console.error("Anthropic failed, falling back to OpenRouter:", anthropicErr);
-        const openrouterKey = process.env.OPENROUTER_API_KEY;
+        const openrouterKey = process.env.OPENROUTER_API_KEY || process.env["CLÉ_API_OPENROUTER"] || process.env.CLE_API_OPENROUTER;
         if (openrouterKey && !imageData) {
           for (const candidateModel of FREE_FALLBACK_MODELS) {
             try {

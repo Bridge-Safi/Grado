@@ -3,7 +3,10 @@ import Anthropic from "@anthropic-ai/sdk";
 function createClient(): Anthropic {
   const replitKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
   const replitBase = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
-  const directKey = process.env.ANTHROPIC_API_KEY;
+  const directKey = process.env.ANTHROPIC_API_KEY
+    || process.env["CLÉ_ANTHROPIC"]
+    || process.env.CLE_ANTHROPIC
+    || process.env.ANTHROPIC_KEY;
 
   if (replitKey && replitBase) {
     return new Anthropic({ apiKey: replitKey, baseURL: replitBase });
