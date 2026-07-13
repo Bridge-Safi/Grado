@@ -12,8 +12,8 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const RESEND_FROM = process.env.RESEND_FROM_EMAIL || "noreply@grado.safi-bridge.ma";
 const isAdmin = (email: string) => !!ADMIN_EMAIL && email.toLowerCase() === ADMIN_EMAIL;
 // Mode hors ligne : le site reste visible mais inscriptions/connexions bloquées (sauf admin).
-// Pour ouvrir l'accès au public : ajouter la variable GRADO_OFFLINE=0 sur Railway.
-const GRADO_OFFLINE = (process.env.GRADO_OFFLINE ?? "1") !== "0";
+// Pour fermer l'accès au public : ajouter la variable GRADO_OFFLINE=1 sur Railway.
+const GRADO_OFFLINE = (process.env.GRADO_OFFLINE ?? "0") !== "0";
 
 function generateCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();

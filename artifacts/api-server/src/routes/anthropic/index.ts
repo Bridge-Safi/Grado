@@ -637,8 +637,8 @@ router.post("/conversations/:id/messages", async (req, res) => {
   const isAdminUser = !!(CHAT_ADMIN_EMAIL && currentUser?.email && currentUser.email.toLowerCase().trim() === CHAT_ADMIN_EMAIL);
   const isPaidUser = currentUser && (currentUser.plan !== "gratuit" || isAdminUser);
 
-  // Mode hors ligne : seul l'admin peut utiliser le chat (GRADO_OFFLINE=0 pour rouvrir)
-  const GRADO_OFFLINE = (process.env.GRADO_OFFLINE ?? "1") !== "0";
+  // Mode hors ligne : seul l'admin peut utiliser le chat (GRADO_OFFLINE=1 pour fermer)
+  const GRADO_OFFLINE = (process.env.GRADO_OFFLINE ?? "0") !== "0";
   if (GRADO_OFFLINE && !isAdminUser) {
     res.status(403).json({ error: "🚀 Grado arrive très bientôt ! L'accès n'est pas encore ouvert au public." });
     return;
