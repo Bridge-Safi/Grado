@@ -704,11 +704,21 @@ router.post("/conversations/:id/messages", async (req, res) => {
     "liquid/lfm-2.5-1.2b-instruct:free",
   ];
 
+  // No Anthropic key available (neither Replit AI integration nor a direct key) — fall back
+  // to Gemini/OpenRouter for everyone, not just free users, so chat still works.
+  const hasAnthropicKey = !!(
+    (process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY && process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL) ||
+    process.env.ANTHROPIC_API_KEY ||
+    process.env["CLÉ_ANTHROPIC"] ||
+    process.env.CLE_ANTHROPIC ||
+    process.env.ANTHROPIC_KEY
+  );
+
   const isOpenRouterModel = modelChoice in OPENROUTER_MODELS;
   // Free users get a free OpenRouter model for now (premium models arrive soon); vision requires sonnet (multimodal)
   const selectedModel = imageData
     ? "claude-sonnet-4-5"
-    : !isPaidUser
+    : !isPaidUser || !hasAnthropicKey
       ? OPENROUTER_MODELS["mistral"]
       : isOpenRouterModel
         ? OPENROUTER_MODELS[modelChoice]
@@ -837,7 +847,7 @@ Sois authentique, pas robotique.\n\n`,
     res.setHeader("X-Accel-Buffering", "no");
 
     fullResponse = "";
-    const useOpenRouter = !imageData && (!isPaidUser || isOpenRouterModel);
+    const useOpenRouter = !imageData && (!isPaidUser || !hasAnthropicKey || isOpenRouterModel);
 
     if (useOpenRouter) {
       // OpenRouter uses OpenAI-compatible API
@@ -856,7 +866,8 @@ Sois authentique, pas robotique.\n\n`,
       const OR_HEADERS: Record<string, string> = { "HTTP-Referer": "https://grado.app", "X-Title": "Grado AI" };
       type ChatCandidate = { url: string; key: string; model: string; extraHeaders?: Record<string, string> };
       const candidates: ChatCandidate[] = [];
-      if (!isPaidUser) {
+      // Free users, or any user when no Anthropic key is configured, use the free Gemini/OpenRouter fallback chain
+      if (!isPaidUser || !hasAnthropicKey) {
         if (geminiKey) {
           candidates.push({ url: GEMINI_CHAT_URL, key: geminiKey, model: process.env.GEMINI_MODEL || "gemini-flash-latest" });
         }
