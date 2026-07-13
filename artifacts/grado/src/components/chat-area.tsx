@@ -1125,7 +1125,7 @@ export function ChatArea({
     </div>
 
     {/* ── Aperçu en direct (redimensionnable) ── */}
-    {(previewHtml || isRunning) && (
+    {previewHtml && (
       <>
         <div
           onMouseDown={handlePreviewResizeStart}
@@ -1290,7 +1290,7 @@ export function ChatArea({
     )}
 
     {/* ── Bouton flottant Aperçu (mobile uniquement) ── */}
-    {(previewHtml || isRunning) && !mobilePreviewOpen && (
+    {previewHtml && !mobilePreviewOpen && (
       <button
         onClick={() => setMobilePreviewOpen(true)}
         className={cn(
