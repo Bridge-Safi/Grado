@@ -5,7 +5,7 @@ nixPkgs = ["nodejs_20"]
 cmds = ["npm install -g pnpm", "pnpm install"]
 
 [phases.build]
-cmds = ["pnpm run build"]
+cmds = ["pnpm --filter @workspace/grado run build", "pnpm run build"]
 
 [start]
 cmd = "pnpm run start"

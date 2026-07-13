@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useListAnthropicConversations,
   useCreateAnthropicConversation,
@@ -24,6 +24,13 @@ export default function ChatPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
   const [runCount, setRunCount] = useState(0);
+
+  // Safety: if isRunning stays true for more than 60s, force-reset it
+  useEffect(() => {
+    if (!isRunning) return;
+    const timer = setTimeout(() => setIsRunning(false), 60_000);
+    return () => clearTimeout(timer);
+  }, [isRunning]);
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
   const { user, logout, token } = useAuth();
