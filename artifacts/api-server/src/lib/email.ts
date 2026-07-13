@@ -37,7 +37,6 @@ export async function sendWelcomeEmail(to: string, name: string): Promise<void> 
         <p style="margin:0 0 12px;font-size:13px;font-weight:700;color:#C8C8E8">Ce que tu as sur le plan Gratuit :</p>
         <ul style="margin:0;padding:0 0 0 18px;color:#8888A8;font-size:13px;line-height:2">
           <li>5 créations / mois (apps, sites, jeux…)</li>
-          <li>2 vidéos IA / mois <span style="color:#5B5BD6;font-weight:600">— GRATUIT</span></li>
           <li>3 chansons IA / mois</li>
           <li>Hébergement d'1 site</li>
         </ul>

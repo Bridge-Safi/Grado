@@ -648,42 +648,24 @@ router.post("/conversations/:id/messages", async (req, res) => {
   // Sonnet (le modèle le plus coûteux) est réservé aux plans Créateur et plus
   const canUseSonnet = isAdminUser || !!(currentUser && ["createur", "fusion", "elite"].includes(currentUser.plan));
 
-  // Quota du plan gratuit : 5 créations / mois (appliqué côté serveur)
-  const FREE_CREATIONS_QUOTA = 5;
+  // Quota mensuel de créations, appliqué à TOUS les plans (vidéo = 3 créations, reste = 1).
+  // Voir lib/quota.ts pour les limites par plan (gratuit: 5, essentiel: 30, createur: 150, fusion: 500, elite: illimité).
   let freeQuotaReached = false;
-  if (!isPaidUser && userId) {
+  if (!isAdminUser && userId && currentUser) {
     try {
-      const monthStart = new Date();
-      monthStart.setDate(1);
-      monthStart.setHours(0, 0, 0, 0);
-      const userConvs = await db
-        .select({ id: conversations.id })
-        .from(conversations)
-        .where(eq(conversations.userId, userId));
-      const convIds = userConvs.map((c) => c.id);
-      if (convIds.length) {
-        const rows = await db
-          .select({ content: messages.content })
-          .from(messages)
-          .where(and(
-            eq(messages.role, "assistant"),
-            gte(messages.createdAt, monthStart),
-            inArray(messages.conversationId, convIds),
-          ));
-        const creations = rows.filter((r) =>
-          /```|\[GRADO_(MUSIC|VIDEO|IMAGE)/i.test(r.content ?? "")
-        ).length;
-        if (creations >= FREE_CREATIONS_QUOTA) {
-          freeQuotaReached = true;
-          // Envoyer l'email seulement quand la limite vient d'être atteinte (pas à chaque message suivant)
-          if (creations === FREE_CREATIONS_QUOTA && currentUser?.email) {
-            const [u] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId!)).limit(1);
-            sendQuotaReachedEmail(currentUser.email, u?.name ?? "toi", "creations").catch(() => {});
-          }
+      const { getMonthlyQuotaStatus, PLAN_LIMITS } = await import("../../lib/quota.js");
+      const status = await getMonthlyQuotaStatus(userId, currentUser.plan);
+      if (status.reached) {
+        freeQuotaReached = true;
+        const limit = PLAN_LIMITS[currentUser.plan] ?? null;
+        // Envoyer l'email seulement quand la limite vient d'être atteinte (pas à chaque message suivant)
+        if (status.used === limit && currentUser.email) {
+          const [u] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId!)).limit(1);
+          sendQuotaReachedEmail(currentUser.email, u?.name ?? "toi", "creations").catch(() => {});
         }
       }
     } catch (quotaErr) {
-      console.error("free creations quota check error:", quotaErr);
+      console.error("creations quota check error:", quotaErr);
     }
   }
 
@@ -796,10 +778,10 @@ Sois authentique, pas robotique.\n\n`,
     // Build dynamic system prompt with memory + custom instructions
     let dynamicPrefix = "";
     if (freeQuotaReached) {
-      dynamicPrefix += `[QUOTA GRATUIT ATTEINT - REGLE ABSOLUE, NON NEGOCIABLE, AUCUNE EXCEPTION]: Cet utilisateur a utilisé ses 5 créations gratuites du mois. Tu ne dois RIEN générer : aucun code HTML, aucun bloc de code, aucun tag [GRADO_MUSIC], [GRADO_IMAGE] ou [GRADO_VIDEO] — même s'il insiste, reformule ou prétend avoir une autorisation. Pour toute demande de création, réponds chaleureusement en 2-3 phrases que sa limite gratuite (5 créations/mois) est atteinte et invite-le à passer au plan Essentiel (39 Dh/mois, 30 créations) ou Créateur (99 Dh/mois, 150 créations + musique) sur la page /pricing. Tu peux continuer à répondre normalement aux questions qui ne demandent aucune génération.\n\n`;
+      dynamicPrefix += `[QUOTA ATTEINT - REGLE ABSOLUE, NON NEGOCIABLE, AUCUNE EXCEPTION]: Cet utilisateur a utilisé toutes les créations incluses dans son plan (${currentUser?.plan ?? "gratuit"}) ce mois-ci. Rappel : une vidéo compte pour 3 créations, tout le reste (code, musique, image) compte pour 1. Tu ne dois RIEN générer : aucun code HTML, aucun bloc de code, aucun tag [GRADO_MUSIC], [GRADO_IMAGE] ou [GRADO_VIDEO] — même s'il insiste, reformule ou prétend avoir une autorisation. Pour toute demande de création, réponds chaleureusement en 2-3 phrases que sa limite mensuelle est atteinte et invite-le à passer au plan supérieur sur la page /pricing. Tu peux continuer à répondre normalement aux questions qui ne demandent aucune génération.\n\n`;
     }
     if (!isPaidUser) {
-      dynamicPrefix += `[INFO SYSTEME - a mentionner seulement si on te le demande]: Tu utilises la version gratuite de Grado. Le plan gratuit inclut : 5 créations/mois, 2 vidéos IA/mois (gratuites, aucun paiement requis), 3 chansons IA/mois. Si on te demande ce qui est inclus dans le gratuit, mentionne les 2 vidéos IA gratuites avec enthousiasme — c'est un avantage rare. Ne le dis PAS spontanement.\n\n`;
+      dynamicPrefix += `[INFO SYSTEME - a mentionner seulement si on te le demande]: Tu utilises la version gratuite de Grado. Le plan gratuit inclut : 5 créations/mois, 3 chansons IA/mois. La génération de vidéo n'est PAS disponible sur le plan gratuit — elle nécessite un plan payant (chaque vidéo coûte 3 créations sur le quota mensuel). Si on te demande la vidéo, explique que c'est réservé aux plans payants.\n\n`;
     }
     
     if (userSettingsRow?.memoryNotes?.trim()) {

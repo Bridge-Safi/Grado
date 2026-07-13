@@ -1,2 +1,3 @@
 - [Imported project DB tables missing](imported-db-missing-tables.md) — after importing this project, Postgres tables defined in schema can be absent (never migrated); run drizzle push before assuming a 500 is a code bug.
 - [Grado chat AI key fallback](grado-ai-key-fallback.md) — chat send silently failed with no AI key configured; routing now falls back to Gemini/OpenRouter for all users with retries, but a valid key still needs real free-tier quota.
+- [Grado monthly creation quota](grado-video-quota.md) — shared weighted quota (video=3, else=1) in lib/quota.ts enforces plan limits for ALL plans, not just free; video generation was previously unenforced for paid tiers.

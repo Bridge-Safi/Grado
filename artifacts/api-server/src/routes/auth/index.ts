@@ -281,24 +281,9 @@ router.get("/usage", async (req, res) => {
   const [user] = await db.select({ plan: users.plan }).from(users).where(eq(users.id, userId)).limit(1);
   if (!user) { res.status(404).json({ error: "Introuvable" }); return; }
 
-  const PLAN_LIMITS: Record<string, number | null> = {
-    gratuit: 5, essentiel: 30, createur: 150, fusion: 500, elite: null,
-  };
-  const limit = PLAN_LIMITS[user.plan] ?? null;
-
   try {
-    const { conversations, messages } = await import("@workspace/db");
-    const { gte, inArray, and, eq: drizzleEq } = await import("drizzle-orm");
-    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
-    const userConvs = await db.select({ id: conversations.id }).from(conversations).where(drizzleEq(conversations.userId, userId));
-    const convIds = userConvs.map((c: any) => c.id);
-    let used = 0;
-    if (convIds.length) {
-      const rows = await db.select({ content: messages.content }).from(messages).where(
-        and(drizzleEq(messages.role, "assistant"), gte(messages.createdAt, monthStart), inArray(messages.conversationId, convIds))
-      );
-      used = rows.filter((r: any) => /```|\[GRADO_(MUSIC|VIDEO|IMAGE)/i.test(r.content ?? "")).length;
-    }
+    const { getMonthlyQuotaStatus } = await import("../../lib/quota.js");
+    const { used, limit } = await getMonthlyQuotaStatus(userId, user.plan);
     res.json({ plan: user.plan, used, limit });
   } catch (err) {
     res.status(500).json({ error: "Erreur" });

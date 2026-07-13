@@ -40,7 +40,6 @@ const PLANS = [
     tagline: "Pour explorer",
     features: [
       "5 créations / mois",
-      "2 vidéos IA / mois",
       "3 chansons IA / mois",
       "Aperçu en direct",
       "App web, jeux, dashboards",
@@ -59,6 +58,7 @@ const PLANS = [
     features: [
       "30 créations / mois",
       "Génération musicale IA",
+      "Génération vidéo IA (3 créations/vidéo)",
       "Tous les types de projets",
       "Hébergement 5 sites",
       "Téléchargement du code",
@@ -76,6 +76,7 @@ const PLANS = [
     features: [
       "150 créations / mois",
       "Génération musicale IA",
+      "Génération vidéo IA (3 créations/vidéo)",
       "Hébergement illimité",
       "Domaine personnalisé",
       "Support prioritaire",
@@ -91,7 +92,7 @@ const PLANS = [
     tagline: "Pour les pros",
     features: [
       "500 créations / mois",
-      "Vidéos IA illimitées",
+      "Génération vidéo IA (3 créations/vidéo)",
       "Modèles IA avancés",
       "Accès API Grado",
       "Tout du plan Créateur",
