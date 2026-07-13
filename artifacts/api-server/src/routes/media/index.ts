@@ -243,63 +243,99 @@ router.post("/video", async (req, res) => {
 
   res.status(202).json({ id: record.id, status: "pending" });
 
-  // Generate asynchronously via FAL.ai queue
+  // Generate asynchronously — tries models in order until one succeeds
   (async () => {
-    try {
-      const submitRes = await fetch("https://queue.fal.run/fal-ai/minimax-video/v2/video-01", {
-        method: "POST",
-        headers: {
-          "Authorization": `Key ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ prompt, aspect_ratio: aspectRatio, duration: "6s" }),
-      });
+    // Models tried in order: ltx-video (fast, open-source) → cogvideox → wan → minimax (premium)
+    type VideoModel = {
+      id: string;
+      body: Record<string, unknown>;
+      getUrl: (output: any) => string | null;
+    };
+    const MODELS: VideoModel[] = [
+      {
+        id: "fal-ai/ltx-video",
+        body: { prompt, negative_prompt: "blurry, low quality", num_inference_steps: 30 },
+        getUrl: (o) => o?.video?.url ?? null,
+      },
+      {
+        id: "fal-ai/cogvideox-5b",
+        body: { prompt },
+        getUrl: (o) => o?.video?.url ?? null,
+      },
+      {
+        id: "fal-ai/wan/t2v-14b",
+        body: { prompt },
+        getUrl: (o) => o?.video?.url ?? null,
+      },
+      {
+        id: "fal-ai/minimax-video/v2/video-01",
+        body: { prompt, aspect_ratio: aspectRatio, duration: "6s" },
+        getUrl: (o) => o?.video?.url ?? null,
+      },
+    ];
 
-      if (!submitRes.ok) {
-        const err = await submitRes.text();
-        throw new Error(`FAL submit error ${submitRes.status}: ${err}`);
-      }
+    const headers = { "Authorization": `Key ${apiKey}`, "Content-Type": "application/json" };
 
-      const { request_id } = await submitRes.json() as { request_id: string };
+    let videoUrl: string | null = null;
+    let lastError = "All video models failed";
 
-      // Poll for completion (up to 5 minutes)
-      let videoUrl: string | null = null;
-      for (let i = 0; i < 60; i++) {
-        await new Promise(r => setTimeout(r, 5000));
-        const statusRes = await fetch(
-          `https://queue.fal.run/fal-ai/minimax-video/v2/video-01/requests/${request_id}`,
-          { headers: { "Authorization": `Key ${apiKey}` } }
-        );
-        if (!statusRes.ok) continue;
-        const data = await statusRes.json() as any;
-        if (data.status === "COMPLETED" && data.output?.video?.url) {
-          videoUrl = data.output.video.url;
-          break;
+    for (const model of MODELS) {
+      try {
+        const submitRes = await fetch(`https://queue.fal.run/${model.id}`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(model.body),
+        });
+
+        if (!submitRes.ok) {
+          lastError = `${model.id}: ${submitRes.status} ${await submitRes.text()}`;
+          console.warn(`Video model ${model.id} rejected (${submitRes.status}), trying next...`);
+          continue;
         }
-        if (data.status === "FAILED") throw new Error("FAL video generation failed");
+
+        const { request_id } = await submitRes.json() as { request_id: string };
+
+        // Poll up to 5 min
+        for (let i = 0; i < 60; i++) {
+          await new Promise(r => setTimeout(r, 5000));
+          const pollRes = await fetch(`https://queue.fal.run/${model.id}/requests/${request_id}`, { headers });
+          if (!pollRes.ok) continue;
+          const data = await pollRes.json() as any;
+          if (data.status === "COMPLETED") {
+            videoUrl = model.getUrl(data.output);
+            break;
+          }
+          if (data.status === "FAILED") throw new Error(`${model.id} generation failed`);
+        }
+
+        if (videoUrl) break; // success — stop trying models
+        lastError = `${model.id} timed out`;
+      } catch (modelErr: any) {
+        lastError = modelErr.message;
+        console.warn(`Video model ${model.id} error:`, modelErr.message);
       }
-
-      if (!videoUrl) throw new Error("Video generation timed out");
-
-      const videoRes = await fetch(videoUrl);
-      const videoBuffer = await videoRes.arrayBuffer();
-      const dir = path.join(WORKSPACE_ROOT, "attached_assets", "generated_videos");
-      fs.mkdirSync(dir, { recursive: true });
-      const fileName = `video_${record.id}_${Date.now()}.mp4`;
-      fs.writeFileSync(path.join(dir, fileName), Buffer.from(videoBuffer));
-
-      await db
-        .update(mediaGenerations)
-        .set({ status: "done", filePath: `attached_assets/generated_videos/${fileName}` })
-        .where(eq(mediaGenerations.id, record.id));
-    } catch (err: any) {
-      console.error("Video generation error:", err.message);
-      await db
-        .update(mediaGenerations)
-        .set({ status: "error", error: err.message })
-        .where(eq(mediaGenerations.id, record.id));
     }
-  })();
+
+    if (!videoUrl) throw new Error(lastError);
+
+    const videoRes = await fetch(videoUrl);
+    const videoBuffer = await videoRes.arrayBuffer();
+    const dir = path.join(WORKSPACE_ROOT, "attached_assets", "generated_videos");
+    fs.mkdirSync(dir, { recursive: true });
+    const fileName = `video_${record.id}_${Date.now()}.mp4`;
+    fs.writeFileSync(path.join(dir, fileName), Buffer.from(videoBuffer));
+
+    await db
+      .update(mediaGenerations)
+      .set({ status: "done", filePath: `attached_assets/generated_videos/${fileName}` })
+      .where(eq(mediaGenerations.id, record.id));
+  })().catch(async (err: any) => {
+    console.error("Video generation error:", err.message);
+    await db
+      .update(mediaGenerations)
+      .set({ status: "error", error: err.message })
+      .where(eq(mediaGenerations.id, record.id));
+  });
 });
 
 // POST /media/image — generate image via FAL.ai Flux Schnell (fast, ~3s)
