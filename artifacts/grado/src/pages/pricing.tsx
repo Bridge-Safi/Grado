@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check, Zap, Loader2, ArrowRight, Star, Clock, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -8,12 +8,36 @@ import { GradoLogo } from "@/components/grado-logo";
 import { LangSwitcher } from "@/components/lang-switcher";
 import { PaymentModal } from "@/components/payment-modal";
 
+type Currency = "MAD" | "EUR" | "USD";
+
+const CURRENCIES: { code: Currency; symbol: string; flag: string; label: string }[] = [
+  { code: "MAD", symbol: "Dh", flag: "🇲🇦", label: "MAD" },
+  { code: "EUR", symbol: "€",  flag: "🇪🇺", label: "EUR" },
+  { code: "USD", symbol: "$",  flag: "🇺🇸", label: "USD" },
+];
+
+// Prices per currency — rounded to market-competitive values
+const PRICES: Record<string, Record<Currency, number>> = {
+  gratuit:  { MAD: 0,   EUR: 0,  USD: 0  },
+  essentiel:{ MAD: 39,  EUR: 4,  USD: 4  },
+  createur: { MAD: 99,  EUR: 9,  USD: 10 },
+  fusion:   { MAD: 189, EUR: 17, USD: 19 },
+  elite:    { MAD: 359, EUR: 32, USD: 35 },
+};
+
+function detectCurrency(): Currency {
+  const lang = navigator.language || "fr";
+  if (lang.startsWith("ar") || lang.includes("MA") || lang.includes("DZ") || lang.includes("TN")) return "MAD";
+  if (["en-US", "en-CA", "en-AU"].some(l => lang.startsWith(l.split("-")[0]) && lang.includes(l.split("-")[1]))) return "USD";
+  if (lang.startsWith("en")) return "USD";
+  return "EUR";
+}
+
 const PLANS = [
   {
     id: "gratuit",
     name: "Gratuit",
     tagline: "Pour explorer",
-    price: 0,
     features: [
       "5 créations / mois",
       "2 vidéos IA / mois",
@@ -32,7 +56,6 @@ const PLANS = [
     id: "essentiel",
     name: "Essentiel",
     tagline: "Pour démarrer",
-    price: 39,
     features: [
       "30 créations / mois",
       "Génération musicale IA",
@@ -50,7 +73,6 @@ const PLANS = [
     id: "createur",
     name: "Créateur",
     tagline: "Le plus populaire",
-    price: 99,
     features: [
       "150 créations / mois",
       "Génération musicale IA",
@@ -67,7 +89,6 @@ const PLANS = [
     id: "fusion",
     name: "Fusion",
     tagline: "Pour les pros",
-    price: 189,
     features: [
       "500 créations / mois",
       "Vidéos IA illimitées",
@@ -84,7 +105,6 @@ const PLANS = [
     id: "elite",
     name: "Élite",
     tagline: "Sans limites",
-    price: 359,
     features: [
       "Créations illimitées",
       "Vidéo + Musique illimités",
@@ -106,6 +126,14 @@ export default function PricingPage() {
   const [error, setError] = useState("");
   const [paymentPlan, setPaymentPlan] = useState<typeof PLANS[0] | null>(null);
   const [pendingPlans, setPendingPlans] = useState<Set<string>>(new Set());
+  const [currency, setCurrency] = useState<Currency>("MAD");
+
+  useEffect(() => {
+    setCurrency(detectCurrency());
+  }, []);
+
+  const cur = CURRENCIES.find(c => c.code === currency)!;
+  const getPrice = (planId: string) => PRICES[planId]?.[currency] ?? 0;
 
   const isOnboarding =
     typeof window !== "undefined" &&
@@ -190,10 +218,34 @@ export default function PricingPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="text-sm text-[#8888A8] text-center mb-12 max-w-md"
+          className="text-sm text-[#8888A8] text-center mb-6 max-w-md"
         >
           Paiement par virement bancaire ou QR code — Activation sous 24h
         </motion.p>
+
+        {/* Currency switcher */}
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="flex items-center gap-1 bg-[#0a0a10] border border-[#2a2a38] rounded-xl p-1 mb-10"
+        >
+          {CURRENCIES.map((c) => (
+            <button
+              key={c.code}
+              onClick={() => setCurrency(c.code)}
+              className={cn(
+                "flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all",
+                currency === c.code
+                  ? "bg-[#5B5BD6] text-white shadow-[0_0_12px_rgba(91,91,214,0.4)]"
+                  : "text-[#8888A8] hover:text-white"
+              )}
+            >
+              <span>{c.flag}</span>
+              <span>{c.label}</span>
+            </button>
+          ))}
+        </motion.div>
 
         {error && (
           <div className="mb-6 px-4 py-2.5 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400">
@@ -259,14 +311,17 @@ export default function PricingPage() {
                   </p>
                   <p className="text-base font-bold text-white">{plan.name}</p>
                   <div className="flex items-end gap-1 mt-2">
-                    <span className="text-3xl font-bold text-white">{plan.price}</span>
-                    {plan.price > 0 ? (
+                    {currency !== "EUR" && getPrice(plan.id) > 0 && (
+                      <span className="text-sm font-semibold text-white mb-0.5">{cur.symbol}</span>
+                    )}
+                    <span className="text-3xl font-bold text-white">{getPrice(plan.id)}</span>
+                    {getPrice(plan.id) > 0 ? (
                       <>
-                        <span className="text-sm font-semibold text-white mb-0.5">Dh</span>
+                        {currency === "EUR" && <span className="text-sm font-semibold text-white mb-0.5">{cur.symbol}</span>}
                         <span className="text-[#8888A8] text-xs mb-1">/mois</span>
                       </>
                     ) : (
-                      <span className="text-sm font-semibold text-[#8888A8] mb-0.5">Dh</span>
+                      <span className="text-sm font-semibold text-[#8888A8] mb-0.5">Gratuit</span>
                     )}
                   </div>
                 </div>
@@ -364,7 +419,7 @@ export default function PricingPage() {
                   { label: "Créations / mois",       vals: ["5", "30", "150", "500", "∞"] },
                   { label: "Hébergement de sites",    vals: ["1 site", "5 sites", "∞", "∞", "∞"] },
                   { label: "Génération musicale IA",  vals: ["3/mois", "✓", "✓", "✓", "✓"] },
-                  { label: "Génération vidéo IA",     vals: ["✗", "✗", "✗", "✓", "✓"] },
+                  { label: "Génération vidéo IA",     vals: ["2/mois", "✗", "✗", "✓", "✓"] },
                   { label: "Domaine personnalisé",    vals: ["✗", "✗", "✓", "✓", "✓"] },
                   { label: "Accès API Grado",         vals: ["✗", "✗", "✗", "✓", "✓"] },
                   { label: "Modèles IA premium",      vals: ["✗", "✗", "✗", "✗", "✓"] },
@@ -390,7 +445,9 @@ export default function PricingPage() {
         </motion.div>
 
         <p className="mt-8 text-xs text-[#8888A8] text-center max-w-sm">
-          Paiement sécurisé par virement bancaire · Activation sous 24h · Prix en dirhams marocains (DH)
+          Paiement sécurisé par virement bancaire · Activation sous 24h ·{" "}
+          Prix affichés en{" "}
+          {currency === "MAD" ? "dirhams marocains (MAD)" : currency === "EUR" ? "euros (EUR)" : "dollars américains (USD)"}
         </p>
       </div>
     </div>
