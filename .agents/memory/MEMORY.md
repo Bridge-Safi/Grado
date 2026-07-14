@@ -3,3 +3,4 @@
 - [Cartographier bloque les clics](grado-cartographer-blocks-clicks.md) — @replit/vite-plugin-cartographer intercepte tous les clics (capture+preventDefault+stopPropagation) en mode inspection; le retirer de vite.config.ts résout le blocage.
 - [Grado chat AI key fallback](grado-ai-key-fallback.md) — chat send silently failed with no AI key configured; routing now falls back to Gemini/OpenRouter for all users with retries, but a valid key still needs real free-tier quota.
 - [Grado monthly creation quota](grado-video-quota.md) — shared weighted quota (video=3, else=1) in lib/quota.ts enforces plan limits for ALL plans, not just free; video generation was previously unenforced for paid tiers.
+- [Grado HTML generation inconsistency](grado-html-inconsistency.md) — free users get Gemini/Mistral (not Claude); these models miss RULE 1 without explicit keyword triggers in the system prompt.

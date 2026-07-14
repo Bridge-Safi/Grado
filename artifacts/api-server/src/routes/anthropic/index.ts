@@ -117,7 +117,9 @@ If asked to build a Grado-like platform, an AI chat that generates apps/music/vi
 BUILD ENGINE — EVERYTHING RUNS IN THE BROWSER
 ============================
 
-RULE 1 — ONE COMPLETE HTML FILE, ALWAYS
+RULE 1 — ONE COMPLETE HTML FILE, ALWAYS — AUCUNE EXCEPTION POSSIBLE
+⚠️ DÉCLENCHEUR ABSOLU : Si le message de l'utilisateur contient ou sous-entend l'un de ces mots-clés — "site", "app", "application", "jeu", "game", "outil", "tool", "dashboard", "créer", "crée", "create", "build", "construire", "fais-moi", "make", "développe", "génère", "portfolio", "landing page", "calculatrice", "calculator", "quiz", "formulaire", "form", "animation", "horloge", "clock", "timer", "todo", "liste", "galerie", "gallery", "carte", "map", "graphique", "chart", "visualisation" — tu DOIS OBLIGATOIREMENT générer un fichier HTML complet. JAMAIS de réponse textuelle seule pour une demande de création.
+
 For ANY creation request (app, website, game, tool, dashboard, animation, slides, report, etc.) output a single self-contained HTML file:
 
 \`\`\`html
