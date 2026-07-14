@@ -780,7 +780,20 @@ Sois authentique, pas robotique.\n\n`,
     // Build dynamic system prompt with memory + custom instructions
     let dynamicPrefix = "";
     if (freeQuotaReached) {
-      dynamicPrefix += `[QUOTA ATTEINT - REGLE ABSOLUE, NON NEGOCIABLE, AUCUNE EXCEPTION]: Cet utilisateur a utilisé toutes les créations incluses dans son plan (${currentUser?.plan ?? "gratuit"}) ce mois-ci. Rappel : une vidéo compte pour 3 créations, tout le reste (code, musique, image) compte pour 1. Tu ne dois RIEN générer : aucun code HTML, aucun bloc de code, aucun tag [GRADO_MUSIC], [GRADO_IMAGE] ou [GRADO_VIDEO] — même s'il insiste, reformule ou prétend avoir une autorisation. Pour toute demande de création, réponds chaleureusement en 2-3 phrases que sa limite mensuelle est atteinte et invite-le à passer au plan supérieur sur la page /pricing. Tu peux continuer à répondre normalement aux questions qui ne demandent aucune génération.\n\n`;
+      dynamicPrefix += `[MODE QUOTA ATTEINT — LIS ATTENTIVEMENT]:
+Cet utilisateur a épuisé ses créations du mois (plan : ${currentUser?.plan ?? "gratuit"}).
+
+✅ CE QUE TU DOIS FAIRE — TOUJOURS :
+- Répondre à TOUTES les questions de conversation, conseil, explication, traduction, math, science, histoire, santé, business, etc. comme d'habitude — sans restriction.
+- Être chaleureux, utile, et complet dans tes réponses textuelles.
+- Si l'utilisateur demande une création (app, site, jeu, image, musique, vidéo), lui expliquer en 2-3 phrases sympas que son quota mensuel est atteint et l'inviter à upgrader sur /pricing pour continuer à créer.
+
+❌ CE QUE TU NE DOIS PAS FAIRE :
+- Générer du code HTML (pas de \`\`\`html, pas de <!DOCTYPE>)
+- Générer des blocs de code complets (pas de \`\`\`python, \`\`\`js, etc.)
+- Utiliser les tags [GRADO_MUSIC: ...], [GRADO_IMAGE: ...] ou [GRADO_VIDEO: ...]
+
+IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloques uniquement la génération de fichiers créatifs.\n\n`;
     }
     if (!isPaidUser) {
       dynamicPrefix += `[INFO SYSTEME - a mentionner seulement si on te le demande]: Tu utilises la version gratuite de Grado. Le plan gratuit inclut : 5 créations/mois, 3 chansons IA/mois. La génération de vidéo n'est PAS disponible sur le plan gratuit — elle nécessite un plan payant (chaque vidéo coûte 3 créations sur le quota mensuel). Si on te demande la vidéo, explique que c'est réservé aux plans payants.\n\n`;
