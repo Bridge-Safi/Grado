@@ -892,23 +892,31 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
           const RETRIES = 3;
           for (let attemptNum = 0; attemptNum < RETRIES; attemptNum++) {
             try {
-              const attempt = await fetch(candidate.url, {
-                method: "POST",
-                headers: {
-                  "Authorization": `Bearer ${candidate.key}`,
-                  "Content-Type": "application/json",
-                  ...(candidate.extraHeaders || {}),
-                },
-                body: JSON.stringify({
-                  model: candidate.model,
-                  max_tokens: candidate.url === GEMINI_CHAT_URL ? 32768 : 8192,
-                  stream: true,
-                  messages: [
-                    { role: "system", content: finalSystem },
-                    ...runningMessages,
-                  ],
-                }),
-              });
+              const fetchAbort = new AbortController();
+              const fetchTimeout = setTimeout(() => fetchAbort.abort(), 28_000); // 28s max par tentative
+              let attempt: Response;
+              try {
+                attempt = await fetch(candidate.url, {
+                  method: "POST",
+                  signal: fetchAbort.signal,
+                  headers: {
+                    "Authorization": `Bearer ${candidate.key}`,
+                    "Content-Type": "application/json",
+                    ...(candidate.extraHeaders || {}),
+                  },
+                  body: JSON.stringify({
+                    model: candidate.model,
+                    max_tokens: candidate.url === GEMINI_CHAT_URL ? 32768 : 8192,
+                    stream: true,
+                    messages: [
+                      { role: "system", content: finalSystem },
+                      ...runningMessages,
+                    ],
+                  }),
+                });
+              } finally {
+                clearTimeout(fetchTimeout);
+              }
               if (attempt.ok && attempt.body) {
                 orRes = attempt;
                 break;
