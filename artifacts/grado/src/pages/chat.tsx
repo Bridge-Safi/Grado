@@ -74,7 +74,6 @@ export default function ChatPage() {
   // proprement à "Nouvelle conversation" au lieu de rester bloqué.
   useEffect(() => {
     if (activeConversationId === null) return;
-    if (conversations.length === 0) return;
     const stillExists = conversations.some((c: any) => c.id === activeConversationId);
     if (!stillExists) setActiveConversationId(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
