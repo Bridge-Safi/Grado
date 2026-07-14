@@ -230,6 +230,7 @@ export function ChatArea({
   useEffect(() => {
     setActiveId(conversationId);
     setLastCompletedHtml(null); // reset preview on conversation switch
+    setPreviewKey((k) => k + 1); // force iframe remount on conversation switch
   }, [conversationId]);
 
   useEffect(() => {
@@ -450,7 +451,10 @@ export function ChatArea({
         };
         // Persist HTML immediately so the preview never flickers to blank
         const completedHtml = extractHtml(fullText);
-        if (completedHtml) setLastCompletedHtml(completedHtml);
+        if (completedHtml) {
+          setLastCompletedHtml(completedHtml);
+          setPreviewKey((k) => k + 1); // force iframe remount with fresh HTML
+        }
 
         setLocalMessages((prev) => [...prev, newMsg]);
 
@@ -1266,7 +1270,7 @@ export function ChatArea({
             )
           ) : previewHtml ? (
             <iframe
-              key={previewKey}
+              key={`${activeId ?? 0}-${previewKey}`}
               srcDoc={previewHtml}
               sandbox="allow-scripts allow-forms allow-modals allow-popups"
               className="w-full h-full rounded-xl border border-[#1e1e2a] bg-white shadow-[0_0_40px_rgba(91,91,214,0.08)]"
@@ -1419,7 +1423,7 @@ export function ChatArea({
               )
             ) : previewHtml ? (
               <iframe
-                key={previewKey}
+                key={`mob-${activeId ?? 0}-${previewKey}`}
                 srcDoc={previewHtml}
                 sandbox="allow-scripts allow-forms allow-modals allow-popups"
                 className="w-full h-full rounded-xl border border-[#1e1e2a] bg-white shadow-[0_0_40px_rgba(91,91,214,0.08)]"
@@ -1462,7 +1466,7 @@ export function ChatArea({
           </div>
           {/* Full iframe */}
           <iframe
-            key={`fs-${previewKey}`}
+            key={`fs-${activeId ?? 0}-${previewKey}`}
             srcDoc={previewHtml}
             sandbox="allow-scripts allow-forms allow-modals allow-popups"
             className="flex-1 w-full border-0 bg-white"
