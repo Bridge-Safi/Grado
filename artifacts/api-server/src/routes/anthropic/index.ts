@@ -864,7 +864,10 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
     res.setHeader("X-Accel-Buffering", "no");
 
     fullResponse = "";
-    const useOpenRouter = !imageData && (!isPaidUser || !hasAnthropicKey || isOpenRouterModel);
+    // Sans clé Anthropic, on doit toujours passer par Gemini/OpenRouter — y compris quand une
+    // image est jointe — sinon les photos ne sont jamais transmises au modèle (elles étaient
+    // silencieusement perdues quand seul le chemin Anthropic était tenté).
+    const useOpenRouter = !hasAnthropicKey || (!imageData && (!isPaidUser || isOpenRouterModel));
 
     if (useOpenRouter) {
       // OpenRouter uses OpenAI-compatible API
@@ -888,7 +891,9 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
         if (geminiKey) {
           candidates.push({ url: GEMINI_CHAT_URL, key: geminiKey, model: process.env.GEMINI_MODEL || "gemini-flash-latest" });
         }
-        if (openrouterKey) {
+        // Les modèles gratuits de secours (FREE_FALLBACK_MODELS) ne supportent pas la vision —
+        // s'il y a une image jointe, inutile de les tenter, ils l'ignoreraient silencieusement.
+        if (openrouterKey && !imageData) {
           for (const m of FREE_FALLBACK_MODELS) {
             candidates.push({ url: OPENROUTER_CHAT_URL, key: openrouterKey, model: m, extraHeaders: OR_HEADERS });
           }
@@ -896,10 +901,34 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
       } else if (openrouterKey) {
         candidates.push({ url: OPENROUTER_CHAT_URL, key: openrouterKey, model: selectedModel, extraHeaders: OR_HEADERS });
       }
+      if (imageData && candidates.length === 0) {
+        safeWrite(`data: ${JSON.stringify({ error: "La reconnaissance d'image nécessite une clé GEMINI_API_KEY configurée sur le serveur." })}\n\n`);
+        try { res.end(); } catch {}
+        return;
+      }
       const MAX_CONTINUATIONS = 12;
+      // Format OpenAI-compatible : convertit les blocs "image" (format Anthropic) en "image_url"
+      // (format attendu par Gemini/OpenRouter). Sans cette conversion, l'image était sérialisée
+      // en JSON brut dans le texte et jamais réellement "vue" par le modèle.
+      const toOpenAIContent = (content: any) => {
+        if (typeof content === "string") return content;
+        if (Array.isArray(content)) {
+          return content.map((block: any) => {
+            if (block?.type === "image" && block.source?.type === "base64") {
+              return {
+                type: "image_url",
+                image_url: { url: `data:${block.source.media_type};base64,${block.source.data}` },
+              };
+            }
+            if (block?.type === "text") return { type: "text", text: block.text };
+            return block;
+          });
+        }
+        return JSON.stringify(content);
+      };
       const runningMessages = chatMessages.map((m: any) => ({
         role: m.role,
-        content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+        content: toOpenAIContent(m.content),
       }));
       let round = 0;
       let gotAnyContent = false;
@@ -1071,6 +1100,64 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
       } catch (anthropicErr) {
         console.error("Anthropic failed, falling back to OpenRouter:", anthropicErr);
         const openrouterKey = process.env.OPENROUTER_API_KEY || process.env["CLÉ_API_OPENROUTER"] || process.env.CLE_API_OPENROUTER;
+        const geminiKeyFallback = process.env.GEMINI_API_KEY || process.env["Clé API GEMINI"] || process.env.CLE_API_GEMINI || process.env.GEMINI_KEY;
+        // Si une image est jointe et qu'Anthropic échoue, Gemini (vision) est le seul repli
+        // viable — les modèles gratuits OpenRouter de FREE_FALLBACK_MODELS ne supportent pas les images.
+        if (imageData && geminiKeyFallback) {
+          try {
+            const toOpenAIContentFallback = (content: any) => {
+              if (typeof content === "string") return content;
+              if (Array.isArray(content)) {
+                return content.map((block: any) => {
+                  if (block?.type === "image" && block.source?.type === "base64") {
+                    return { type: "image_url", image_url: { url: `data:${block.source.media_type};base64,${block.source.data}` } };
+                  }
+                  if (block?.type === "text") return { type: "text", text: block.text };
+                  return block;
+                });
+              }
+              return JSON.stringify(content);
+            };
+            const attempt = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+              method: "POST",
+              headers: { "Authorization": `Bearer ${geminiKeyFallback}`, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                model: process.env.GEMINI_MODEL || "gemini-flash-latest",
+                max_tokens: 32768,
+                stream: true,
+                messages: [
+                  { role: "system", content: finalSystem },
+                  ...chatMessages.map((m: any) => ({ role: m.role, content: toOpenAIContentFallback(m.content) })),
+                ],
+              }),
+            });
+            if (attempt.ok && attempt.body) {
+              const reader3 = attempt.body.getReader();
+              const decoder3 = new TextDecoder();
+              let buffer3 = "";
+              while (true) {
+                const { done, value } = await reader3.read();
+                if (done) break;
+                buffer3 += decoder3.decode(value, { stream: true });
+                const lines3 = buffer3.split("\n");
+                buffer3 = lines3.pop() ?? "";
+                for (const line of lines3) {
+                  if (!line.startsWith("data: ")) continue;
+                  const data = line.slice(6).trim();
+                  if (data === "[DONE]") continue;
+                  try {
+                    const parsedLine = JSON.parse(data);
+                    const delta = parsedLine.choices?.[0]?.delta?.content;
+                    if (delta) {
+                      fullResponse += delta;
+                      safeWrite(`data: ${JSON.stringify({ content: delta })}\n\n`);
+                    }
+                  } catch {}
+                }
+              }
+            }
+          } catch {}
+        }
         if (openrouterKey && !imageData) {
           for (const candidateModel of FREE_FALLBACK_MODELS) {
             try {
