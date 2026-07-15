@@ -26,3 +26,24 @@ directly against `https://generativelanguage.googleapis.com/v1beta/openai/chat/c
 persistent 429 with `limit: 0` across attempts means the key's project needs its free tier enabled
 (aistudio.google.com/app/apikey), not a code bug. OpenRouter tends to have a more usable free tier
 as an alternative fallback key.
+
+**Vision/image bug found later:** when an image is attached, the code used to force the Anthropic
+model unconditionally (even with no Anthropic key, or when Anthropic errors e.g. insufficient
+credit) and OpenRouter/Gemini fallbacks explicitly skipped whenever `imageData` was present —
+images were silently dropped or the request just errored out with no real fallback. Also, when a
+fallback *was* attempted, message content arrays (Anthropic `{type:"image", source:{...}}` blocks)
+were being `JSON.stringify`'d into plain text instead of converted to the OpenAI-compatible
+`{type:"image_url", image_url:{url:"data:...;base64,..."}}` format Gemini/OpenRouter expect — so
+even a "successful" fallback call never actually saw the image.
+
+**Fix:** route to OpenRouter/Gemini whenever there's no Anthropic key (imageData or not), convert
+Anthropic-style image blocks to OpenAI `image_url` format for OpenRouter/Gemini calls, and add a
+dedicated free vision-capable OpenRouter model fallback list (e.g. `google/gemma-4-26b-a4b-it:free`,
+`nvidia/nemotron-nano-12b-v2-vl:free`) since the existing free text-only fallback list
+(llama/gpt-oss/lfm) can't process images at all.
+
+**Provider account limits are separate from code bugs:** Anthropic can return "credit balance too
+low" (billing), OpenRouter a key-level "Key limit exceeded (total limit)" (spend cap on that key),
+and Gemini its per-day free-tier quota — none of these are fixable in code; they require the user to
+add credit / raise the key's limit / wait for daily reset. Free OpenRouter `:free` models also hit
+frequent transient upstream 429s (shared pool) — this is normal, not a config error.

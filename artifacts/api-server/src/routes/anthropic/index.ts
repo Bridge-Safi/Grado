@@ -707,6 +707,13 @@ router.post("/conversations/:id/messages", async (req, res) => {
     "openai/gpt-oss-20b:free",
     "liquid/lfm-2.5-1.2b-instruct:free",
   ];
+  // Modèles OpenRouter gratuits ET compatibles vision — utilisés uniquement quand une image
+  // est jointe. Les modèles de FREE_FALLBACK_MODELS ci-dessus ne comprennent pas les images.
+  const FREE_VISION_FALLBACK_MODELS = [
+    "google/gemma-4-26b-a4b-it:free",
+    "nvidia/nemotron-nano-12b-v2-vl:free",
+    "google/gemma-4-31b-it:free",
+  ];
 
   // No Anthropic key available (neither Replit AI integration nor a direct key) — fall back
   // to Gemini/OpenRouter for everyone, not just free users, so chat still works.
@@ -891,18 +898,24 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
         if (geminiKey) {
           candidates.push({ url: GEMINI_CHAT_URL, key: geminiKey, model: process.env.GEMINI_MODEL || "gemini-flash-latest" });
         }
-        // Les modèles gratuits de secours (FREE_FALLBACK_MODELS) ne supportent pas la vision —
-        // s'il y a une image jointe, inutile de les tenter, ils l'ignoreraient silencieusement.
-        if (openrouterKey && !imageData) {
-          for (const m of FREE_FALLBACK_MODELS) {
-            candidates.push({ url: OPENROUTER_CHAT_URL, key: openrouterKey, model: m, extraHeaders: OR_HEADERS });
+        if (openrouterKey) {
+          if (imageData) {
+            // Les modèles de FREE_FALLBACK_MODELS ne comprennent pas les images — on utilise
+            // à la place des modèles gratuits OpenRouter récents avec support vision.
+            for (const m of FREE_VISION_FALLBACK_MODELS) {
+              candidates.push({ url: OPENROUTER_CHAT_URL, key: openrouterKey, model: m, extraHeaders: OR_HEADERS });
+            }
+          } else {
+            for (const m of FREE_FALLBACK_MODELS) {
+              candidates.push({ url: OPENROUTER_CHAT_URL, key: openrouterKey, model: m, extraHeaders: OR_HEADERS });
+            }
           }
         }
       } else if (openrouterKey) {
         candidates.push({ url: OPENROUTER_CHAT_URL, key: openrouterKey, model: selectedModel, extraHeaders: OR_HEADERS });
       }
       if (imageData && candidates.length === 0) {
-        safeWrite(`data: ${JSON.stringify({ error: "La reconnaissance d'image nécessite une clé GEMINI_API_KEY configurée sur le serveur." })}\n\n`);
+        safeWrite(`data: ${JSON.stringify({ error: "La reconnaissance d'image nécessite une clé GEMINI_API_KEY ou OPENROUTER_API_KEY configurée sur le serveur." })}\n\n`);
         try { res.end(); } catch {}
         return;
       }
@@ -1158,8 +1171,24 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
             }
           } catch {}
         }
-        if (openrouterKey && !imageData) {
-          for (const candidateModel of FREE_FALLBACK_MODELS) {
+        // Si Gemini n'a pas donné de réponse (pas de clé, ou lui aussi en erreur), on tente
+        // les modèles vision gratuits d'OpenRouter avant d'abandonner.
+        if (!fullResponse && openrouterKey) {
+          const toOpenAIContentOR = (content: any) => {
+            if (typeof content === "string") return content;
+            if (Array.isArray(content)) {
+              return content.map((block: any) => {
+                if (block?.type === "image" && block.source?.type === "base64") {
+                  return { type: "image_url", image_url: { url: `data:${block.source.media_type};base64,${block.source.data}` } };
+                }
+                if (block?.type === "text") return { type: "text", text: block.text };
+                return block;
+              });
+            }
+            return JSON.stringify(content);
+          };
+          const candidateModels = imageData ? FREE_VISION_FALLBACK_MODELS : FREE_FALLBACK_MODELS;
+          for (const candidateModel of candidateModels) {
             try {
               const attempt = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                 method: "POST",
@@ -1177,7 +1206,7 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
                     { role: "system", content: finalSystem },
                     ...chatMessages.map((m: any) => ({
                       role: m.role,
-                      content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+                      content: imageData ? toOpenAIContentOR(m.content) : (typeof m.content === "string" ? m.content : JSON.stringify(m.content)),
                     })),
                   ],
                 }),
