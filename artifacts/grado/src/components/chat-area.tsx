@@ -323,7 +323,8 @@ export function ChatArea({
         if (
           err.error === "FREE_MUSIC_QUOTA_REACHED" ||
           err.error === "FREE_VIDEO_QUOTA_REACHED" ||
-          err.error === "PLAN_VIDEO_QUOTA_REACHED"
+          err.error === "PLAN_VIDEO_QUOTA_REACHED" ||
+          err.error === "PLAN_VIDEO_MONTHLY_CAP_REACHED"
         ) {
           setMediaJobs((prev) => [...prev, { prompt, mediaId: -2, type, title, genre, lyrics, quotaError: err.error }]);
         } else if (
@@ -851,8 +852,10 @@ export function ChatArea({
                             {mediaJob.quotaError === "FREE_VIDEO_QUOTA_REACHED"
                               ? "🎬 La génération vidéo n'est pas disponible sur le plan gratuit."
                               : mediaJob.quotaError === "PLAN_VIDEO_QUOTA_REACHED"
-                                ? "🎬 Tu n'as plus assez de créations ce mois-ci pour générer une vidéo (chaque vidéo coûte 3 créations)."
-                                : "🎵 Tu as utilisé tes 3 chansons gratuites ce mois-ci."}{" "}
+                                ? "🎬 Tu n'as plus assez de créations ce mois-ci pour générer une vidéo (chaque vidéo coûte 8 créations)."
+                                : mediaJob.quotaError === "PLAN_VIDEO_MONTHLY_CAP_REACHED"
+                                  ? "🎬 Tu as atteint le nombre maximum de vidéos incluses ce mois-ci pour ton plan."
+                                  : "🎵 Tu as utilisé tes 3 chansons gratuites ce mois-ci."}{" "}
                             Passe à un plan supérieur pour continuer.{" "}
                             <a href="/pricing" className="underline font-semibold text-[#7B7BFF]">Voir les tarifs →</a>
                           </div>

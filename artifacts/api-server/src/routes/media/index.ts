@@ -197,10 +197,13 @@ router.post("/video", async (req, res) => {
   }
 
   // La vidéo n'est jamais gratuite : plan gratuit bloqué d'office, et chaque vidéo
-  // coûte 3 créations sur le quota mensuel des plans payants (voir lib/quota.ts).
+  // coûte 8 créations sur le quota mensuel des plans payants (voir lib/quota.ts) —
+  // en plus, un plafond mensuel dédié (VIDEO_MONTHLY_CAP) s'applique car le coût réel
+  // d'une vidéo varie fortement (0,10€ à plusieurs € selon le modèle fal.ai utilisé),
+  // même pour le plan Élite qui n'a pas de plafond sur le reste.
   // Ce contrôle passe AVANT la vérification de FAL_KEY pour que l'utilisateur voie
   // toujours le bon message (upgrade de plan) plutôt qu'une erreur de config serveur.
-  const VIDEO_COST = 3;
+  const VIDEO_COST = 8;
   try {
     const [conv] = await db.select().from(conversations).where(eq(conversations.id, Number(conversationId)));
     if (conv?.userId) {
@@ -212,11 +215,33 @@ router.post("/video", async (req, res) => {
           res.status(403).json({ error: "FREE_VIDEO_QUOTA_REACHED" });
           return;
         }
-        const { getMonthlyQuotaStatus } = await import("../../lib/quota.js");
+        const { getMonthlyQuotaStatus, VIDEO_MONTHLY_CAP } = await import("../../lib/quota.js");
         const status = await getMonthlyQuotaStatus(conv.userId, u?.plan ?? "gratuit");
         if (status.limit !== null && status.used + VIDEO_COST > status.limit) {
           res.status(403).json({ error: "PLAN_VIDEO_QUOTA_REACHED" });
           return;
+        }
+        const videoCap = VIDEO_MONTHLY_CAP[u?.plan ?? ""];
+        if (videoCap !== undefined) {
+          const monthStart = new Date();
+          monthStart.setDate(1);
+          monthStart.setHours(0, 0, 0, 0);
+          const userConvs = await db.select({ id: conversations.id }).from(conversations).where(eq(conversations.userId, conv.userId));
+          const convIds = userConvs.map((c) => c.id);
+          const videosThisMonth = convIds.length
+            ? await db
+                .select({ id: mediaGenerations.id })
+                .from(mediaGenerations)
+                .where(and(
+                  eq(mediaGenerations.type, "video"),
+                  gte(mediaGenerations.createdAt, monthStart),
+                  inArray(mediaGenerations.conversationId, convIds),
+                ))
+            : [];
+          if (videosThisMonth.length >= videoCap) {
+            res.status(403).json({ error: "PLAN_VIDEO_MONTHLY_CAP_REACHED" });
+            return;
+          }
         }
       }
     }

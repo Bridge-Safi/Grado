@@ -2,18 +2,32 @@ import { db, conversations, messages } from "@workspace/db";
 import { and, eq, gte, inArray } from "drizzle-orm";
 
 // Créations autorisées par mois selon le plan (null = illimité)
+// Fusion abaissé de 500 à 300 : à 500, un client qui consomme tout son quota en
+// génération de sites (≈0,05€/création via Claude) coûtait jusqu'à 25€, au-dessus
+// du prix du plan (17€). Voir aussi VIDEO_MONTHLY_CAP ci-dessous pour la vidéo,
+// dont le coût réel (0,10€ à plusieurs € selon le modèle fal.ai) est très variable.
 export const PLAN_LIMITS: Record<string, number | null> = {
   gratuit: 5,
   essentiel: 30,
   createur: 150,
-  fusion: 500,
+  fusion: 300,
   elite: null,
 };
 
-// Poids d'une création selon son type — une vidéo coûte 3 créations, tout le reste 1.
+// Plafond mensuel de vidéos, indépendant du quota de créations global. La vidéo est
+// le poste de coût le plus risqué (modèles fal.ai de 0,10€ à 0,50€+ par génération) —
+// un plafond dédié évite qu'un seul client ne consomme un budget disproportionné,
+// même sur le plan "illimité" Élite.
+export const VIDEO_MONTHLY_CAP: Record<string, number> = {
+  fusion: 15,
+  elite: 30,
+};
+
+// Poids d'une création selon son type — une vidéo coûte 8 créations (coût réel
+// nettement supérieur à un site ou une image), tout le reste 1.
 export function creationWeight(content: string | null | undefined): number {
   const text = content ?? "";
-  if (/\[GRADO_VIDEO/i.test(text)) return 3;
+  if (/\[GRADO_VIDEO/i.test(text)) return 8;
   if (/```|\[GRADO_(MUSIC|IMAGE)/i.test(text)) return 1;
   return 0;
 }

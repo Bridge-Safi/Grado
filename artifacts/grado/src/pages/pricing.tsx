@@ -17,12 +17,15 @@ const CURRENCIES: { code: Currency; symbol: string; flag: string; label: string 
 ];
 
 // Prices per currency — rounded to market-competitive values
+// Fusion et Élite ont été réajustés (juillet 2026) pour sécuriser la marge face au
+// coût réel de la génération vidéo (très variable, 0,10€ à plusieurs € selon le
+// modèle fal.ai) — voir lib/quota.ts pour le détail des nouveaux plafonds.
 const PRICES: Record<string, Record<Currency, number>> = {
   gratuit:  { MAD: 0,   EUR: 0,  USD: 0  },
   essentiel:{ MAD: 39,  EUR: 4,  USD: 4  },
   createur: { MAD: 99,  EUR: 9,  USD: 10 },
-  fusion:   { MAD: 189, EUR: 17, USD: 19 },
-  elite:    { MAD: 359, EUR: 32, USD: 35 },
+  fusion:   { MAD: 219, EUR: 19, USD: 21 },
+  elite:    { MAD: 439, EUR: 39, USD: 43 },
 };
 
 function detectCurrency(): Currency {
@@ -91,8 +94,8 @@ const PLANS = [
     name: "Fusion",
     tagline: "Pour les pros",
     features: [
-      "500 créations / mois",
-      "Génération vidéo IA (3 créations/vidéo)",
+      "300 créations / mois",
+      "15 vidéos IA / mois",
       "Modèles IA avancés",
       "Accès API Grado",
       "Tout du plan Créateur",
@@ -108,7 +111,7 @@ const PLANS = [
     tagline: "Sans limites",
     features: [
       "Créations illimitées",
-      "Vidéo + Musique illimités",
+      "30 vidéos IA / mois, musique illimitée",
       "Modèles IA premium",
       "Support dédié 24/7",
       "Accès anticipé nouveautés",
@@ -417,10 +420,10 @@ export default function PricingPage() {
               </thead>
               <tbody className="divide-y divide-[#1e1e2a] bg-[#000000]">
                 {[
-                  { label: "Créations / mois",       vals: ["5", "30", "150", "500", "∞"] },
+                  { label: "Créations / mois",       vals: ["5", "30", "150", "300", "∞"] },
                   { label: "Hébergement de sites",    vals: ["1 site", "5 sites", "∞", "∞", "∞"] },
                   { label: "Génération musicale IA",  vals: ["3/mois", "✓", "✓", "✓", "✓"] },
-                  { label: "Génération vidéo IA",     vals: ["2/mois", "✗", "✗", "✓", "✓"] },
+                  { label: "Génération vidéo IA",     vals: ["✗", "✗", "✗", "15/mois", "30/mois"] },
                   { label: "Domaine personnalisé",    vals: ["✗", "✗", "✓", "✓", "✓"] },
                   { label: "Accès API Grado",         vals: ["✗", "✗", "✗", "✓", "✓"] },
                   { label: "Modèles IA premium",      vals: ["✗", "✗", "✗", "✗", "✓"] },
