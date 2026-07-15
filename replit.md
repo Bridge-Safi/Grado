@@ -10,7 +10,8 @@ An AI chat / site-builder web app with an Express API and a React frontend, impo
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string (currently Replit's built-in dev Postgres; schema has been pushed but it starts empty — see Gotchas)
+- Required env: `DATABASE_URL` — Postgres connection string (currently Replit's built-in dev Postgres; schema has been pushed — see Gotchas)
+- After a fresh import/clone, run `pnpm install` then `pnpm --filter @workspace/db run push` before starting the workflows — a new environment has no `node_modules` and an empty/unmigrated dev database.
 
 ## Stack
 
