@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Check, Zap, Loader2, ArrowRight, Star, Clock, Lock } from "lucide-react";
+import { Check, Zap, Loader2, ArrowRight, Star, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
@@ -356,14 +356,7 @@ export default function PricingPage() {
                 </ul>
 
                 {/* CTA */}
-                {plan.paid ? (
-                  <div className="flex flex-col gap-2">
-                    <button disabled className="w-full py-2 rounded-xl bg-[#1a1a2a] border border-[#2a2a38] text-[#5555A8] text-xs font-semibold flex items-center justify-center gap-1.5 cursor-not-allowed">
-                      <Lock className="w-3.5 h-3.5" /> Non disponible pour le moment
-                    </button>
-                    <p className="text-[10px] text-[#5555A8] text-center">Bientôt disponible 🚀</p>
-                  </div>
-                ) : isPending && !isCurrent ? (
+                {isPending && !isCurrent ? (
                   <button disabled className="w-full py-2 rounded-xl bg-yellow-600/20 border border-yellow-600/30 text-yellow-400 text-xs font-semibold flex items-center justify-center gap-1.5">
                     <Clock className="w-3.5 h-3.5" /> Vérification en cours…
                   </button>

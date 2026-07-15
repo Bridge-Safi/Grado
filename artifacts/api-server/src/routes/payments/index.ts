@@ -9,11 +9,13 @@ const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-change-me";
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
 
+// Montants en MAD (dirhams) — doivent rester synchronisés avec PRICES dans
+// artifacts/grado/src/pages/pricing.tsx (colonne MAD).
 const PLAN_PRICES: Record<string, number> = {
   essentiel: 39,
   createur: 99,
-  fusion: 189,
-  elite: 359,
+  fusion: 219,
+  elite: 439,
 };
 
 function getUserId(req: any): number | null {
