@@ -168,6 +168,8 @@ export function ChatArea({
   const [reflectionMode, setReflectionMode] = useState(false);
   const [thinkingSteps, setThinkingSteps] = useState<string[]>([]);
   const [expandedThinking, setExpandedThinking] = useState<Record<number, boolean>>({});
+  // Messages whose short accompanying text (next to a generated HTML preview) was expanded via "Voir plus"
+  const [expandedHtmlText, setExpandedHtmlText] = useState<Record<number, boolean>>({});
 
   // Track if current request is a build (vs quick question)
   const [isBuilding, setIsBuilding] = useState(false);
@@ -718,6 +720,24 @@ export function ChatArea({
                           >
                             {msg.role === "user" ? (
                               <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                            ) : html && !expandedHtmlText[msg.id] ? (
+                              // Quand un site/app est généré, on garde le message d'accompagnement
+                              // court (3-4 lignes) — la vraie sortie est dans l'aperçu à droite.
+                              <>
+                                <div className="line-clamp-4">
+                                  <MarkdownRenderer content={displayContent} />
+                                </div>
+                                {displayContent.length > 220 && (
+                                  <button
+                                    onClick={() =>
+                                      setExpandedHtmlText((prev) => ({ ...prev, [msg.id]: true }))
+                                    }
+                                    className="mt-1 text-xs text-[#8888A8] hover:text-white transition-colors"
+                                  >
+                                    Voir plus
+                                  </button>
+                                )}
+                              </>
                             ) : (
                               <MarkdownRenderer content={displayContent} />
                             )}
