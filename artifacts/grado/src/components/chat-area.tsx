@@ -1261,13 +1261,19 @@ export function ChatArea({
               <pre ref={liveCodeRef} className="w-full h-full rounded-xl border border-[#1e1e2a] bg-[#0A0A0C] text-[#9ecbff] text-[11px] leading-relaxed p-4 overflow-auto font-mono whitespace-pre-wrap">
                 {liveAgentCode}
               </pre>
-            ) : previewHtml && !isRunning ? (
+            ) : isRunning && streamText ? (
+              <pre ref={liveCodeRef} className="w-full h-full rounded-xl border border-[#1e1e2a] bg-[#0A0A0C] text-[#9ecbff] text-[11px] leading-relaxed p-4 overflow-auto font-mono whitespace-pre-wrap">
+                {streamText}
+              </pre>
+            ) : previewHtml ? (
               <pre className="w-full h-full rounded-xl border border-[#1e1e2a] bg-[#0A0A0C] text-[#9ecbff] text-[11px] leading-relaxed p-4 overflow-auto font-mono whitespace-pre-wrap">
                 {previewHtml}
               </pre>
             ) : (
               <PreviewLoadingScreen />
             )
+          ) : isRunning ? (
+            <PreviewLoadingScreen />
           ) : previewHtml ? (
             <iframe
               key={`${activeId ?? 0}-${previewKey}`}
@@ -1414,13 +1420,19 @@ export function ChatArea({
                 <pre className="w-full h-full rounded-xl border border-[#1e1e2a] bg-[#0A0A0C] text-[#9ecbff] text-[11px] leading-relaxed p-4 overflow-auto font-mono whitespace-pre-wrap">
                   {liveAgentCode}
                 </pre>
-              ) : previewHtml && !isRunning ? (
+              ) : isRunning && streamText ? (
+                <pre className="w-full h-full rounded-xl border border-[#1e1e2a] bg-[#0A0A0C] text-[#9ecbff] text-[11px] leading-relaxed p-4 overflow-auto font-mono whitespace-pre-wrap">
+                  {streamText}
+                </pre>
+              ) : previewHtml ? (
                 <pre className="w-full h-full rounded-xl border border-[#1e1e2a] bg-[#0A0A0C] text-[#9ecbff] text-[11px] leading-relaxed p-4 overflow-auto font-mono whitespace-pre-wrap">
                   {previewHtml}
                 </pre>
               ) : (
                 <PreviewLoadingScreen />
               )
+            ) : isRunning ? (
+              <PreviewLoadingScreen />
             ) : previewHtml ? (
               <iframe
                 key={`mob-${activeId ?? 0}-${previewKey}`}
