@@ -896,13 +896,14 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
       } else if (openrouterKey) {
         candidates.push({ url: OPENROUTER_CHAT_URL, key: openrouterKey, model: selectedModel, extraHeaders: OR_HEADERS });
       }
-      const MAX_CONTINUATIONS = 4;
+      const MAX_CONTINUATIONS = 12;
       const runningMessages = chatMessages.map((m: any) => ({
         role: m.role,
         content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
       }));
       let round = 0;
       let gotAnyContent = false;
+      let hitContinuationCap = false;
       while (round <= MAX_CONTINUATIONS) {
         let orRes: Response | null = null;
         let lastErrText = "";
@@ -995,6 +996,10 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
         // Réponse tronquée car la limite de tokens a été atteinte : on continue automatiquement
         // pour éviter que le chat/la génération de code ne se coupe en plein milieu.
         if (finishReason === "length" && roundText.trim()) {
+          if (round === MAX_CONTINUATIONS) {
+            hitContinuationCap = true;
+            break;
+          }
           runningMessages.push({ role: "assistant", content: roundText });
           runningMessages.push({
             role: "user",
@@ -1005,12 +1010,19 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
         }
         break;
       }
+      // On a épuisé le budget de continuations automatiques mais la réponse est encore
+      // tronquée : on le signale au frontend pour qu'il relance une suite automatiquement
+      // au lieu de laisser le message coupé sans explication.
+      if (hitContinuationCap) {
+        safeWrite(`data: ${JSON.stringify({ truncated: true })}\n\n`);
+      }
     } else {
       // Anthropic (direct key or Replit proxy)
       try {
-        const MAX_CONTINUATIONS = 4;
+        const MAX_CONTINUATIONS = 12;
         const runningAnthropicMessages: Array<{ role: "user" | "assistant"; content: any }> = [...chatMessages];
         let round = 0;
+        let hitContinuationCap = false;
         while (round <= MAX_CONTINUATIONS) {
           const stream = anthropic.messages.stream({
             model: selectedModel,
@@ -1039,6 +1051,10 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
           // Réponse tronquée car la limite de tokens a été atteinte : on continue automatiquement
           // pour éviter que le chat/la génération de code ne se coupe en plein milieu.
           if (stopReason === "max_tokens" && roundText.trim()) {
+            if (round === MAX_CONTINUATIONS) {
+              hitContinuationCap = true;
+              break;
+            }
             runningAnthropicMessages.push({ role: "assistant", content: roundText });
             runningAnthropicMessages.push({
               role: "user",
@@ -1048,6 +1064,9 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
             continue;
           }
           break;
+        }
+        if (hitContinuationCap) {
+          safeWrite(`data: ${JSON.stringify({ truncated: true })}\n\n`);
         }
       } catch (anthropicErr) {
         console.error("Anthropic failed, falling back to OpenRouter:", anthropicErr);

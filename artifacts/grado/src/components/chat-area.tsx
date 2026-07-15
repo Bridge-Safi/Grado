@@ -414,6 +414,7 @@ export function ChatArea({
       const decoder = new TextDecoder();
       let fullText = "";
       let streamError = "";
+      let truncated = false;
       let lastPreviewUpdate = 0;
 
       while (true) {
@@ -426,6 +427,7 @@ export function ChatArea({
               const data = JSON.parse(line.slice(6));
               if (data.content) fullText += data.content;
               if (data.error && !streamError) streamError = String(data.error);
+              if (data.truncated) truncated = true;
             } catch {
               // ignore partial JSON
             }
@@ -471,6 +473,13 @@ export function ChatArea({
         if (mediaTag && currentId) {
           await triggerMediaGeneration(currentId, mediaTag.type, mediaTag.prompt, mediaTag.title, mediaTag.genre, mediaTag.lyrics);
         }
+
+        // Le serveur a épuisé son budget de continuations automatiques mais la réponse
+        // est encore tronquée (ex: gros site généré) : on relance nous-mêmes une suite
+        // en arrière-plan, sans que l'utilisateur ait besoin de cliquer sur "Run".
+        if (truncated) {
+          await continueTruncatedMessage(newMsgId, currentId!);
+        }
       }
     } catch (error) {
       console.error("Streaming error:", error);
@@ -489,6 +498,71 @@ export function ChatArea({
       onRunEnd();
       queryClient.invalidateQueries({ queryKey: getListAnthropicMessagesQueryKey(currentId!) });
       queryClient.invalidateQueries({ queryKey: getListAnthropicConversationsQueryKey() });
+    }
+  };
+
+  // Relance automatiquement une suite de génération quand le serveur a signalé que la
+  // réponse est encore tronquée après avoir épuisé son propre budget de continuations.
+  // Contrairement au bouton "Run" (qui relance le prompt depuis le début), ceci ajoute
+  // la suite directement à la fin du même message, sans intervention de l'utilisateur.
+  const continueTruncatedMessage = async (msgId: number, currentId: number) => {
+    try {
+      const token = localStorage.getItem("grado_token");
+      const res = await fetch(`/api/anthropic/conversations/${currentId}/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          content: "Continue exactement là où tu t'es arrêté, sans rien répéter de ce que tu as déjà écrit et sans réintroduction.",
+        }),
+      });
+      if (!res.ok || !res.body) return;
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let addition = "";
+      let lastPreviewUpdate = 0;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        for (const line of chunk.split("\n")) {
+          if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.content) addition += data.content;
+            } catch {
+              // ignore partial JSON
+            }
+          }
+        }
+        const now = Date.now();
+        if (now - lastPreviewUpdate > 300) {
+          lastPreviewUpdate = now;
+          setLocalMessages((prev) =>
+            prev.map((m) => (m.id === msgId ? { ...m, content: m.content + addition } : m))
+          );
+        }
+      }
+
+      if (addition) {
+        setLocalMessages((prev) =>
+          prev.map((m) => (m.id === msgId ? { ...m, content: m.content + addition } : m))
+        );
+        const merged = localMessages.find((m) => m.id === msgId)?.content ?? "";
+        const completedHtml = extractHtml(merged + addition);
+        if (completedHtml) {
+          setLastCompletedHtml(completedHtml);
+          setPreviewKey((k) => k + 1);
+        }
+      }
+    } catch (err) {
+      console.error("continueTruncatedMessage error:", err);
+    } finally {
+      queryClient.invalidateQueries({ queryKey: getListAnthropicMessagesQueryKey(currentId) });
     }
   };
 
