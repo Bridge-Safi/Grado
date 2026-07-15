@@ -442,6 +442,13 @@ export function ChatArea({
         throw new Error(streamError);
       }
 
+      // Une erreur est survenue après avoir déjà reçu du texte (ex: crédit IA épuisé
+      // en plein milieu d'une continuation) : on le signale au lieu de laisser le
+      // message se couper silencieusement.
+      if (fullText && streamError) {
+        fullText += `\n\n${streamError.startsWith("⚠️") ? streamError : `⚠️ ${streamError}`}`;
+      }
+
       if (fullText) {
         const newMsgId = Date.now() + 1;
         const newMsg: AnthropicMessage = {

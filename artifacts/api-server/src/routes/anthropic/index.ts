@@ -17,6 +17,26 @@ import {
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-change-me";
 
+// Détecte les erreurs de type "plus de crédit / quota dépassé" renvoyées par les
+// fournisseurs IA (Anthropic, OpenRouter, Gemini) pour donner un message clair à
+// l'utilisateur plutôt qu'un message vide ou une erreur générique.
+function isCreditOrQuotaError(text: string): boolean {
+  const t = text.toLowerCase();
+  return (
+    t.includes("insufficient_quota") ||
+    t.includes("insufficient credit") ||
+    t.includes("credit balance") ||
+    t.includes("exceeded your current quota") ||
+    t.includes("resource_exhausted") ||
+    t.includes("billing") && t.includes("quota") ||
+    t.includes("payment required") ||
+    t.includes("402")
+  );
+}
+
+const CREDIT_ERROR_MESSAGE =
+  "⚠️ Le service IA n'a plus de crédit disponible sur son compte. Réessaie plus tard ou contacte l'administrateur pour recharger le quota.";
+
 function getUserId(req: any): number | null {
   try {
     const auth = req.headers.authorization;
@@ -934,7 +954,7 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
 
         if (!orRes || !orRes.body) {
           if (!gotAnyContent) {
-            safeWrite(`data: ${JSON.stringify({ error: `OpenRouter error: ${lastErrText}` })}\n\n`);
+            safeWrite(`data: ${JSON.stringify({ error: isCreditOrQuotaError(lastErrText) ? CREDIT_ERROR_MESSAGE : `OpenRouter error: ${lastErrText}` })}\n\n`);
             try { res.end(); } catch {}
             return;
           }
@@ -1086,7 +1106,8 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
           }
         }
         if (!fullResponse) {
-          safeWrite(`data: ${JSON.stringify({ error: "Le service premium est temporairement indisponible. Réessaie dans un instant." })}\n\n`);
+          const anthropicErrText = String((anthropicErr as any)?.message ?? anthropicErr ?? "");
+          safeWrite(`data: ${JSON.stringify({ error: isCreditOrQuotaError(anthropicErrText) ? CREDIT_ERROR_MESSAGE : "Le service premium est temporairement indisponible. Réessaie dans un instant." })}\n\n`);
         }
       }
         }
