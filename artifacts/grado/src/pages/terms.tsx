@@ -5,7 +5,7 @@ import { GradoLogo } from "@/components/grado-logo";
 const SECTIONS = [
   {
     title: "1. Objet",
-    body: `Les présentes conditions générales d'utilisation (« CGU ») régissent l'accès et l'utilisation de la plateforme Grado, un service qui permet de générer des applications, de la musique et des vidéos à l'aide de l'intelligence artificielle à partir d'instructions en langage naturel. En créant un compte ou en utilisant Grado, vous acceptez sans réserve les présentes CGU.`,
+    body: `Les présentes conditions générales d'utilisation (« CGU ») régissent l'accès et l'utilisation de la plateforme Grado, un service qui permet de générer des applications, des images et des vidéos à l'aide de l'intelligence artificielle à partir d'instructions en langage naturel. En créant un compte ou en utilisant Grado, vous acceptez sans réserve les présentes CGU.`,
   },
   {
     title: "2. Compte utilisateur",
@@ -13,11 +13,11 @@ const SECTIONS = [
   },
   {
     title: "3. Offres et abonnements",
-    body: `Grado propose une offre gratuite avec quota limité (créations, chansons, hébergement) ainsi que plusieurs offres payantes (Essentiel, Créateur, Fusion, Élite) décrites sur la page Tarifs. Les paiements s'effectuent par virement bancaire ou QR code ; l'activation du plan intervient sous 24h après vérification du paiement par notre équipe. Les prix sont indiqués en dirhams marocains (Dh), toutes taxes comprises sauf mention contraire.`,
+    body: `Grado propose une offre gratuite avec quota limité (créations, hébergement) ainsi que plusieurs offres payantes (Essentiel, Créateur, Fusion, Élite) décrites sur la page Tarifs. Les paiements s'effectuent par virement bancaire ou QR code ; l'activation du plan intervient sous 24h après vérification du paiement par notre équipe. Les prix sont indiqués en dirhams marocains (Dh), toutes taxes comprises sauf mention contraire.`,
   },
   {
     title: "4. Contenus générés",
-    body: `Les applications, morceaux de musique, vidéos et autres contenus générés à partir de vos instructions vous appartiennent, sous réserve des droits des tiers (bibliothèques, modèles, contenus protégés) et du respect des présentes CGU. Grado ne revendique aucune propriété sur vos créations. Vous restez seul responsable du contenu que vous générez et publiez via la plateforme.`,
+    body: `Les applications, images, vidéos et autres contenus générés à partir de vos instructions vous appartiennent, sous réserve des droits des tiers (bibliothèques, modèles, contenus protégés) et du respect des présentes CGU. Grado ne revendique aucune propriété sur vos créations. Vous restez seul responsable du contenu que vous générez et publiez via la plateforme.`,
   },
   {
     title: "5. Usage interdit",

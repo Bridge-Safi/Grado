@@ -117,7 +117,7 @@ export function UsageWidget({ token }: { token: string | null }) {
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-white">Créations ce mois</p>
-                    <p className="text-[10px] text-[#5555A8]">Apps, sites, jeux, musique…</p>
+                    <p className="text-[10px] text-[#5555A8]">Apps, sites, jeux, images, vidéos…</p>
                   </div>
                 </div>
                 <span className={cn("text-sm font-bold", isDanger ? "text-red-400" : isWarning ? "text-orange-400" : colors.text)}>

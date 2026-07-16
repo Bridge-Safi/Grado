@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { Zap, Code2, Music, Video, ArrowRight, Star } from "lucide-react";
+import { Zap, Code2, Image, Video, ArrowRight, Star } from "lucide-react";
 import { GradoLogo } from "@/components/grado-logo";
 import { LangSwitcher } from "@/components/lang-switcher";
 import { useI18n } from "@/lib/i18n";
@@ -11,7 +11,7 @@ export default function LandingPage() {
 
   const FEATURES = [
     { icon: Code2, title: t.f1Title, desc: t.f1Desc },
-    { icon: Music, title: t.f2Title, desc: t.f2Desc },
+    { icon: Image, title: t.f2Title, desc: t.f2Desc },
     { icon: Video, title: t.f3Title, desc: t.f3Desc },
   ];
 
@@ -145,7 +145,7 @@ export default function LandingPage() {
               </div>
               <div className="flex justify-end">
                 <div className="bg-[#5B5BD6] text-white text-sm rounded-2xl rounded-br-sm px-4 py-2.5 max-w-xs shadow-[0_0_12px_rgba(91,91,214,0.3)]">
-                  Génère-moi un beat hip-hop énergique
+                  Génère une illustration cyberpunk d'une ville futuriste
                 </div>
               </div>
               <div className="flex items-start gap-2">
@@ -153,13 +153,9 @@ export default function LandingPage() {
                   <GradoLogo size={18} />
                 </div>
                 <div className="bg-[#0A0A0A] border border-[#2a2a38] text-[#E8E8F0] text-sm rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-sm">
-                  🎵 Musique générée — 22 secondes
-                  <div className="mt-2 flex items-center gap-2 bg-[#000000] rounded-lg p-2.5 border border-[#5B5BD6]/20">
-                    <div className="w-7 h-7 rounded-full bg-[#5B5BD6] flex items-center justify-center shrink-0 shadow-[0_0_10px_rgba(91,91,214,0.4)] text-xs">▶</div>
-                    <div className="flex-1 h-1 bg-[#2a2a38] rounded-full overflow-hidden">
-                      <div className="w-1/3 h-full bg-gradient-to-r from-[#5B5BD6] to-[#8B8BFF] rounded-full" />
-                    </div>
-                    <span className="text-xs text-[#8888A8]">0:22</span>
+                  🖼️ Image générée — qualité 4K
+                  <div className="mt-2 rounded-lg bg-gradient-to-br from-[#5B5BD6]/20 to-[#8B8BFF]/10 border border-[#5B5BD6]/20 p-3 flex items-center justify-center h-16">
+                    <span className="text-xs text-[#7B7BFF] font-medium">✦ Rendu en cours…</span>
                   </div>
                 </div>
               </div>

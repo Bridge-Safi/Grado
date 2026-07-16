@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
-import { Check, Zap, Loader2, ArrowRight, Star, Clock } from "lucide-react";
+import { Check, Zap, Loader2, ArrowRight, Star, Clock, Gift } from "lucide-react";
+
+const NEW_USER_DISCOUNT = 0.08; // 8% — moins de 10%
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { useAuth } from "@/lib/auth";
@@ -43,7 +45,6 @@ const PLANS = [
     tagline: "Pour explorer",
     features: [
       "5 créations / mois",
-      "3 chansons IA / mois",
       "Aperçu en direct",
       "App web, jeux, dashboards",
       "Hébergement 1 site",
@@ -60,7 +61,6 @@ const PLANS = [
     tagline: "Pour démarrer",
     features: [
       "30 créations / mois",
-      "Génération musicale IA",
       "Génération vidéo IA (3 créations/vidéo)",
       "Tous les types de projets",
       "Hébergement 5 sites",
@@ -78,7 +78,6 @@ const PLANS = [
     tagline: "Le plus populaire",
     features: [
       "150 créations / mois",
-      "Génération musicale IA",
       "Génération vidéo IA (3 créations/vidéo)",
       "Hébergement illimité",
       "Domaine personnalisé",
@@ -111,7 +110,7 @@ const PLANS = [
     tagline: "Sans limites",
     features: [
       "Créations illimitées",
-      "30 vidéos IA / mois, musique illimitée",
+      "30 vidéos IA / mois",
       "Modèles IA premium",
       "Support dédié 24/7",
       "Accès anticipé nouveautés",
@@ -201,7 +200,7 @@ export default function PricingPage() {
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 flex items-center gap-2 bg-green-500/10 border border-green-500/25 rounded-full px-5 py-2"
+            className="mb-4 flex items-center gap-2 bg-green-500/10 border border-green-500/25 rounded-full px-5 py-2"
           >
             <Check className="w-3.5 h-3.5 text-green-400" />
             <span className="text-xs font-semibold text-green-400">
@@ -209,6 +208,34 @@ export default function PricingPage() {
             </span>
           </motion.div>
         )}
+
+        {/* Promo banner — offre bienvenue */}
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.03 }}
+          className="mb-6 relative overflow-hidden rounded-2xl border border-[#5B5BD6]/40 bg-gradient-to-r from-[#0d0d22] via-[#0e0e2e] to-[#0d0d22] px-5 py-3.5 flex items-center gap-4 max-w-2xl w-full shadow-[0_0_30px_rgba(91,91,214,0.15)]"
+        >
+          {/* Glow strip */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#7B7BFF]/60 to-transparent" />
+          <div className="w-8 h-8 rounded-xl bg-[#5B5BD6]/20 border border-[#5B5BD6]/30 flex items-center justify-center shrink-0">
+            <Gift className="w-4 h-4 text-[#7B7BFF]" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-bold text-white">
+              Offre de bienvenue{" "}
+              <span className="bg-[#5B5BD6]/30 text-[#9B9BFF] px-1.5 py-0.5 rounded font-mono tracking-wide text-[10px]">−8%</span>
+              {" "}sur ton premier abonnement
+            </p>
+            <p className="text-[11px] text-[#7B7BFF]/70 mt-0.5">
+              Mentionne <span className="font-mono font-semibold text-[#9B9BFF]">BIENVENUE</span> dans le motif du virement pour bénéficier de la réduction.
+            </p>
+          </div>
+          <div className="hidden sm:flex items-center gap-1 shrink-0 bg-[#5B5BD6]/15 border border-[#5B5BD6]/25 rounded-lg px-3 py-2">
+            <Zap className="w-3 h-3 text-[#7B7BFF]" />
+            <span className="text-[11px] font-bold text-[#9B9BFF]">Offre limitée</span>
+          </div>
+        </motion.div>
 
         <motion.h1
           initial={{ opacity: 0, y: 10 }}
@@ -314,20 +341,36 @@ export default function PricingPage() {
                     {plan.tagline}
                   </p>
                   <p className="text-base font-bold text-white">{plan.name}</p>
-                  <div className="flex items-end gap-1 mt-2">
-                    {currency !== "EUR" && getPrice(plan.id) > 0 && (
-                      <span className="text-sm font-semibold text-white mb-0.5">{cur.symbol}</span>
-                    )}
-                    <span className="text-3xl font-bold text-white">{getPrice(plan.id)}</span>
-                    {getPrice(plan.id) > 0 ? (
-                      <>
-                        {currency === "EUR" && <span className="text-sm font-semibold text-white mb-0.5">{cur.symbol}</span>}
-                        <span className="text-[#8888A8] text-xs mb-1">/mois</span>
-                      </>
-                    ) : (
-                      <span className="text-sm font-semibold text-[#8888A8] mb-0.5">Gratuit</span>
-                    )}
-                  </div>
+                  {(() => {
+                    const price = getPrice(plan.id);
+                    const discounted = price > 0 ? Math.round(price * (1 - NEW_USER_DISCOUNT)) : 0;
+                    return (
+                      <div className="mt-2">
+                        {price > 0 && (
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className="text-xs text-[#555568] line-through">
+                              {currency !== "EUR" && cur.symbol}{price}{currency === "EUR" && cur.symbol}
+                            </span>
+                            <span className="text-[9px] font-bold bg-[#5B5BD6]/25 text-[#9B9BFF] px-1.5 py-0.5 rounded-full uppercase tracking-wide">−8%</span>
+                          </div>
+                        )}
+                        <div className="flex items-end gap-1">
+                          {currency !== "EUR" && price > 0 && (
+                            <span className="text-sm font-semibold text-white mb-0.5">{cur.symbol}</span>
+                          )}
+                          <span className="text-3xl font-bold text-white">{price > 0 ? discounted : 0}</span>
+                          {price > 0 ? (
+                            <>
+                              {currency === "EUR" && <span className="text-sm font-semibold text-white mb-0.5">{cur.symbol}</span>}
+                              <span className="text-[#8888A8] text-xs mb-1">/mois</span>
+                            </>
+                          ) : (
+                            <span className="text-sm font-semibold text-[#8888A8] mb-0.5">Gratuit</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Payment badge */}
@@ -415,7 +458,6 @@ export default function PricingPage() {
                 {[
                   { label: "Créations / mois",       vals: ["5", "30", "150", "300", "∞"] },
                   { label: "Hébergement de sites",    vals: ["1 site", "5 sites", "∞", "∞", "∞"] },
-                  { label: "Génération musicale IA",  vals: ["3/mois", "✓", "✓", "✓", "✓"] },
                   { label: "Génération vidéo IA",     vals: ["✗", "✗", "✗", "15/mois", "30/mois"] },
                   { label: "Domaine personnalisé",    vals: ["✗", "✗", "✓", "✓", "✓"] },
                   { label: "Accès API Grado",         vals: ["✗", "✗", "✗", "✓", "✓"] },

@@ -406,25 +406,8 @@ RULE 6 — BUILD IMMEDIATELY. BUILD BRILLIANTLY.
 - Add one unexpected detail that surprises the user — a hidden easter egg, a clever interaction, an extra feature they didn't ask for but will love
 
 ============================
-RULE 7 — MUSIC & VIDEO GENERATION
+RULE 7 — VIDEO & IMAGE GENERATION
 ============================
-
-When the user asks to GENERATE music (a song, beat, track, chanson, musique, etc.):
-
-You are a professional songwriter and music producer. Generate a COMPLETE song with full lyrics.
-
-Output EXACTLY this tag on its own line (all on one line, no line breaks inside the tag):
-[GRADO_MUSIC: prompt="<detailed audio style: genre, BPM, instruments, mood, energy, vocals description>" | title="<Titre de la chanson>" | genre="<Genre / Sous-genre>" | lyrics="<Paroles complètes avec structure:\n\n[Intro]\n...\n\n[Couplet 1]\n...\n\n[Refrain]\n...\n\n[Couplet 2]\n...\n\n[Refrain]\n...\n\n[Bridge]\n...\n\n[Outro]\n...>"]
-
-Then write 2-3 lines describing the song (style, mood, what makes it unique).
-
-IMPORTANT rules for music generation:
-- The prompt= value is for the audio AI: describe instruments, BPM, mood, genre, vocal style in detail (e.g. "upbeat Afrobeat pop, 110 BPM, acoustic guitar, talking drums, warm female vocals, bright and energetic")
-- The title= is the song title — creative and matching the theme
-- The genre= is short (e.g. "Afrobeat Pop", "Trap Marocain", "R&B Soul", "Electronic House")
-- The lyrics= contains the FULL lyrics in the user's language — real verses, chorus, bridge. Make them poetic, meaningful, and rhythmically strong
-- Use \\n to represent line breaks inside the lyrics string
-- Write lyrics in the SAME language the user used (French → French lyrics, Arabic → Arabic lyrics, English → English lyrics, Darija → Darija)
 
 When the user asks to GENERATE a video or film clip:
 Output EXACTLY this tag on its own line:
@@ -446,7 +429,6 @@ RESPONSE FORMAT
 ============================
 
 - Any creation/build request → complete HTML file in \`\`\`html block + 1-2 line description
-- Music generation → [GRADO_MUSIC: ...] tag + description
 - Video generation → [GRADO_VIDEO: ...] tag + description
 - Image generation → [GRADO_IMAGE: ...] tag + description
 - Knowledge question → complete detailed markdown answer in the user's language`;
@@ -818,12 +800,12 @@ Cet utilisateur a épuisé ses créations du mois (plan : ${currentUser?.plan ??
 ❌ CE QUE TU NE DOIS PAS FAIRE :
 - Générer du code HTML (pas de \`\`\`html, pas de <!DOCTYPE>)
 - Générer des blocs de code complets (pas de \`\`\`python, \`\`\`js, etc.)
-- Utiliser les tags [GRADO_MUSIC: ...], [GRADO_IMAGE: ...] ou [GRADO_VIDEO: ...]
+- Utiliser les tags [GRADO_IMAGE: ...] ou [GRADO_VIDEO: ...]
 
 IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloques uniquement la génération de fichiers créatifs.\n\n`;
     }
     if (!isPaidUser) {
-      dynamicPrefix += `[INFO SYSTEME - a mentionner seulement si on te le demande]: Tu utilises la version gratuite de Grado. Le plan gratuit inclut : 5 créations/mois, 3 chansons IA/mois. La génération de vidéo n'est PAS disponible sur le plan gratuit — elle nécessite un plan payant (chaque vidéo coûte 3 créations sur le quota mensuel). Si on te demande la vidéo, explique que c'est réservé aux plans payants.\n\n`;
+      dynamicPrefix += `[INFO SYSTEME - a mentionner seulement si on te le demande]: Tu utilises la version gratuite de Grado. Le plan gratuit inclut : 5 créations/mois. La génération de vidéo n'est PAS disponible sur le plan gratuit — elle nécessite un plan payant (chaque vidéo coûte 3 créations sur le quota mensuel). Si on te demande la vidéo, explique que c'est réservé aux plans payants.\n\n`;
     }
     
     if (userSettingsRow?.memoryNotes?.trim()) {
