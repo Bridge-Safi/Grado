@@ -174,6 +174,9 @@ export function ChatArea({
   // Track if current request is a build (vs quick question)
   const [isBuilding, setIsBuilding] = useState(false);
 
+  // Track which conversation IDs we've already auto-resumed (prevents double-fire)
+  const autoResumedRef = useRef<Set<number>>(new Set());
+
   // More options menu
   const [showMore, setShowMore] = useState(false);
 
@@ -239,6 +242,19 @@ export function ChatArea({
     // Don't overwrite locally-built messages while streaming or multi-agent is active
     if (!isMultiAgent && !isRunning) setLocalMessages(messages);
   }, [messages]);
+
+  // Auto-resume: if a conversation ends with an unanswered user message (stream was
+  // interrupted by navigation), restart the generation automatically on return.
+  useEffect(() => {
+    if (isRunning || !conversationId || messages.length === 0) return;
+    if (autoResumedRef.current.has(conversationId)) return;
+    const last = messages[messages.length - 1];
+    if (last.role === "user") {
+      autoResumedRef.current.add(conversationId);
+      // Delay slightly so localMessages is settled from the effect above
+      setTimeout(() => handleSend(last.content, true), 100);
+    }
+  }, [messages, conversationId]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -340,7 +356,8 @@ export function ChatArea({
     }
   };
 
-  const handleSend = async (overrideContent?: string) => {
+  // skipOptimisticMsg=true when auto-resuming: the user message is already in localMessages
+  const handleSend = async (overrideContent?: string, skipOptimisticMsg?: boolean) => {
     const content = (typeof overrideContent === "string" ? overrideContent : input).trim();
     if (!content || isRunning) return;
 
@@ -357,20 +374,22 @@ export function ChatArea({
     const sentImagePreview = imagePreview;
     clearImage();
 
-    // Add the user message immediately so the chat never feels frozen
-    const userMsgId = Date.now();
-    const userMsg: AnthropicMessage & { imagePreview?: string } = {
-      id: userMsgId,
-      conversationId: activeId ?? 0,
-      role: "user",
-      content,
-      createdAt: new Date().toISOString(),
-      imagePreview: sentImagePreview ?? undefined,
-    } as any;
-    if (sentImagePreview) {
-      setMsgImageMap((prev) => ({ ...prev, [userMsgId]: sentImagePreview }));
+    if (!skipOptimisticMsg) {
+      // Add the user message immediately so the chat never feels frozen
+      const userMsgId = Date.now();
+      const userMsg: AnthropicMessage & { imagePreview?: string } = {
+        id: userMsgId,
+        conversationId: activeId ?? 0,
+        role: "user",
+        content,
+        createdAt: new Date().toISOString(),
+        imagePreview: sentImagePreview ?? undefined,
+      } as any;
+      if (sentImagePreview) {
+        setMsgImageMap((prev) => ({ ...prev, [userMsgId]: sentImagePreview }));
+      }
+      setLocalMessages((prev) => [...prev, userMsg]);
     }
-    setLocalMessages((prev) => [...prev, userMsg]);
     setIsBuilding(BUILD_KEYWORDS.test(content) || agentMode === "dev" || agentMode === "design");
     onRunStart();
 
