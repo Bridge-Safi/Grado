@@ -1233,7 +1233,7 @@ export function ChatArea({
     </div>
 
     {/* ── Aperçu en direct (redimensionnable) ── */}
-    {previewHtml && (
+    {(previewHtml || (isRunning && isBuilding)) && (
       <>
         <div
           onMouseDown={handlePreviewResizeStart}
