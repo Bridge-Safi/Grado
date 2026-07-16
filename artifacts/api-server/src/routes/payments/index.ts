@@ -181,6 +181,7 @@ router.get("/config", (_req, res) => {
     holder: process.env.PAYMENT_HOLDER || "Grado",
     phone: process.env.PAYMENT_PHONE || "",
     bank: process.env.PAYMENT_BANK || "",
+    paypal: process.env.PAYMENT_PAYPAL_EMAIL || "",
   });
 });
 

@@ -80,7 +80,9 @@ router.post("/music", async (req, res) => {
     (async () => {
       try {
         const tags = [genre || "", prompt].filter(Boolean).join(", ");
-        const audioDuration = Math.min(Number(durationSeconds), 240); // max 4 min
+        // Free users: max 60s (preview quality). Paid users: max 4 min (studio).
+        const maxDuration = u?.plan && u.plan !== "gratuit" ? 240 : 60;
+        const audioDuration = Math.min(Number(durationSeconds), maxDuration);
 
         const submitRes = await fetch("https://queue.fal.run/fal-ai/ace-step", {
           method: "POST",

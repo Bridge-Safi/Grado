@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
-import { X, Copy, Check, Clock, CreditCard, Building2, AlertCircle, Loader2 } from "lucide-react";
+import { X, Copy, Check, Clock, CreditCard, Building2, Wallet, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +16,18 @@ interface PaymentConfig {
   holder: string;
   phone: string;
   bank: string;
+  paypal: string;
+}
+
+// Masque un IBAN/RIB : garde les 4 premiers et 4 derniers caractères visibles,
+// remplace le reste par des points — évite d'exposer le RIB en clair à l'écran
+// (capture d'écran, épaule curieuse) tout en gardant la copie intégrale possible.
+function maskIban(iban: string): string {
+  const clean = iban.replace(/\s+/g, "");
+  if (clean.length <= 8) return iban;
+  const start = clean.slice(0, 4);
+  const end = clean.slice(-4);
+  return `${start} •••• •••• ${end}`;
 }
 
 interface PaymentModalProps {
@@ -26,13 +38,14 @@ interface PaymentModalProps {
 
 export function PaymentModal({ plan, onClose, onSuccess }: PaymentModalProps) {
   const { token } = useAuth();
-  const [tab, setTab] = useState<"qr" | "virement">("qr");
+  const [tab, setTab] = useState<"qr" | "virement" | "paypal">("qr");
   const [reference, setReference] = useState<string>("");
-  const [config, setConfig] = useState<PaymentConfig>({ iban: "", holder: "Grado", phone: "", bank: "" });
+  const [config, setConfig] = useState<PaymentConfig>({ iban: "", holder: "Grado", phone: "", bank: "", paypal: "" });
   const [copied, setCopied] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
+  const [ibanRevealed, setIbanRevealed] = useState(false);
 
   useEffect(() => {
     init();
@@ -171,6 +184,16 @@ export function PaymentModal({ plan, onClose, onSuccess }: PaymentModalProps) {
                   <Building2 className="w-3.5 h-3.5" />
                   Virement bancaire
                 </button>
+                <button
+                  onClick={() => setTab("paypal")}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-2 py-3 text-xs font-semibold transition-colors",
+                    tab === "paypal" ? "text-[#7B7BFF] border-b-2 border-[#5B5BD6]" : "text-[#8888A8] hover:text-white"
+                  )}
+                >
+                  <Wallet className="w-3.5 h-3.5" />
+                  PayPal
+                </button>
               </div>
 
               <div className="p-5">
@@ -212,7 +235,7 @@ export function PaymentModal({ plan, onClose, onSuccess }: PaymentModalProps) {
                       </div>
                     </div>
                   </div>
-                ) : (
+                ) : tab === "virement" ? (
                   <div className="space-y-3">
                     <p className="text-xs text-[#8888A8]">Effectuez un virement avec les informations suivantes :</p>
                     {[
@@ -227,14 +250,25 @@ export function PaymentModal({ plan, onClose, onSuccess }: PaymentModalProps) {
                         <p className="text-[10px] text-[#8888A8] mb-1">{label}</p>
                         <div className="flex items-center justify-between gap-2">
                           <span className={cn(
-                            "text-sm font-medium break-all",
-                            key === "ref2" ? "font-mono text-[#7B7BFF]" : "text-white"
+                            "text-sm font-medium break-all font-mono",
+                            key === "ref2" ? "text-[#7B7BFF]" : key === "iban" ? "text-white tracking-wide" : "text-white"
                           )}>
-                            {value}
+                            {key === "iban" && !ibanRevealed ? maskIban(value) : value}
                           </span>
-                          <button onClick={() => copy(value, key)} className="shrink-0 text-[#8888A8] hover:text-white transition-colors">
-                            {copied === key ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-                          </button>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {key === "iban" && (
+                              <button
+                                onClick={() => setIbanRevealed((v) => !v)}
+                                className="text-[#8888A8] hover:text-white transition-colors"
+                                aria-label={ibanRevealed ? "Masquer le RIB" : "Afficher le RIB"}
+                              >
+                                {ibanRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                              </button>
+                            )}
+                            <button onClick={() => copy(value, key)} className="text-[#8888A8] hover:text-white transition-colors">
+                              {copied === key ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -253,18 +287,32 @@ export function PaymentModal({ plan, onClose, onSuccess }: PaymentModalProps) {
                       </p>
                     </div>
                   </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-3 py-6">
+                    <div className="w-12 h-12 rounded-xl bg-[#5B5BD6]/10 border border-[#5B5BD6]/20 flex items-center justify-center">
+                      <Wallet className="w-6 h-6 text-[#7B7BFF]" />
+                    </div>
+                    <p className="text-sm text-white font-semibold text-center">PayPal — bientôt disponible</p>
+                    <p className="text-xs text-[#8888A8] text-center leading-relaxed max-w-xs">
+                      Le paiement par PayPal arrive prochainement. En attendant, utilise le QR code ou le virement bancaire.
+                    </p>
+                  </div>
                 )}
 
-                <button
-                  onClick={handleConfirm}
-                  className="w-full mt-5 py-3 rounded-xl bg-[#5B5BD6] hover:bg-[#4a4ac4] text-white text-sm font-semibold transition-all shadow-[0_0_16px_rgba(91,91,214,0.35)] flex items-center justify-center gap-2"
-                >
-                  <Check className="w-4 h-4" />
-                  J'ai effectué le virement
-                </button>
-                <p className="text-center text-[10px] text-[#5555A8] mt-2">
-                  Activation sous 2 à 24h après vérification par notre équipe
-                </p>
+                {tab !== "paypal" && (
+                  <>
+                    <button
+                      onClick={handleConfirm}
+                      className="w-full mt-5 py-3 rounded-xl bg-[#5B5BD6] hover:bg-[#4a4ac4] text-white text-sm font-semibold transition-all shadow-[0_0_16px_rgba(91,91,214,0.35)] flex items-center justify-center gap-2"
+                    >
+                      <Check className="w-4 h-4" />
+                      J'ai effectué le virement
+                    </button>
+                    <p className="text-center text-[10px] text-[#5555A8] mt-2">
+                      Activation sous 2 à 24h après vérification par notre équipe
+                    </p>
+                  </>
+                )}
               </div>
             </>
           )}

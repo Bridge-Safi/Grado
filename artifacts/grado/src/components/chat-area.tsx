@@ -50,6 +50,7 @@ interface MediaJob {
   genre?: string;
   lyrics?: string;
   quotaError?: string;
+  quality?: "standard" | "studio";
 }
 
 
@@ -312,12 +313,13 @@ export function ChatArea({
           prompt,
           lyrics,
           genre,
-          durationSeconds: 180,
+          durationSeconds: isPaidUser ? 180 : 60,
         }),
       });
       if (res.ok) {
         const data = await res.json();
-        setMediaJobs((prev) => [...prev, { prompt, mediaId: data.id, type, title, genre, lyrics }]);
+        const quality = type === "music" ? (isPaidUser ? "studio" : "standard") as "studio" | "standard" : undefined;
+        setMediaJobs((prev) => [...prev, { prompt, mediaId: data.id, type, title, genre, lyrics, quality }]);
       } else {
         const err = await res.json();
         if (
@@ -836,14 +838,29 @@ export function ChatArea({
 
                         {/* Music / video player */}
                         {mediaJob && mediaJob.type !== "image" && mediaJob.mediaId > 0 && (
-                          <MediaPlayer
-                            type={mediaJob.type as "music" | "video"}
-                            mediaId={mediaJob.mediaId}
-                            prompt={mediaJob.prompt}
-                            title={mediaJob.title}
-                            genre={mediaJob.genre}
-                            lyrics={mediaJob.lyrics}
-                          />
+                          <>
+                            <MediaPlayer
+                              type={mediaJob.type as "music" | "video"}
+                              mediaId={mediaJob.mediaId}
+                              prompt={mediaJob.prompt}
+                              title={mediaJob.title}
+                              genre={mediaJob.genre}
+                              lyrics={mediaJob.lyrics}
+                            />
+                            {mediaJob.type === "music" && mediaJob.quality === "standard" && (
+                              <div className="mt-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 flex items-start gap-3">
+                                <span className="text-base leading-none mt-0.5">🎵</span>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs text-amber-300/90 font-semibold mb-0.5">Qualité standard · 1 min</p>
+                                  <p className="text-[11px] text-amber-200/60 leading-relaxed">
+                                    Les chansons gratuites sont limitées à 1 minute. Avec{" "}
+                                    <a href="/pricing" className="underline text-amber-300/80 font-medium">Fusion ou Créateur</a>
+                                    {" "}tu génères des chansons complètes jusqu'à 4 min en qualité studio — paroles, refrain, bridge, tout y est.
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </>
                         )}
 
                         {/* Free/plan media quota reached */}
