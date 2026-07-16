@@ -236,8 +236,8 @@ export function ChatArea({
   }, [conversationId]);
 
   useEffect(() => {
-    // Don't overwrite locally-built messages while multi-agent is active
-    if (!isMultiAgent) setLocalMessages(messages);
+    // Don't overwrite locally-built messages while streaming or multi-agent is active
+    if (!isMultiAgent && !isRunning) setLocalMessages(messages);
   }, [messages]);
 
   useEffect(() => {
