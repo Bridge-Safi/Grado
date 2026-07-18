@@ -12,6 +12,7 @@ import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
 import PricingPage from "@/pages/pricing";
 import SettingsPage from "@/pages/settings";
+import ProfilePage from "@/pages/profile";
 import AdminPage from "@/pages/admin";
 import MySitesPage from "@/pages/my-sites";
 import SiteViewPage from "@/pages/site-view";
@@ -112,6 +113,9 @@ function Router() {
       </Route>
       <Route path="/settings">
         <ProtectedRoute component={SettingsPage} />
+      </Route>
+      <Route path="/profile">
+        <ProtectedRoute component={ProfilePage} />
       </Route>
       <Route path="/admin">
         <ProtectedRoute component={AdminPage} />
