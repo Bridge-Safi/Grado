@@ -235,6 +235,9 @@ export function ChatArea({
   };
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Dernier HTML produit par le mode Multi-Agents — persiste en base a la fin
+  // du run (sinon un refresh effacait toute la construction, zabi 2026-07-18)
+  const multiAgentHtmlRef = useRef<string | null>(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -624,7 +627,19 @@ export function ChatArea({
       } as AnthropicMessage,
     ]);
 
+    // Persiste le message utilisateur en base tout de suite : avant, RIEN du
+    // run multi-agents n'etait sauvegarde -> au refresh la conversation etait vide.
+    try {
+      const tk = localStorage.getItem("grado_token");
+      fetch(`/api/anthropic/conversations/${currentId}/messages/manual`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(tk ? { Authorization: `Bearer ${tk}` } : {}) },
+        body: JSON.stringify({ content, role: "user" }),
+      }).catch(() => {});
+    } catch { /* best-effort */ }
+
     setLiveAgentCode("");
+    multiAgentHtmlRef.current = null;
     setMultiAgentPrompt(content);
     setIsMultiAgent(true);
     onRunStart();
@@ -933,6 +948,7 @@ export function ChatArea({
                       prompt={multiAgentPrompt}
                       token={localStorage.getItem("grado_token")}
                       onPreview={(html) => {
+                        multiAgentHtmlRef.current = html;
                         // Add generated HTML as a real assistant message so it survives DB sync
                         setLocalMessages((prev) => [
                           ...prev,
@@ -947,6 +963,23 @@ export function ChatArea({
                       }}
                       onDone={() => {
                         onRunEnd();
+                        // Sauvegarde le site construit comme vrai message assistant en base —
+                        // sans ca, il fallait relancer un "Run" classique pour ne rien perdre.
+                        const html = multiAgentHtmlRef.current;
+                        if (html && activeId) {
+                          multiAgentHtmlRef.current = null;
+                          const tk = localStorage.getItem("grado_token");
+                          fetch(`/api/anthropic/conversations/${activeId}/messages/manual`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json", ...(tk ? { Authorization: `Bearer ${tk}` } : {}) },
+                            body: JSON.stringify({ content: "```html\n" + html + "\n```" }),
+                          })
+                            .then(() => {
+                              queryClient.invalidateQueries({ queryKey: getListAnthropicMessagesQueryKey(activeId) });
+                              queryClient.invalidateQueries({ queryKey: getListAnthropicConversationsQueryKey() });
+                            })
+                            .catch(() => {});
+                        }
                         // don't clear isMultiAgent here — keep preview visible
                       }}
                       onStream={(_agentId, text) => {
