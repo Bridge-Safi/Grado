@@ -238,6 +238,9 @@ export function ChatArea({
   // Dernier HTML produit par le mode Multi-Agents — persiste en base a la fin
   // du run (sinon un refresh effacait toute la construction, zabi 2026-07-18)
   const multiAgentHtmlRef = useRef<string | null>(null);
+  // Bouton Stop : annule le stream en cours (envoi normal ou multi-agents)
+  const sendAbortRef = useRef<AbortController | null>(null);
+  const agentAbortRef = useRef<(() => void) | null>(null);
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -424,6 +427,7 @@ export function ChatArea({
       }
 
       const token = localStorage.getItem("grado_token");
+      sendAbortRef.current = new AbortController();
       const res = await fetch(`/api/anthropic/conversations/${currentId}/messages`, {
         method: "POST",
         headers: {
@@ -431,6 +435,7 @@ export function ChatArea({
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(body),
+        signal: sendAbortRef.current.signal,
       });
 
       if (!res.ok) {
@@ -513,14 +518,17 @@ export function ChatArea({
         }
       }
     } catch (error) {
-      console.error("Streaming error:", error);
+      const aborted = error instanceof DOMException && error.name === "AbortError";
+      if (!aborted) console.error("Streaming error:", error);
       setLocalMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
           conversationId: currentId!,
           role: "assistant",
-          content: `⚠️ ${error instanceof Error && error.message ? error.message : "Une erreur est survenue. Réessaie."}`,
+          content: aborted
+            ? "⏹ Génération arrêtée."
+            : `⚠️ ${error instanceof Error && error.message ? error.message : "Une erreur est survenue. Réessaie."}`,
           createdAt: new Date().toISOString(),
         },
       ]);
@@ -643,6 +651,13 @@ export function ChatArea({
     setMultiAgentPrompt(content);
     setIsMultiAgent(true);
     onRunStart();
+  };
+
+  // Stop : coupe l'envoi normal ET le run multi-agents
+  const handleStop = () => {
+    sendAbortRef.current?.abort();
+    agentAbortRef.current?.();
+    onRunEnd();
   };
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -947,6 +962,7 @@ export function ChatArea({
                     <AgentOrchestrator
                       prompt={multiAgentPrompt}
                       token={localStorage.getItem("grado_token")}
+                      registerAbort={(fn) => { agentAbortRef.current = fn; }}
                       onPreview={(html) => {
                         multiAgentHtmlRef.current = html;
                         // Add generated HTML as a real assistant message so it survives DB sync
@@ -1282,11 +1298,21 @@ export function ChatArea({
                 placeholder="Décris ce que tu veux créer..."
                 className="min-h-[40px] max-h-[160px] border-0 focus-visible:ring-0 resize-none bg-transparent px-4 py-2.5 text-[#E8E8F0] text-sm placeholder:text-[#8888A8]"
                 rows={1}
-                disabled={isRunning}
                 data-testid="input-message"
               />
             </div>
 
+            {isRunning && (
+              <Button
+                size="icon"
+                onClick={handleStop}
+                title="Arrêter la génération"
+                className="h-9 w-9 shrink-0 rounded-lg bg-red-500/15 border border-red-500/40 text-red-400 hover:bg-red-500/25 transition-all duration-150"
+                data-testid="button-stop"
+              >
+                <span className="block w-3 h-3 rounded-[3px] bg-red-400" />
+              </Button>
+            )}
             <Button
               size="icon"
               className={cn(

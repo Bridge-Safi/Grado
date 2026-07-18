@@ -19,10 +19,11 @@ interface AgentOrchestratorProps {
   token: string | null;
   onPreview?: (html: string) => void;
   onDone?: () => void;
+  registerAbort?: (fn: () => void) => void;
   onStream?: (agentId: string, text: string) => void;
 }
 
-export function AgentOrchestrator({ prompt, token, onPreview, onDone, onStream }: AgentOrchestratorProps) {
+export function AgentOrchestrator({ prompt, token, onPreview, onDone, onStream, registerAbort }: AgentOrchestratorProps) {
   const [agents, setAgents] = useState<AgentState[]>([]);
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
@@ -35,6 +36,10 @@ export function AgentOrchestrator({ prompt, token, onPreview, onDone, onStream }
   const abortRef = useRef<AbortController | null>(null);
   const firstEventRef = useRef(false);
   const doneRef = useRef(false);
+  // Throttle des tokens : avant, CHAQUE token declenchait un re-render complet +
+  // un setTimeout -> sur un gros site l'onglet gelait ("aucun bouton ne marche").
+  const pendingTokensRef = useRef<Record<string, string>>({});
+  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     run();
@@ -43,6 +48,7 @@ export function AgentOrchestrator({ prompt, token, onPreview, onDone, onStream }
 
   const run = async () => {
     abortRef.current = new AbortController();
+    registerAbort?.(() => abortRef.current?.abort());
     firstEventRef.current = false;
 
     // 120s timeout — proxy can buffer initial events for up to 90s
@@ -132,19 +138,31 @@ export function AgentOrchestrator({ prompt, token, onPreview, onDone, onStream }
         setExpandedAgent(ev.agentId);
         break;
 
-      case "agent_token":
-        setAgents(prev => prev.map(a => {
-          if (a.id !== ev.agentId) return a;
-          const newOutput = a.output + ev.token;
-          // auto-scroll output
-          setTimeout(() => {
-            const el = outputRefs.current[ev.agentId];
-            if (el) el.scrollTop = el.scrollHeight;
-          }, 0);
-          onStream?.(ev.agentId, newOutput);
-          return { ...a, output: newOutput };
-        }));
+      case "agent_token": {
+        const pend = pendingTokensRef.current;
+        pend[ev.agentId] = (pend[ev.agentId] ?? "") + ev.token;
+        if (!flushTimerRef.current) {
+          flushTimerRef.current = setTimeout(() => {
+            flushTimerRef.current = null;
+            const batch = pendingTokensRef.current;
+            pendingTokensRef.current = {};
+            setAgents(prev => prev.map(a => {
+              const add = batch[a.id];
+              if (!add) return a;
+              const newOutput = a.output + add;
+              onStream?.(a.id, newOutput);
+              return { ...a, output: newOutput };
+            }));
+            setTimeout(() => {
+              for (const id of Object.keys(batch)) {
+                const el = outputRefs.current[id];
+                if (el) el.scrollTop = el.scrollHeight;
+              }
+            }, 0);
+          }, 150);
+        }
         break;
+      }
 
       case "agent_done":
         setAgents(prev => prev.map(a =>
