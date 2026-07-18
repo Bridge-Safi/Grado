@@ -593,10 +593,13 @@ router.post("/conversations/:id/messages/manual", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: "Invalid id" }); return; }
   const { content } = req.body;
   if (!content || typeof content !== "string") { res.status(400).json({ error: "content requis" }); return; }
+  // role optionnel ("user" | "assistant", defaut assistant) — permet au mode
+  // Multi-Agents de persister aussi le prompt utilisateur.
+  const role = req.body.role === "user" ? "user" : "assistant";
   try {
     const [msg] = await db.insert(messages).values({
       conversationId: parsed.data.id,
-      role: "assistant",
+      role,
       content,
     }).returning();
     res.status(201).json({
