@@ -165,7 +165,7 @@ export default function MySitesPage() {
                 <p><span className="text-[#7B7BFF]">Nom :</span> <span className="text-white">@ ou www</span></p>
                 <p><span className="text-[#7B7BFF]">Valeur :</span> <span className="text-green-400">{window.location.hostname}</span></p>
               </div>
-              <p className="text-xs text-[#8888A8] mt-2">Disponible sur les plans <span className="text-[#7B7BFF] font-medium">Hacker</span> et <span className="text-[#7B7BFF] font-medium">Pro</span>.</p>
+              <p className="text-xs text-[#8888A8] mt-2">Disponible à partir du plan <span className="text-[#7B7BFF] font-medium">Créateur</span>.</p>
             </div>
           </div>
         </div>

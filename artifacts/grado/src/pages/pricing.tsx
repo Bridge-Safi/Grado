@@ -61,7 +61,6 @@ const PLANS = [
     tagline: "Pour démarrer",
     features: [
       "30 créations / mois",
-      "Génération vidéo IA (3 créations/vidéo)",
       "Tous les types de projets",
       "Hébergement 5 sites",
       "Téléchargement du code",
@@ -78,7 +77,6 @@ const PLANS = [
     tagline: "Le plus populaire",
     features: [
       "150 créations / mois",
-      "Génération vidéo IA (3 créations/vidéo)",
       "Hébergement illimité",
       "Domaine personnalisé",
       "Support prioritaire",
@@ -127,7 +125,7 @@ export default function PricingPage() {
   const [, navigate] = useLocation();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState("");
-  const [paymentPlan, setPaymentPlan] = useState<typeof PLANS[0] | null>(null);
+  const [paymentPlan, setPaymentPlan] = useState<(typeof PLANS[0] & { price: number }) | null>(null);
   const [pendingPlans, setPendingPlans] = useState<Set<string>>(new Set());
   const [currency, setCurrency] = useState<Currency>("MAD");
 
@@ -160,7 +158,9 @@ export default function PricingPage() {
       return;
     }
 
-    setPaymentPlan(plan);
+    // Le virement se fait toujours en dirhams : on passe le prix MAD du plan
+    // (avant, plan.price n'existait pas -> "Montant : Dh" VIDE dans la modale).
+    setPaymentPlan({ ...plan, price: PRICES[plan.id]?.MAD ?? 0 });
   };
 
   const handlePaymentSuccess = (planId: string) => {
