@@ -105,7 +105,7 @@ export default function ChatPage() {
   return (
     <div className="flex flex-col h-[100dvh] w-full overflow-hidden bg-[#000000]">
       {/* ── Top navbar with red Run button ── */}
-      <header className="h-12 border-b border-[#2a2a38] bg-[#050505] flex items-center px-3 gap-3 shrink-0 z-20">
+      <header className="h-12 border-b border-[#2a2a38] bg-[#050505] flex items-center px-2 sm:px-3 gap-2 sm:gap-3 shrink-0 z-20">
         {/* Sidebar toggle */}
         {!isSidebarOpen && (
           <Button
@@ -130,10 +130,21 @@ export default function ChatPage() {
         {/* User info + logout */}
         {user && (
           <div className="flex items-center gap-2">
-            <div className="hidden sm:flex flex-col items-end">
+            <button
+              onClick={() => navigate("/profile")}
+              title="Mon profil"
+              className="hidden sm:flex flex-col items-end hover:opacity-80 transition-opacity"
+            >
               <span className="text-xs text-white font-medium leading-none">{user.name}</span>
               <span className="text-[10px] text-[#5B5BD6] leading-none mt-0.5 capitalize">{user.plan}</span>
-            </div>
+            </button>
+            <button
+              onClick={() => navigate("/profile")}
+              title="Mon profil"
+              className="sm:hidden h-7 w-7 flex items-center justify-center rounded-full bg-gradient-to-br from-[#8B5CF6] to-[#5B5BD6] text-[11px] font-black text-white shrink-0"
+            >
+              {(user.name ?? "?").trim().charAt(0).toUpperCase()}
+            </button>
             <UsageWidget token={token} />
             <button
               onClick={() => {
@@ -149,14 +160,14 @@ export default function ChatPage() {
           </div>
         )}
 
-        <LangSwitcher compact />
+        <div className="hidden sm:block"><LangSwitcher compact /></div>
 
         {/* Red Run button */}
         <button
           data-testid="button-run-header"
           onClick={() => !isRunning && setRunCount(c => c + 1)}
           className={cn(
-            "flex items-center gap-1.5 h-8 px-3 rounded-lg text-sm font-medium transition-all duration-150 select-none",
+            "flex items-center gap-1.5 h-8 px-2.5 sm:px-3 rounded-lg text-sm font-medium transition-all duration-150 select-none shrink-0",
             isRunning
               ? "bg-red-600/80 text-white animate-pulse cursor-not-allowed"
               : "bg-red-600 hover:bg-red-500 text-white shadow-[0_0_12px_rgba(220,38,38,0.4)] hover:shadow-[0_0_18px_rgba(220,38,38,0.6)]"
@@ -164,7 +175,7 @@ export default function ChatPage() {
           disabled={isRunning}
         >
           <Play className={cn("w-3.5 h-3.5", isRunning && "animate-spin")} fill="currentColor" />
-          <span>{isRunning ? "Running..." : "Run"}</span>
+          <span className="hidden sm:inline">{isRunning ? "Running..." : "Run"}</span>
         </button>
       </header>
 
