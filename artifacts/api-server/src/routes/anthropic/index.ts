@@ -577,6 +577,7 @@ router.get("/conversations/:id/messages", async (req, res) => {
         conversationId: m.conversationId,
         role: m.role,
         content: m.content,
+        images: (m as { images?: string[] | null }).images ?? undefined,
         createdAt: m.createdAt.toISOString(),
       }))
     );
@@ -629,7 +630,16 @@ router.post("/conversations/:id/messages", async (req, res) => {
 
   const conversationId = paramsParsed.data.id;
   const userContent = bodyParsed.data.content;
-  const imageData = bodyParsed.data.imageData;
+  // Multi-photos : imageDatas[] (jusqu'a 4) avec repli sur l'ancien champ imageData
+  const rawImageDatas = (req.body as { imageDatas?: unknown }).imageDatas;
+  const rawImageMimes = (req.body as { imageMimes?: unknown }).imageMimes;
+  const imageDatas: string[] = Array.isArray(rawImageDatas)
+    ? rawImageDatas.filter((s): s is string => typeof s === "string" && s.length > 0).slice(0, 4)
+    : (bodyParsed.data.imageData ? [bodyParsed.data.imageData] : []);
+  const imageMimes: string[] = Array.isArray(rawImageMimes)
+    ? rawImageMimes.filter((s): s is string => typeof s === "string").slice(0, 4)
+    : [];
+  const imageData = imageDatas[0];
   const imageMimeType = (bodyParsed.data.imageMimeType ?? "image/jpeg") as
     | "image/jpeg"
     | "image/png"
@@ -790,7 +800,14 @@ Sois authentique, pas robotique.\n\n`,
 
     // Load user settings (memory + custom instructions) in parallel with message save
     const [, userSettingsRow] = await Promise.all([
-      db.insert(messages).values({ conversationId, role: "user", content: userContent }),
+      db.insert(messages).values({
+        conversationId,
+        role: "user",
+        content: userContent,
+        images: imageDatas.length
+          ? imageDatas.map((d, i) => `data:${imageMimes[i] ?? imageMimeType};base64,${d}`)
+          : null,
+      }),
       userId
         ? db.select().from(userSettings).where(eq(userSettings.userId, userId)).limit(1).then(r => r[0] ?? null)
         : Promise.resolve(null),
@@ -847,14 +864,15 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
 
     // Build last user message – include image if provided
     if (imageData) {
-      const enrichedText = `${userContent}\n\n[Note système: L'utilisateur a joint une image. Si tu génères du HTML contenant cette image, utilise exactement __USER_IMAGE_1__ comme valeur de l'attribut src. Grado remplacera automatiquement ce placeholder par la vraie image avant l'affichage.]`;
+      const placeholders = imageDatas.map((_, i) => `__USER_IMAGE_${i + 1}__`).join(", ");
+      const enrichedText = `${userContent}\n\n[Note système: L'utilisateur a joint ${imageDatas.length} image(s). Si tu génères du HTML contenant ces images, utilise exactement ${placeholders} comme valeurs d'attribut src. Grado remplacera automatiquement ces placeholders par les vraies images avant l'affichage.]`;
       chatMessages.push({
         role: "user",
         content: [
-          {
+          ...imageDatas.map((d, i) => ({
             type: "image",
-            source: { type: "base64", media_type: imageMimeType, data: imageData },
-          },
+            source: { type: "base64", media_type: (imageMimes[i] ?? imageMimeType), data: d },
+          })),
           { type: "text", text: enrichedText },
         ],
       });
