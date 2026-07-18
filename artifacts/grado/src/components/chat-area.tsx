@@ -194,6 +194,11 @@ export function ChatArea({
   const [previewTab, setPreviewTab] = useState<"apercu" | "code">("apercu");
   const [previewKey, setPreviewKey] = useState(0);
   const [previewFullscreen, setPreviewFullscreen] = useState(false);
+  // Créations de la conversation : permet de recharger dans l'aperçu n'importe
+  // quel site généré plus tôt dans la MÊME conversation (zabi: "le site
+  // disparaît" quand les derniers messages sont du texte sans code).
+  const [selectedCreation, setSelectedCreation] = useState<string | null>(null);
+  const [creationsMenuOpen, setCreationsMenuOpen] = useState(false);
   const [previewWidth, setPreviewWidth] = useState<number>(() => {
     if (typeof window === "undefined") return 550;
     const saved = Number(localStorage.getItem("grado_preview_width"));
@@ -235,6 +240,8 @@ export function ChatArea({
   useEffect(() => {
     setActiveId(conversationId);
     setLastCompletedHtml(null); // reset preview on conversation switch
+    setSelectedCreation(null);
+    setCreationsMenuOpen(false);
     setPreviewKey((k) => k + 1); // force iframe remount on conversation switch
   }, [conversationId]);
 
@@ -484,6 +491,7 @@ export function ChatArea({
         const completedHtml = extractHtml(fullText);
         if (completedHtml) {
           setLastCompletedHtml(completedHtml);
+          setSelectedCreation(null);
           setPreviewKey((k) => k + 1); // force iframe remount with fresh HTML
         }
 
@@ -576,6 +584,7 @@ export function ChatArea({
         const completedHtml = extractHtml(merged + addition);
         if (completedHtml) {
           setLastCompletedHtml(completedHtml);
+          setSelectedCreation(null);
           setPreviewKey((k) => k + 1);
         }
       }
@@ -639,8 +648,24 @@ export function ChatArea({
     }
     return null;
   })();
+  // Toutes les créations (HTML) de la conversation, dans l'ordre — pour le menu "Créations"
+  const conversationCreations = (() => {
+    const list: { key: string; html: string; label: string }[] = [];
+    localMessages.forEach((m, i) => {
+      if (m.role !== "assistant") return;
+      const h = extractHtml(m.content);
+      if (!h) return;
+      const t = /<title[^>]*>([^<]{1,60})<\/title>/i.exec(h)?.[1]?.trim();
+      list.push({ key: String(i), html: h, label: t || `Création ${list.length + 1}` });
+    });
+    return list;
+  })();
+  const selectedCreationHtml = selectedCreation !== null
+    ? conversationCreations.find((cr) => cr.key === selectedCreation)?.html ?? null
+    : null;
+
   // lastCompletedHtml évite le clignotement entre la fin du stream et la mise à jour de localMessages
-  const previewHtml = liveStreamHtml ?? lastCompletedHtml ?? lastMessageHtml;
+  const previewHtml = liveStreamHtml ?? selectedCreationHtml ?? lastCompletedHtml ?? lastMessageHtml;
 
   const {
     publishedUrl,
@@ -1295,6 +1320,38 @@ export function ChatArea({
               Code
             </button>
           </div>
+          {conversationCreations.length > 0 && (
+            <div className="relative ml-2">
+              <button
+                onClick={() => setCreationsMenuOpen((o) => !o)}
+                title="Sites créés dans cette conversation"
+                className="flex items-center gap-1 text-[10px] font-semibold text-[#C8C8E8] hover:text-white border border-[#2a2a38] hover:border-[#5B5BD6]/50 rounded-md px-2 py-1 transition-colors bg-[#0A0A0C]"
+              >
+                📁 Créations ({conversationCreations.length})
+              </button>
+              {creationsMenuOpen && (
+                <div className="absolute left-0 top-8 z-50 min-w-[220px] max-h-64 overflow-auto rounded-lg border border-[#2a2a38] bg-[#0A0A0C] shadow-xl p-1">
+                  {conversationCreations.map((cr) => (
+                    <button
+                      key={cr.key}
+                      onClick={() => {
+                        setSelectedCreation(cr.key);
+                        setCreationsMenuOpen(false);
+                        setPreviewTab("apercu");
+                        setPreviewKey((k) => k + 1);
+                      }}
+                      className={cn(
+                        "w-full text-left px-2.5 py-1.5 rounded-md text-[11px] transition-colors truncate",
+                        selectedCreation === cr.key ? "bg-[#5B5BD6]/20 text-white" : "text-[#A0A0B8] hover:bg-white/5 hover:text-white"
+                      )}
+                    >
+                      {cr.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex-1" />
           {previewHtml && previewTab === "apercu" && (
             <div className="flex items-center gap-1 mr-2">
