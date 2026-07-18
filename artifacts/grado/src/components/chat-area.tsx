@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Paperclip, SendHorizonal, Globe, Palette, GalleryHorizontal, Sparkles, BarChart3, Gamepad2, FileText, X, Zap, Brain, Code2, Lightbulb, BarChart2, Users, Mic, MicOff, ChevronDown, ChevronUp, Lock, RefreshCw, GripVertical, Download, ExternalLink, CheckCheck, Rocket, Maximize2, Minimize2 } from "lucide-react";
 import { AgentOrchestrator } from "./agent-orchestrator";
 import { AnthropicMessage } from "@workspace/api-client-react";
@@ -143,16 +143,16 @@ export function ChatArea({
   const [localMessages, setLocalMessages] = useState<AnthropicMessage[]>([]);
   const [activeId, setActiveId] = useState<number | null>(null);
   const [mediaJobs, setMediaJobs] = useState<MediaJob[]>([]);
-  const [msgImageMap, setMsgImageMap] = useState<Record<number, string>>({});
+  const [msgImageMap, setMsgImageMap] = useState<Record<number, string[]>>({});
   const [liveAgentCode, setLiveAgentCode] = useState<string>("");
   const liveCodeRef = useRef<HTMLPreElement>(null);
   // Dernier HTML généré avec succès — évite le clignotement entre live et final
   const [lastCompletedHtml, setLastCompletedHtml] = useState<string | null>(null);
 
-  // Image upload state
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [imageBase64, setImageBase64] = useState<string | null>(null);
-  const [imageMime, setImageMime] = useState<string>("image/jpeg");
+  // Image upload state — multi-photos (jusqu'a 4)
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [imageBase64s, setImageBase64s] = useState<string[]>([]);
+  const [imageMimes, setImageMimes] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Model & agent
@@ -238,6 +238,10 @@ export function ChatArea({
   // Dernier HTML produit par le mode Multi-Agents — persiste en base a la fin
   // du run (sinon un refresh effacait toute la construction, zabi 2026-07-18)
   const multiAgentHtmlRef = useRef<string | null>(null);
+  // Cache extractHtml : sans lui, CHAQUE re-render (toutes les 300ms pendant un
+  // stream) re-analysait TOUS les messages avec des regex sur des chaines
+  // enormes -> gels frequents de la page.
+  const htmlCacheRef = useRef<Map<string, string | null>>(new Map());
   // Bouton Stop : annule le stream en cours (envoi normal ou multi-agents)
   const sendAbortRef = useRef<AbortController | null>(null);
   const agentAbortRef = useRef<(() => void) | null>(null);
@@ -294,29 +298,35 @@ export function ChatArea({
   };
 
   // File / image picker
+  const MAX_IMAGES = 4;
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const mime = file.type;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      // dataUrl = "data:<mime>;base64,<data>"
-      const base64 = dataUrl.split(",")[1];
-      setImageBase64(base64);
-      setImageMime(mime);
-      setImagePreview(dataUrl);
-    };
-    reader.readAsDataURL(file);
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    for (const file of files.slice(0, MAX_IMAGES)) {
+      const mime = file.type;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string;
+        const base64 = dataUrl.split(",")[1];
+        setImageBase64s((prev) => (prev.length >= MAX_IMAGES ? prev : [...prev, base64]));
+        setImageMimes((prev) => (prev.length >= MAX_IMAGES ? prev : [...prev, mime]));
+        setImagePreviews((prev) => (prev.length >= MAX_IMAGES ? prev : [...prev, dataUrl]));
+      };
+      reader.readAsDataURL(file);
+    }
     // Reset so same file can be re-selected
     e.target.value = "";
   };
 
   const clearImage = () => {
-    setImagePreview(null);
-    setImageBase64(null);
-    setImageMime("image/jpeg");
+    setImagePreviews([]);
+    setImageBase64s([]);
+    setImageMimes([]);
+  };
+  const removeImage = (idx: number) => {
+    setImagePreviews((prev) => prev.filter((_, i) => i !== idx));
+    setImageBase64s((prev) => prev.filter((_, i) => i !== idx));
+    setImageMimes((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const triggerMediaGeneration = async (
@@ -381,25 +391,25 @@ export function ChatArea({
       if (textareaRef.current) textareaRef.current.style.height = "auto";
     }
 
-    // Snapshot & clear image
-    const sentImageBase64 = imageBase64;
-    const sentImageMime = imageMime;
-    const sentImagePreview = imagePreview;
+    // Snapshot & clear images
+    const sentImageBase64s = imageBase64s;
+    const sentImageMimes = imageMimes;
+    const sentImagePreviews = imagePreviews;
     clearImage();
 
     if (!skipOptimisticMsg) {
       // Add the user message immediately so the chat never feels frozen
       const userMsgId = Date.now();
-      const userMsg: AnthropicMessage & { imagePreview?: string } = {
+      const userMsg: AnthropicMessage & { images?: string[] } = {
         id: userMsgId,
         conversationId: activeId ?? 0,
         role: "user",
         content,
         createdAt: new Date().toISOString(),
-        imagePreview: sentImagePreview ?? undefined,
+        images: sentImagePreviews.length ? sentImagePreviews : undefined,
       } as any;
-      if (sentImagePreview) {
-        setMsgImageMap((prev) => ({ ...prev, [userMsgId]: sentImagePreview }));
+      if (sentImagePreviews.length) {
+        setMsgImageMap((prev) => ({ ...prev, [userMsgId]: sentImagePreviews }));
       }
       setLocalMessages((prev) => [...prev, userMsg]);
     }
@@ -421,9 +431,12 @@ export function ChatArea({
         ? "[MODE RÉFLEXION] Avant de répondre, pense étape par étape entre des balises <think>...</think>, puis donne ta réponse finale après.\n\n"
         : "";
       const body: Record<string, any> = { content: reflectPrefix + content, model, agentMode };
-      if (sentImageBase64) {
-        body.imageData = sentImageBase64;
-        body.imageMimeType = sentImageMime;
+      if (sentImageBase64s.length) {
+        // Nouveau format multi + anciens champs pour compatibilite
+        body.imageDatas = sentImageBase64s;
+        body.imageMimes = sentImageMimes;
+        body.imageData = sentImageBase64s[0];
+        body.imageMimeType = sentImageMimes[0] ?? "image/jpeg";
       }
 
       const token = localStorage.getItem("grado_token");
@@ -668,7 +681,7 @@ export function ChatArea({
 
   // Écran divisé : HTML en cours de génération (live) → HTML de session → HTML des messages DB
   const liveStreamHtml = isRunning && streamText ? extractHtmlLoose(streamText) : null;
-  const lastMessageHtml = (() => {
+  const lastMessageHtml = useMemo(() => {
     for (let i = localMessages.length - 1; i >= 0; i--) {
       const m = localMessages[i];
       if (m.role === "assistant") {
@@ -677,9 +690,9 @@ export function ChatArea({
       }
     }
     return null;
-  })();
+  }, [localMessages]);
   // Toutes les créations (HTML) de la conversation, dans l'ordre — pour le menu "Créations"
-  const conversationCreations = (() => {
+  const conversationCreations = useMemo(() => {
     const list: { key: string; html: string; label: string }[] = [];
     localMessages.forEach((m, i) => {
       if (m.role !== "assistant") return;
@@ -689,7 +702,7 @@ export function ChatArea({
       list.push({ key: String(i), html: h, label: t || `Création ${list.length + 1}` });
     });
     return list;
-  })();
+  }, [localMessages]);
   const selectedCreationHtml = selectedCreation !== null
     ? conversationCreations.find((cr) => cr.key === selectedCreation)?.html ?? null
     : null;
@@ -781,19 +794,27 @@ export function ChatArea({
                 {localMessages.map((msg) => {
                   // Find the most recent user message before this one that has an image
                   const msgIndex = localMessages.indexOf(msg);
-                  const precedingUserImgUrl = (() => {
+                  const precedingUserImgUrls = (() => {
                     if (msg.role !== "assistant") return undefined;
                     for (let i = msgIndex - 1; i >= 0; i--) {
                       const prev = localMessages[i];
                       if (prev.role === "user") {
-                        return msgImageMap[prev.id] ?? undefined;
+                        const dbImgs = (prev as { images?: string[] }).images;
+                        return msgImageMap[prev.id] ?? (dbImgs && dbImgs.length ? dbImgs : undefined);
                       }
                     }
                     return undefined;
                   })();
-                  const html = msg.role === "assistant"
-                    ? extractHtml(msg.content, precedingUserImgUrl ? [precedingUserImgUrl] : undefined)
-                    : null;
+                  const html = (() => {
+                    if (msg.role !== "assistant") return null;
+                    const key = `${msg.id}:${msg.content.length}:${precedingUserImgUrls?.length ?? 0}`;
+                    const cached = htmlCacheRef.current.get(key);
+                    if (cached !== undefined) return cached;
+                    const h = extractHtml(msg.content, precedingUserImgUrls);
+                    if (htmlCacheRef.current.size > 400) htmlCacheRef.current.clear();
+                    htmlCacheRef.current.set(key, h);
+                    return h;
+                  })();
                   const mediaTag = msg.role === "assistant" ? extractMediaTag(msg.content) : null;
                   const rawDisplay = mediaTag ? stripMediaTag(msg.content) : msg.content;
                   // Extract <think>...</think> block for reflection mode display
@@ -805,7 +826,7 @@ export function ChatArea({
                     ? contentWithoutThink.split(/```|<!DOCTYPE|<html[\s>]/i)[0].trim()
                     : contentWithoutThink;
                   const mediaJob = mediaTag ? mediaJobs.find((j) => j.prompt === mediaTag.prompt) : undefined;
-                  const msgImagePreview = (msg as any).imagePreview as string | undefined;
+                  const msgImages: string[] | undefined = (msg as any).images ?? msgImageMap[msg.id] ?? ((msg as any).imagePreview ? [(msg as any).imagePreview] : undefined);
 
                   return (
                     <motion.div
@@ -827,13 +848,16 @@ export function ChatArea({
 
                       <div className={cn("flex flex-col gap-2", msg.role === "assistant" ? "flex-1 min-w-0" : "max-w-[80%]")}>
                         {/* Image attachment preview */}
-                        {msg.role === "user" && msgImagePreview && (
-                          <div className="flex justify-end">
-                            <img
-                              src={msgImagePreview}
-                              alt="Pièce jointe"
-                              className="max-w-[200px] max-h-[160px] rounded-xl border border-[#2a2a38] object-cover"
-                            />
+                        {msg.role === "user" && msgImages && msgImages.length > 0 && (
+                          <div className="flex justify-end gap-1.5 flex-wrap">
+                            {msgImages.map((src, i) => (
+                              <img
+                                key={i}
+                                src={src}
+                                alt={`Pièce jointe ${i + 1}`}
+                                className="max-w-[140px] max-h-[120px] rounded-xl border border-[#2a2a38] object-cover"
+                              />
+                            ))}
                           </div>
                         )}
 
@@ -1223,26 +1247,37 @@ export function ChatArea({
 
           {/* Image preview */}
           <AnimatePresence>
-            {imagePreview && (
+            {imagePreviews.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                className="mb-2"
+                className="mb-2 flex items-end gap-2 flex-wrap"
               >
-                <div className="relative inline-block">
-                  <img
-                    src={imagePreview}
-                    alt="Pièce jointe"
-                    className="max-h-[120px] max-w-[180px] rounded-xl border border-[#2a2a38] object-cover"
-                  />
+                {imagePreviews.map((src, idx) => (
+                  <div key={idx} className="relative inline-block">
+                    <img
+                      src={src}
+                      alt={`Pièce jointe ${idx + 1}`}
+                      className="max-h-[90px] max-w-[130px] rounded-xl border border-[#2a2a38] object-cover"
+                    />
+                    <button
+                      onClick={() => removeImage(idx)}
+                      className="absolute -top-1.5 -right-1.5 bg-[#1a1a24] border border-[#2a2a38] rounded-full p-0.5 text-[#8888A8] hover:text-white transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                {imagePreviews.length < 4 && (
                   <button
-                    onClick={clearImage}
-                    className="absolute -top-1.5 -right-1.5 bg-[#1a1a24] border border-[#2a2a38] rounded-full p-0.5 text-[#8888A8] hover:text-white transition-colors"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="h-[90px] w-[60px] rounded-xl border border-dashed border-[#2a2a38] text-[#8888A8] hover:text-white hover:border-[#5B5BD6]/50 text-xl transition-colors"
+                    title="Ajouter une autre photo (max 4)"
                   >
-                    <X className="w-3 h-3" />
+                    +
                   </button>
-                </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -1253,6 +1288,7 @@ export function ChatArea({
             <input
               ref={fileInputRef}
               type="file"
+              multiple
               accept="image/*,.jpg,.jpeg,.png,.gif,.webp,.pdf"
               className="hidden"
               onChange={handleFileChange}
@@ -1263,7 +1299,7 @@ export function ChatArea({
               size="icon"
               className={cn(
                 "h-9 w-9 shrink-0 rounded-lg transition-colors",
-                imagePreview
+                imagePreviews.length > 0
                   ? "text-[#5B5BD6] hover:text-[#7B7BFF]"
                   : "text-[#8888A8] hover:text-white"
               )}
