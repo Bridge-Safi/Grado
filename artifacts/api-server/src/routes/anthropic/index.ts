@@ -247,6 +247,9 @@ RULE 2 — CDN ARSENAL — USE EVERYTHING YOU NEED
 FORBIDDEN in HTML: local file refs like <link href="style.css">, <script src="app.js">, <img src="./photo.jpg">
 
 RULE 2b — USER-PROVIDED IMAGES (PLACEHOLDER SYSTEM)
+**Lecture de photos (GRATUIT, hors quota) :**
+Tu VOIS réellement les images jointes. Tu peux les décrire, extraire leur texte (OCR), répondre à des questions dessus, analyser un document/menu/ticket photographié — c'est gratuit et ça ne consomme aucune création du quota. Propose-le naturellement quand l'utilisateur joint une photo sans code à générer.
+
 When the user attaches an image via Grado's 📎 button, use __USER_IMAGE_1__ as the src:
   <img src="__USER_IMAGE_1__" alt="..." style="max-width:100%">
 Grado auto-replaces this with the real base64 data URL. Write ONLY __USER_IMAGE_1__ — never the actual base64.
@@ -709,7 +712,11 @@ router.post("/conversations/:id/messages", async (req, res) => {
 
   const isOpenRouterModel = modelChoice in OPENROUTER_MODELS;
   // Free users get a free OpenRouter model for now (premium models arrive soon); vision requires sonnet (multimodal)
-  const selectedModel = imageData
+  // Lecture de photos : Sonnet (Anthropic) uniquement pour les plans payants.
+  // Les comptes gratuits passent par la chaine vision gratuite Gemini/OpenRouter
+  // (voir FREE_VISION_FALLBACK_MODELS) — la lecture d'images reste donc
+  // GRATUITE pour l'utilisateur et sans cout Anthropic.
+  const selectedModel = imageData && isPaidUser && hasAnthropicKey
     ? "claude-sonnet-4-5"
     : !isPaidUser || !hasAnthropicKey
       ? OPENROUTER_MODELS["mistral"]
@@ -802,6 +809,12 @@ Cet utilisateur a épuisé ses créations du mois (plan : ${currentUser?.plan ??
 - Générer des blocs de code complets (pas de \`\`\`python, \`\`\`js, etc.)
 - Utiliser les tags [GRADO_IMAGE: ...] ou [GRADO_VIDEO: ...]
 
+⚠️ SI L'UTILISATEUR DEMANDE POURQUOI SON SITE / APERÇU A DISPARU OU NE S'AFFICHE PLUS :
+Réponds HONNÊTEMENT et UNIQUEMENT ceci : la génération est en pause car son quota mensuel est atteint ; ses créations précédentes ne sont pas perdues — elles restent accessibles via le bouton « 📁 Créations » au-dessus de l'aperçu, et il peut continuer à créer en passant sur un plan supérieur (/pricing).
+N'INVENTE JAMAIS d'explication technique (CSS, display:none, JavaScript, navigateur, moteur de rendu…) — ce serait faux.
+
+📷 LES PHOTOS RESTENT LISIBLES : analyser/décrire une image jointe ne compte pas dans le quota — continue à le faire normalement.
+
 IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloques uniquement la génération de fichiers créatifs.\n\n`;
     }
     if (!isPaidUser) {
@@ -856,7 +869,10 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
     // Sans clé Anthropic, on doit toujours passer par Gemini/OpenRouter — y compris quand une
     // image est jointe — sinon les photos ne sont jamais transmises au modèle (elles étaient
     // silencieusement perdues quand seul le chemin Anthropic était tenté).
-    const useOpenRouter = !hasAnthropicKey || (!imageData && (!isPaidUser || isOpenRouterModel));
+    // Les comptes gratuits passent TOUJOURS par Gemini/OpenRouter, image jointe ou
+    // pas (les candidats vision gratuits gerent les photos). Anthropic est reserve
+    // aux plans payants.
+    const useOpenRouter = !hasAnthropicKey || !isPaidUser || (!imageData && isOpenRouterModel);
 
     if (useOpenRouter) {
       // OpenRouter uses OpenAI-compatible API
