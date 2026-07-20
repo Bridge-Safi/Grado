@@ -679,8 +679,22 @@ export function ChatArea({
     e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
   };
 
+  // Fix : debouncer l'extractHtmlLoose pendant le streaming pour éviter d'appeler
+  // des regex lourdes sur chaque token reçu (freeze du thread principal sur mobile).
+  const [debouncedLiveHtml, setDebouncedLiveHtml] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isRunning || !streamText) {
+      setDebouncedLiveHtml(null);
+      return;
+    }
+    const id = setTimeout(() => {
+      setDebouncedLiveHtml(extractHtmlLoose(streamText));
+    }, 300);
+    return () => clearTimeout(id);
+  }, [streamText, isRunning]);
+
   // Écran divisé : HTML en cours de génération (live) → HTML de session → HTML des messages DB
-  const liveStreamHtml = isRunning && streamText ? extractHtmlLoose(streamText) : null;
+  const liveStreamHtml = debouncedLiveHtml;
   const lastMessageHtml = useMemo(() => {
     for (let i = localMessages.length - 1; i >= 0; i--) {
       const m = localMessages[i];
@@ -725,6 +739,12 @@ export function ChatArea({
   } = usePublish(previewHtml ?? "");
 
   const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
+
+  // Fix : fermer l'overlay mobile à chaque changement de conversation pour
+  // éviter qu'il reste collé (invisible mais interceptant tous les taps).
+  useEffect(() => {
+    setMobilePreviewOpen(false);
+  }, [conversationId]);
 
   const handleGithubImport = async (importedHtml: string, sourceLabel: string) => {
     let currentId = activeId;
