@@ -31,8 +31,8 @@ router.post("/music", async (req, res) => {
     return;
   }
 
-  // Chansons gratuites : le plan gratuit a droit à 3 chansons par mois
-  const FREE_MUSIC_QUOTA = 3;
+  // Musique réservée aux plans payants — fal.ai ACE-Step coûte de l'argent
+  // même pour de courtes générations ; offrir de la musique gratuite n'est pas viable.
   try {
     const [conv] = await db.select().from(conversations).where(eq(conversations.id, Number(conversationId)));
     if (conv?.userId) {
@@ -40,25 +40,8 @@ router.post("/music", async (req, res) => {
       const adminEmail = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
       const isAdmin = !!(adminEmail && u?.email && u.email.toLowerCase().trim() === adminEmail);
       if (u?.plan === "gratuit" && !isAdmin) {
-        const monthStart = new Date();
-        monthStart.setDate(1);
-        monthStart.setHours(0, 0, 0, 0);
-        const userConvs = await db.select({ id: conversations.id }).from(conversations).where(eq(conversations.userId, conv.userId));
-        const convIds = userConvs.map((c) => c.id);
-        const used = convIds.length
-          ? await db
-              .select({ id: mediaGenerations.id })
-              .from(mediaGenerations)
-              .where(and(
-                eq(mediaGenerations.type, "music"),
-                gte(mediaGenerations.createdAt, monthStart),
-                inArray(mediaGenerations.conversationId, convIds),
-              ))
-          : [];
-        if (used.length >= FREE_MUSIC_QUOTA) {
-          res.status(403).json({ error: "FREE_MUSIC_QUOTA_REACHED" });
-          return;
-        }
+        res.status(403).json({ error: "FREE_MUSIC_QUOTA_REACHED" });
+        return;
       }
     }
   } catch (quotaErr) {
