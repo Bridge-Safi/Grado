@@ -1019,26 +1019,36 @@ Si le message de l'utilisateur contient ou sous-entend : "site", "app", "applica
       // OpenRouter uses OpenAI-compatible API
       const openrouterKey = process.env.OPENROUTER_API_KEY || process.env["CLÉ_API_OPENROUTER"] || process.env.CLE_API_OPENROUTER;
       const geminiKey = process.env.GEMINI_API_KEY || process.env["Clé API GEMINI"] || process.env.CLE_API_GEMINI || process.env.GEMINI_KEY;
-      if (!openrouterKey && !geminiKey) {
-        safeWrite(`data: ${JSON.stringify({ error: "Aucune clé IA configurée (GEMINI_API_KEY ou OPENROUTER_API_KEY)" })}\n\n`);
+      const groqKey = process.env.GROQ_API_KEY;
+      if (!openrouterKey && !geminiKey && !groqKey) {
+        safeWrite(`data: ${JSON.stringify({ error: "Aucune clé IA configurée (GEMINI_API_KEY, GROQ_API_KEY ou OPENROUTER_API_KEY)" })}\n\n`);
         try { res.end(); } catch {}
         return;
       }
       
       // OpenRouter is OpenAI-compatible, use fetch directly for streaming
-      // Agent gratuit : Gemini (Google, gratuit et puissant) en priorité, puis les modèles gratuits OpenRouter
+      // Priorité : Gemini → Groq → OpenRouter (tous gratuits, Groq est très rapide)
       const GEMINI_CHAT_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
       const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
+      const GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions";
       const OR_HEADERS: Record<string, string> = { "HTTP-Referer": "https://grado.app", "X-Title": "Grado AI" };
+      const GROQ_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
       type ChatCandidate = { url: string; key: string; model: string; extraHeaders?: Record<string, string> };
       const candidates: ChatCandidate[] = [];
-      // Free users or no Anthropic key → Gemini en priorité, OpenRouter en fallback seulement si pas de Gemini
+      // Free users or no Anthropic key → Gemini → Groq → OpenRouter
       if (!isPaidUser || !hasAnthropicKey) {
         if (geminiKey) {
-          // Gemini disponible : on l'utilise seul (plus fiable que les modèles gratuits OpenRouter)
+          // Gemini disponible : priorité 1
           candidates.push({ url: GEMINI_CHAT_URL, key: geminiKey, model: process.env.GEMINI_MODEL || "gemini-2.0-flash" });
-        } else if (openrouterKey) {
-          // Pas de Gemini : fallback OpenRouter
+        }
+        if (groqKey && !imageData) {
+          // Groq : priorité 2 (ne supporte pas les images)
+          for (const m of GROQ_MODELS) {
+            candidates.push({ url: GROQ_CHAT_URL, key: groqKey, model: m });
+          }
+        }
+        if (openrouterKey) {
+          // OpenRouter : priorité 3
           if (imageData) {
             for (const m of FREE_VISION_FALLBACK_MODELS) {
               candidates.push({ url: OPENROUTER_CHAT_URL, key: openrouterKey, model: m, extraHeaders: OR_HEADERS });
@@ -1051,6 +1061,8 @@ Si le message de l'utilisateur contient ou sous-entend : "site", "app", "applica
         }
       } else if (openrouterKey) {
         candidates.push({ url: OPENROUTER_CHAT_URL, key: openrouterKey, model: selectedModel, extraHeaders: OR_HEADERS });
+      } else if (groqKey) {
+        candidates.push({ url: GROQ_CHAT_URL, key: groqKey, model: GROQ_MODELS[0] });
       }
       if (imageData && candidates.length === 0) {
         safeWrite(`data: ${JSON.stringify({ error: "La reconnaissance d'image nécessite une clé GEMINI_API_KEY ou OPENROUTER_API_KEY configurée sur le serveur." })}\n\n`);
@@ -1311,8 +1323,51 @@ Si le message de l'utilisateur contient ou sous-entend : "site", "app", "applica
             }
           } catch {}
         }
-        // Si Gemini n'a pas donné de réponse (pas de clé, ou lui aussi en erreur), on tente
-        // les modèles vision gratuits d'OpenRouter avant d'abandonner.
+        // Si Gemini n'a pas donné de réponse, on tente Groq (gratuit, rapide, texte seulement)
+        const groqKeyFallback = process.env.GROQ_API_KEY;
+        if (!fullResponse && groqKeyFallback && !imageData) {
+          for (const groqModel of ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]) {
+            try {
+              const attempt = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${groqKeyFallback}`, "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  model: groqModel,
+                  max_tokens: 8192,
+                  stream: true,
+                  messages: [
+                    { role: "system", content: finalSystem },
+                    ...chatMessages.map((m: any) => ({ role: m.role, content: typeof m.content === "string" ? m.content : JSON.stringify(m.content) })),
+                  ],
+                }),
+              });
+              if (attempt.ok && attempt.body) {
+                const readerG = attempt.body.getReader();
+                const decoderG = new TextDecoder();
+                let bufferG = "";
+                while (true) {
+                  const { done, value } = await readerG.read();
+                  if (done) break;
+                  bufferG += decoderG.decode(value, { stream: true });
+                  const linesG = bufferG.split("\n");
+                  bufferG = linesG.pop() ?? "";
+                  for (const line of linesG) {
+                    if (!line.startsWith("data: ")) continue;
+                    const data = line.slice(6).trim();
+                    if (data === "[DONE]") continue;
+                    try {
+                      const parsedLine = JSON.parse(data);
+                      const delta = parsedLine.choices?.[0]?.delta?.content;
+                      if (delta) { fullResponse += delta; safeWrite(`data: ${JSON.stringify({ content: delta })}\n\n`); }
+                    } catch {}
+                  }
+                }
+                if (fullResponse) break;
+              }
+            } catch {}
+          }
+        }
+        // Si Groq n'a pas répondu, on tente OpenRouter avant d'abandonner.
         if (!fullResponse && openrouterKey) {
           const toOpenAIContentOR = (content: any) => {
             if (typeof content === "string") return content;
