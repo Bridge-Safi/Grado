@@ -1035,7 +1035,7 @@ Si le message de l'utilisateur contient ou sous-entend : "site", "app", "applica
       // Free users or no Anthropic key → chaîne Gemini/OpenRouter gratuite
       if (!isPaidUser || !hasAnthropicKey) {
         if (geminiKey) {
-          candidates.push({ url: GEMINI_CHAT_URL, key: geminiKey, model: process.env.GEMINI_MODEL || "gemini-flash-latest" });
+          candidates.push({ url: GEMINI_CHAT_URL, key: geminiKey, model: process.env.GEMINI_MODEL || "gemini-2.0-flash" });
         }
         if (openrouterKey) {
           if (imageData) {
@@ -1276,7 +1276,7 @@ Si le message de l'utilisateur contient ou sous-entend : "site", "app", "applica
               method: "POST",
               headers: { "Authorization": `Bearer ${geminiKeyFallback}`, "Content-Type": "application/json" },
               body: JSON.stringify({
-                model: process.env.GEMINI_MODEL || "gemini-flash-latest",
+                model: process.env.GEMINI_MODEL || "gemini-2.0-flash",
                 max_tokens: 32768,
                 stream: true,
                 messages: [
