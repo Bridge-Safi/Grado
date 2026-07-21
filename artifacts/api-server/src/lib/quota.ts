@@ -6,12 +6,14 @@ import { and, eq, gte, inArray } from "drizzle-orm";
 // génération de sites (≈0,05€/création via Claude) coûtait jusqu'à 25€, au-dessus
 // du prix du plan (17€). Voir aussi VIDEO_MONTHLY_CAP ci-dessous pour la vidéo,
 // dont le coût réel (0,10€ à plusieurs € selon le modèle fal.ai) est très variable.
+// Élite plafonné à 600 (et non "illimité") pour éviter un coût incontrôlable :
+// 600 créations × 0,05€ + 30 vidéos × 0,30€ = 39€ de coût max → prix 59€ → marge 34%.
 export const PLAN_LIMITS: Record<string, number | null> = {
   gratuit: 5,
   essentiel: 30,
   createur: 150,
   fusion: 300,
-  elite: null,
+  elite: 600,
 };
 
 // Plafond mensuel de vidéos, indépendant du quota de créations global. La vidéo est

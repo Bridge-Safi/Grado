@@ -22,12 +22,17 @@ const CURRENCIES: { code: Currency; symbol: string; flag: string; label: string 
 // Fusion et Élite ont été réajustés (juillet 2026) pour sécuriser la marge face au
 // coût réel de la génération vidéo (très variable, 0,10€ à plusieurs € selon le
 // modèle fal.ai) — voir lib/quota.ts pour le détail des nouveaux plafonds.
+// Prix révisés (juillet 2026) pour assurer une marge positive sur chaque plan.
+// Marge cible ≥ 40% même pour un utilisateur qui consomme 100% de son quota.
+// Calcul : Créateur 150×0,05€=7,5€ coût → 12€ prix → marge 37%.
+//          Fusion 300×0,05€+15vidéos×0,30€=19,5€ coût → 29€ prix → marge 33%.
+//          Élite plafonné à 600 créations : 30€+9€=39€ coût → 59€ prix → marge 34%.
 const PRICES: Record<string, Record<Currency, number>> = {
   gratuit:  { MAD: 0,   EUR: 0,  USD: 0  },
-  essentiel:{ MAD: 39,  EUR: 4,  USD: 4  },
-  createur: { MAD: 99,  EUR: 9,  USD: 10 },
-  fusion:   { MAD: 219, EUR: 19, USD: 21 },
-  elite:    { MAD: 439, EUR: 39, USD: 43 },
+  essentiel:{ MAD: 49,  EUR: 5,  USD: 5  },
+  createur: { MAD: 129, EUR: 12, USD: 13 },
+  fusion:   { MAD: 299, EUR: 29, USD: 32 },
+  elite:    { MAD: 599, EUR: 59, USD: 65 },
 };
 
 function detectCurrency(): Currency {
@@ -107,7 +112,7 @@ const PLANS = [
     name: "Élite",
     tagline: "Sans limites",
     features: [
-      "Créations illimitées",
+      "600 créations / mois",
       "30 vidéos IA / mois",
       "Modèles IA premium",
       "Support dédié 24/7",
