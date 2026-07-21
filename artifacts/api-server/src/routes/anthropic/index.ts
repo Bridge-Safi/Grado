@@ -833,23 +833,19 @@ router.post("/conversations/:id/messages", async (req, res) => {
   );
 
   const isOpenRouterModel = modelChoice in OPENROUTER_MODELS;
-
-  // Les utilisateurs gratuits avec du quota restant peuvent utiliser Claude Haiku.
-  // Seuls ceux qui ont dépassé leur quota (ou sans clé Anthropic) tombent sur OpenRouter.
-  // Les images des comptes gratuits restent sur les modèles vision gratuits (pas de coût Anthropic).
-  const canUseAnthropic = hasAnthropicKey && (isPaidUser || !freeQuotaReached);
-
-  const selectedModel = (imageData && isPaidUser && hasAnthropicKey)
+  // Lecture de photos : Sonnet (Anthropic) uniquement pour les plans payants.
+  // Les comptes gratuits passent par la chaine vision gratuite Gemini/OpenRouter
+  // (voir FREE_VISION_FALLBACK_MODELS) — la lecture d'images reste donc
+  // GRATUITE pour l'utilisateur et sans cout Anthropic.
+  const selectedModel = imageData && isPaidUser && hasAnthropicKey
     ? "claude-sonnet-4-5"
-    : (!canUseAnthropic || (imageData && !isPaidUser))
+    : !isPaidUser || !hasAnthropicKey
       ? OPENROUTER_MODELS["mistral"]
-      : (!isPaidUser)
-        ? "claude-haiku-4-5"
-        : isOpenRouterModel
-          ? OPENROUTER_MODELS[modelChoice]
-          : (modelChoice === "sonnet" && !canUseSonnet
-              ? "claude-haiku-4-5"
-              : ANTHROPIC_MODELS[modelChoice] ?? "claude-haiku-4-5");
+      : isOpenRouterModel
+        ? OPENROUTER_MODELS[modelChoice]
+        : (modelChoice === "sonnet" && !canUseSonnet
+            ? "claude-haiku-4-5"
+            : ANTHROPIC_MODELS[modelChoice] ?? "claude-haiku-4-5");
 
   const AGENT_PREFIXES: Record<string, string> = {
     dev: "Tu es un agent de développement expert. Priorité absolue: générer du code complet, fonctionnel et optimisé.\n\n",
@@ -950,7 +946,12 @@ N'INVENTE JAMAIS d'explication technique (CSS, display:none, JavaScript, navigat
 IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloques uniquement la génération de fichiers créatifs.\n\n`;
     }
     if (!isPaidUser) {
-      dynamicPrefix += `[INFO SYSTEME - a mentionner seulement si on te le demande]: Tu utilises la version gratuite de Grado. Le plan gratuit inclut : 5 créations/mois. La génération de vidéo n'est PAS disponible sur le plan gratuit — elle nécessite un plan payant (chaque vidéo coûte 8 créations sur le quota mensuel). Si on te demande la vidéo, explique que c'est réservé aux plans payants.\n\n`;
+      dynamicPrefix += `[INFO SYSTEME - a mentionner seulement si on te le demande]: Tu utilises la version gratuite de Grado. Le plan gratuit inclut : 5 créations/jour (remise à zéro à minuit). La génération de vidéo n'est PAS disponible sur le plan gratuit — elle nécessite un plan payant. Si on te demande la vidéo, explique que c'est réservé aux plans payants.\n\n`;
+
+      // Renforcement explicite de RULE 1 pour les modèles gratuits (Gemini, OpenRouter)
+      // qui ont tendance à répondre en texte au lieu de générer le fichier HTML complet.
+      dynamicPrefix += `⚡ RÈGLE ABSOLUE — GÉNÉRATION HTML OBLIGATOIRE ⚡
+Si le message de l'utilisateur contient ou sous-entend : "site", "app", "application", "jeu", "game", "outil", "tool", "dashboard", "créer", "crée", "create", "build", "construire", "fais-moi", "make", "développe", "génère", "génerer", "génération", "portfolio", "landing page", "calculatrice", "calculator", "quiz", "formulaire", "form", "animation", "horloge", "clock", "timer", "todo", "liste", "galerie", "gallery", "carte", "map", "graphique", "chart", "visualisation", "page", "template", "modèle", "démo", "demo" — tu DOIS OBLIGATOIREMENT générer un fichier HTML complet dans un bloc \`\`\`html ... \`\`\`. JAMAIS de réponse textuelle seule pour une demande de création. Pas de "voici comment", pas de "je peux créer", pas de plan — GÉNÈRE DIRECTEMENT LE HTML COMPLET.\n\n`;
     }
     
     if (userSettingsRow?.memoryNotes?.trim()) {
@@ -1005,7 +1006,7 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
     // Les comptes gratuits passent TOUJOURS par Gemini/OpenRouter, image jointe ou
     // pas (les candidats vision gratuits gerent les photos). Anthropic est reserve
     // aux plans payants.
-    const useOpenRouter = !canUseAnthropic || (imageData && !isPaidUser) || (!imageData && isOpenRouterModel && isPaidUser);
+    const useOpenRouter = !hasAnthropicKey || !isPaidUser || (!imageData && isOpenRouterModel);
 
     if (useOpenRouter) {
       // OpenRouter uses OpenAI-compatible API
