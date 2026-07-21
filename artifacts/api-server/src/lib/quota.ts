@@ -40,12 +40,25 @@ export type QuotaStatus = {
   reached: boolean;
 };
 
-// Calcule l'usage pondéré du mois en cours pour un utilisateur (vidéo = 3, reste = 1).
+// Plans dont le quota se remet à zéro chaque JOUR (minuit) plutôt que chaque mois.
+// Le plan gratuit est quotidien : 5 créations/jour — les plans payants restent mensuels.
+const DAILY_PLANS = new Set(["gratuit"]);
+
+// Calcule l'usage pondéré de la période en cours pour un utilisateur.
+// - Plans gratuits : fenêtre = aujourd'hui 00h00 (quota journalier)
+// - Plans payants  : fenêtre = 1er du mois en cours (quota mensuel)
 export async function getMonthlyQuotaStatus(userId: number, plan: string): Promise<QuotaStatus> {
   const limit = PLAN_LIMITS[plan] ?? null;
-  const monthStart = new Date();
-  monthStart.setDate(1);
-  monthStart.setHours(0, 0, 0, 0);
+
+  const periodStart = new Date();
+  if (DAILY_PLANS.has(plan)) {
+    // Quota journalier : repart à minuit chaque jour
+    periodStart.setHours(0, 0, 0, 0);
+  } else {
+    // Quota mensuel : repart le 1er du mois
+    periodStart.setDate(1);
+    periodStart.setHours(0, 0, 0, 0);
+  }
 
   const userConvs = await db.select({ id: conversations.id }).from(conversations).where(eq(conversations.userId, userId));
   const convIds = userConvs.map((c: { id: number }) => c.id);
@@ -57,7 +70,7 @@ export async function getMonthlyQuotaStatus(userId: number, plan: string): Promi
       .from(messages)
       .where(and(
         eq(messages.role, "assistant"),
-        gte(messages.createdAt, monthStart),
+        gte(messages.createdAt, periodStart),
         inArray(messages.conversationId, convIds),
       ));
     used = rows.reduce((sum: number, r: { content: string | null }) => sum + creationWeight(r.content), 0);

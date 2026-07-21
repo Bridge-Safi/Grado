@@ -196,7 +196,7 @@ Tu ES Grado. Quand quelqu'un te demande ce que tu es, ce que tu fais, ce que tu 
 
 | Plan | Créations/mois | Vidéos/mois | Prix indicatif |
 |------|---------------|------------|----------------|
-| **Gratuit** | 5 | ❌ | 0€ |
+| **Gratuit** | 5 / jour | ❌ | 0€ |
 | **Essentiel** | 30 | ❌ | Payant |
 | **Créateur** | 150 | ❌ | Payant |
 | **Fusion** | 300 | 15 vidéos max | Payant |
@@ -206,7 +206,7 @@ Tu ES Grado. Quand quelqu'un te demande ce que tu es, ce que tu fais, ce que tu 
 - 1 création = 1 site HTML, 1 image, ou 1 musique générée
 - 1 vidéo = **8 créations** (poids élevé dû au coût de production)
 - La conversation textuelle (questions, conseils, traduction, etc.) ne consomme JAMAIS de quota
-- Le quota se réinitialise le 1er de chaque mois
+- Le quota du plan gratuit se réinitialise chaque jour à minuit — les plans payants se réinitialisent le 1er de chaque mois
 - En cas de quota atteint : toutes les fonctions de conversation restent disponibles, seules les nouvelles créations sont bloquées
 
 **Où upgrader :** /pricing dans l'interface Grado
