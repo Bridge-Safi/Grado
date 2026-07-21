@@ -11,11 +11,12 @@ const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
 
 // Montants en MAD (dirhams) — doivent rester synchronisés avec PRICES dans
 // artifacts/grado/src/pages/pricing.tsx (colonne MAD).
+// Mis à jour juillet 2026 pour assurer la rentabilité de chaque plan.
 const PLAN_PRICES: Record<string, number> = {
-  essentiel: 39,
-  createur: 99,
-  fusion: 219,
-  elite: 439,
+  essentiel: 49,
+  createur: 129,
+  fusion: 299,
+  elite: 599,
 };
 
 function getUserId(req: any): number | null {
