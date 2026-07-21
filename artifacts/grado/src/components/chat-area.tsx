@@ -705,21 +705,50 @@ export function ChatArea({
     }
     return null;
   }, [localMessages]);
-  // Toutes les créations (HTML) de la conversation, dans l'ordre — pour le menu "Créations"
-  const conversationCreations = useMemo(() => {
-    const list: { key: string; html: string; label: string }[] = [];
+  // Toutes les créations de la conversation : sites HTML + images + musiques + vidéos
+  type UnifiedCreation =
+    | { kind: "html";  key: string; label: string; html: string }
+    | { kind: "image" | "music" | "video"; key: string; label: string; mediaId: number; msgId: number };
+
+  const allCreations = useMemo((): UnifiedCreation[] => {
+    const list: UnifiedCreation[] = [];
+    let htmlCount = 0;
     localMessages.forEach((m, i) => {
       if (m.role !== "assistant") return;
+      // Sites HTML
       const h = extractHtml(m.content);
-      if (!h) return;
-      const t = /<title[^>]*>([^<]{1,60})<\/title>/i.exec(h)?.[1]?.trim();
-      list.push({ key: String(i), html: h, label: t || `Création ${list.length + 1}` });
+      if (h) {
+        htmlCount++;
+        const t = /<title[^>]*>([^<]{1,60})<\/title>/i.exec(h)?.[1]?.trim();
+        list.push({ kind: "html", key: `html-${i}`, label: t || `Site ${htmlCount}`, html: h });
+      }
+      // Médias (image / musique / vidéo)
+      const tag = extractMediaTag(m.content);
+      if (tag) {
+        const job = mediaJobs.find(j => j.prompt === tag.prompt && j.type === tag.type);
+        if (job && job.mediaId > 0) {
+          const typeLabel: Record<string, string> = { image: "Image", music: "Musique", video: "Vidéo" };
+          const label = job.title || `${typeLabel[tag.type] ?? tag.type} — ${tag.prompt.slice(0, 38)}`;
+          list.push({ kind: tag.type, key: `media-${i}`, label, mediaId: job.mediaId, msgId: m.id });
+        }
+      }
     });
     return list;
-  }, [localMessages]);
+  }, [localMessages, mediaJobs]);
+
+  // Rétrocompatibilité : HTML sélectionné pour l'aperçu
   const selectedCreationHtml = selectedCreation !== null
-    ? conversationCreations.find((cr) => cr.key === selectedCreation)?.html ?? null
+    ? (() => {
+        const cr = allCreations.find(c => c.key === selectedCreation);
+        return cr && cr.kind === "html" ? cr.html : null;
+      })()
     : null;
+
+  // Scroll vers un message précis dans la liste de chat
+  const scrollToMessage = (msgId: number) => {
+    const el = scrollRef.current?.querySelector(`[data-testid="message-assistant-${msgId}"]`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
 
   // lastCompletedHtml évite le clignotement entre la fin du stream et la mise à jour de localMessages
   const previewHtml = liveStreamHtml ?? selectedCreationHtml ?? lastCompletedHtml ?? lastMessageHtml;
@@ -1493,34 +1522,49 @@ export function ChatArea({
               Code
             </button>
           </div>
-          {conversationCreations.length > 0 && (
+          {allCreations.length > 0 && (
             <div className="relative ml-2">
               <button
                 onClick={() => setCreationsMenuOpen((o) => !o)}
-                title="Sites créés dans cette conversation"
+                title="Toutes les créations de cette conversation"
                 className="flex items-center gap-1 text-[10px] font-semibold text-[#C8C8E8] hover:text-white border border-[#2a2a38] hover:border-[#5B5BD6]/50 rounded-md px-2 py-1 transition-colors bg-[#0A0A0C]"
               >
-                📁 Créations ({conversationCreations.length})
+                📁 Créations ({allCreations.length})
               </button>
               {creationsMenuOpen && (
-                <div className="absolute left-0 top-8 z-50 min-w-[220px] max-h-64 overflow-auto rounded-lg border border-[#2a2a38] bg-[#0A0A0C] shadow-xl p-1">
-                  {conversationCreations.map((cr) => (
-                    <button
-                      key={cr.key}
-                      onClick={() => {
-                        setSelectedCreation(cr.key);
-                        setCreationsMenuOpen(false);
-                        setPreviewTab("apercu");
-                        setPreviewKey((k) => k + 1);
-                      }}
-                      className={cn(
-                        "w-full text-left px-2.5 py-1.5 rounded-md text-[11px] transition-colors truncate",
-                        selectedCreation === cr.key ? "bg-[#5B5BD6]/20 text-white" : "text-[#A0A0B8] hover:bg-white/5 hover:text-white"
-                      )}
-                    >
-                      {cr.label}
-                    </button>
-                  ))}
+                <div className="absolute left-0 top-8 z-50 min-w-[240px] max-h-72 overflow-auto rounded-lg border border-[#2a2a38] bg-[#0A0A0C] shadow-xl p-1">
+                  {/* Groupes par type */}
+                  {(["html","image","video","music"] as const).map((kind) => {
+                    const items = allCreations.filter(c => c.kind === kind);
+                    if (!items.length) return null;
+                    const groupLabel: Record<string, string> = { html: "🌐 Sites", image: "🖼️ Images", video: "🎬 Vidéos", music: "🎵 Musiques" };
+                    return (
+                      <div key={kind}>
+                        <p className="text-[9px] uppercase tracking-wider text-[#5555A8] font-semibold px-2.5 pt-2 pb-1">{groupLabel[kind]}</p>
+                        {items.map((cr) => (
+                          <button
+                            key={cr.key}
+                            onClick={() => {
+                              if (cr.kind === "html") {
+                                setSelectedCreation(cr.key);
+                                setPreviewTab("apercu");
+                                setPreviewKey((k) => k + 1);
+                              } else {
+                                scrollToMessage((cr as { msgId: number }).msgId);
+                              }
+                              setCreationsMenuOpen(false);
+                            }}
+                            className={cn(
+                              "w-full text-left px-2.5 py-1.5 rounded-md text-[11px] transition-colors truncate",
+                              selectedCreation === cr.key ? "bg-[#5B5BD6]/20 text-white" : "text-[#A0A0B8] hover:bg-white/5 hover:text-white"
+                            )}
+                          >
+                            {cr.kind === "html" ? "🌐 " : cr.kind === "image" ? "🖼️ " : cr.kind === "video" ? "🎬 " : "🎵 "}{cr.label}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
