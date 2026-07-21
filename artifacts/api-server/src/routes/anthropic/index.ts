@@ -1032,15 +1032,14 @@ Si le message de l'utilisateur contient ou sous-entend : "site", "app", "applica
       const OR_HEADERS: Record<string, string> = { "HTTP-Referer": "https://grado.app", "X-Title": "Grado AI" };
       type ChatCandidate = { url: string; key: string; model: string; extraHeaders?: Record<string, string> };
       const candidates: ChatCandidate[] = [];
-      // Free users or no Anthropic key → chaîne Gemini/OpenRouter gratuite
+      // Free users or no Anthropic key → Gemini en priorité, OpenRouter en fallback seulement si pas de Gemini
       if (!isPaidUser || !hasAnthropicKey) {
         if (geminiKey) {
+          // Gemini disponible : on l'utilise seul (plus fiable que les modèles gratuits OpenRouter)
           candidates.push({ url: GEMINI_CHAT_URL, key: geminiKey, model: process.env.GEMINI_MODEL || "gemini-2.0-flash" });
-        }
-        if (openrouterKey) {
+        } else if (openrouterKey) {
+          // Pas de Gemini : fallback OpenRouter
           if (imageData) {
-            // Les modèles de FREE_FALLBACK_MODELS ne comprennent pas les images — on utilise
-            // à la place des modèles gratuits OpenRouter récents avec support vision.
             for (const m of FREE_VISION_FALLBACK_MODELS) {
               candidates.push({ url: OPENROUTER_CHAT_URL, key: openrouterKey, model: m, extraHeaders: OR_HEADERS });
             }
