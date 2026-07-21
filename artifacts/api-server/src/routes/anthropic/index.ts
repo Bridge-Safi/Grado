@@ -1001,6 +1001,18 @@ Si le message de l'utilisateur contient ou sous-entend : "site", "app", "applica
     res.setHeader("Connection", "keep-alive");
     res.setHeader("X-Accel-Buffering", "no");
 
+    // Quota atteint : répondre immédiatement sans appeler l'IA pour éviter l'écran noir
+    if (freeQuotaReached) {
+      const isDaily = currentUser?.plan === "gratuit";
+      const periodLabel = isDaily ? "du jour" : "du mois";
+      const resetLabel = isDaily ? "demain à minuit" : "le 1er du mois prochain";
+      const msg = `Ton quota de créations ${periodLabel} est atteint 🎯\n\nTes créations précédentes sont toujours accessibles via le bouton **📁 Créations**. Le quota se remet à zéro ${resetLabel}.\n\nPour continuer à créer sans limite, tu peux passer à un plan supérieur → [Voir les offres](/pricing)`;
+      safeWrite(`data: ${JSON.stringify({ content: msg })}\n\n`);
+      safeWrite(`data: ${JSON.stringify({ done: true })}\n\n`);
+      try { res.end(); } catch {}
+      return;
+    }
+
     fullResponse = "";
     // Sans clé Anthropic, on doit toujours passer par Gemini/OpenRouter — y compris quand une
     // image est jointe — sinon les photos ne sont jamais transmises au modèle (elles étaient
