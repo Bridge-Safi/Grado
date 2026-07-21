@@ -416,6 +416,28 @@ export function ChatArea({
       }
       setLocalMessages((prev) => [...prev, userMsg]);
     }
+
+    // ── Import direct de code HTML ──────────────────────────────────────────
+    // Si le message contient un document HTML complet (collé depuis l'extérieur),
+    // on le rend immédiatement dans l'aperçu sans appeler l'IA.
+    const pastedHtml = extractHtml(content);
+    if (pastedHtml) {
+      const assistantMsgId = Date.now() + 1;
+      const assistantMsg: AnthropicMessage = {
+        id: assistantMsgId,
+        conversationId: activeId ?? 0,
+        role: "assistant",
+        content: `\`\`\`html\n${pastedHtml}\n\`\`\`\n\nCode importé ✅ — dis-moi ce que tu veux modifier.`,
+        createdAt: new Date().toISOString(),
+      } as any;
+      setLastCompletedHtml(pastedHtml);
+      setSelectedCreation(null);
+      setPreviewKey((k) => k + 1);
+      setLocalMessages((prev) => [...prev, assistantMsg]);
+      return;
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     setIsBuilding(BUILD_KEYWORDS.test(content) || agentMode === "dev" || agentMode === "design");
     onRunStart();
 
