@@ -16,7 +16,6 @@ import ProfilePage from "@/pages/profile";
 import AdminPage from "@/pages/admin";
 import MySitesPage from "@/pages/my-sites";
 import SiteViewPage from "@/pages/site-view";
-import ForgotPasswordPage from "@/pages/forgot-password";
 import SharedConversationPage from "@/pages/shared-conversation";
 import TermsPage from "@/pages/terms";
 import PrivacyPage from "@/pages/privacy";
@@ -123,7 +122,6 @@ function Router() {
       <Route path="/sites">
         <ProtectedRoute component={MySitesPage} />
       </Route>
-      <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/terms" component={TermsPage} />
       <Route path="/privacy" component={PrivacyPage} />
       <Route path="/contact" component={ContactPage} />
