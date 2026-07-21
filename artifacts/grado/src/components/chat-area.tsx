@@ -465,27 +465,43 @@ export function ChatArea({
       let truncated = false;
       let lastPreviewUpdate = 0;
 
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        for (const line of chunk.split("\n")) {
-          if (line.startsWith("data: ")) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.content) fullText += data.content;
-              if (data.error && !streamError) streamError = String(data.error);
-              if (data.truncated) truncated = true;
-            } catch {
-              // ignore partial JSON
+      // Watchdog : si aucune donnée n'arrive pendant 45s, on abandonne automatiquement
+      // pour éviter que l'appli reste bloquée indéfiniment (écran gelé).
+      let lastActivity = Date.now();
+      const STREAM_TIMEOUT_MS = 45_000;
+      const watchdog = setInterval(() => {
+        if (Date.now() - lastActivity > STREAM_TIMEOUT_MS) {
+          sendAbortRef.current?.abort();
+          clearInterval(watchdog);
+        }
+      }, 5_000);
+
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          lastActivity = Date.now();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          for (const line of chunk.split("\n")) {
+            if (line.startsWith("data: ")) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.content) fullText += data.content;
+                if (data.error && !streamError) streamError = String(data.error);
+                if (data.truncated) truncated = true;
+              } catch {
+                // ignore partial JSON
+              }
             }
           }
+          const now = Date.now();
+          if (now - lastPreviewUpdate > 300) {
+            lastPreviewUpdate = now;
+            setStreamText(fullText);
+          }
         }
-        const now = Date.now();
-        if (now - lastPreviewUpdate > 300) {
-          lastPreviewUpdate = now;
-          setStreamText(fullText);
-        }
+      } finally {
+        clearInterval(watchdog);
       }
 
       if (!fullText && streamError) {
@@ -577,27 +593,42 @@ export function ChatArea({
       let addition = "";
       let lastPreviewUpdate = 0;
 
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        for (const line of chunk.split("\n")) {
-          if (line.startsWith("data: ")) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.content) addition += data.content;
-            } catch {
-              // ignore partial JSON
+      // Watchdog identique à handleSend : abandonne si silencieux 45s
+      const contAbort = new AbortController();
+      let lastActivity2 = Date.now();
+      const watchdog2 = setInterval(() => {
+        if (Date.now() - lastActivity2 > 45_000) {
+          contAbort.abort();
+          clearInterval(watchdog2);
+        }
+      }, 5_000);
+
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          lastActivity2 = Date.now();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          for (const line of chunk.split("\n")) {
+            if (line.startsWith("data: ")) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.content) addition += data.content;
+              } catch {
+                // ignore partial JSON
+              }
             }
           }
+          const now = Date.now();
+          if (now - lastPreviewUpdate > 300) {
+            lastPreviewUpdate = now;
+            setLocalMessages((prev) =>
+              prev.map((m) => (m.id === msgId ? { ...m, content: m.content + addition } : m))
+            );
+          }
         }
-        const now = Date.now();
-        if (now - lastPreviewUpdate > 300) {
-          lastPreviewUpdate = now;
-          setLocalMessages((prev) =>
-            prev.map((m) => (m.id === msgId ? { ...m, content: m.content + addition } : m))
-          );
-        }
+      } finally {
+        clearInterval(watchdog2);
       }
 
       if (addition) {
