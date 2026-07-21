@@ -1090,7 +1090,7 @@ Si le message de l'utilisateur contient ou sous-entend : "site", "app", "applica
           for (let attemptNum = 0; attemptNum < RETRIES; attemptNum++) {
             try {
               const fetchAbort = new AbortController();
-              const fetchTimeout = setTimeout(() => fetchAbort.abort(), 10_000); // 10s max par tentative
+              const fetchTimeout = setTimeout(() => fetchAbort.abort(), 5_000); // 5s max par tentative
               let attempt: Response;
               try {
                 attempt = await fetch(candidate.url, {
@@ -1119,7 +1119,9 @@ Si le message de l'utilisateur contient ou sous-entend : "site", "app", "applica
                 break;
               }
               lastErrText = await attempt.text();
-              const retriable = attempt.status === 503 || attempt.status === 429 || attempt.status >= 500;
+              // 429 = rate limit → passer immédiatement au modèle suivant sans retry
+              // 5xx = erreur serveur temporaire → retry avec backoff
+              const retriable = attempt.status === 503 || (attempt.status >= 500 && attempt.status !== 429);
               if (!retriable || attemptNum === RETRIES - 1) break;
             } catch (fetchErr) {
               lastErrText = String(fetchErr);
