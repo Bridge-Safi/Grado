@@ -893,7 +893,11 @@ Sois authentique, pas robotique.\n\n`,
   let fullResponse = "";
   const safeWrite = (payload: string) => {
     if (res.destroyed || res.writableEnded) return;
-    try { res.write(payload); } catch { /* client déconnecté — on continue en arrière-plan */ }
+    try {
+      res.write(payload);
+      // Force flush pour Railway/proxies qui bufferisent le SSE
+      if (typeof (res as any).flush === "function") (res as any).flush();
+    } catch { /* client déconnecté — on continue en arrière-plan */ }
   };
   try {
     // Verify conversation exists
@@ -1102,7 +1106,7 @@ Si le message de l'utilisateur contient ou sous-entend : "site", "app", "applica
           for (let attemptNum = 0; attemptNum < RETRIES; attemptNum++) {
             try {
               const fetchAbort = new AbortController();
-              const fetchTimeout = setTimeout(() => fetchAbort.abort(), 5_000); // 5s max par tentative
+              const fetchTimeout = setTimeout(() => fetchAbort.abort(), 30_000); // 30s max par tentative
               let attempt: Response;
               try {
                 attempt = await fetch(candidate.url, {
