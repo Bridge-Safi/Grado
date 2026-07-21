@@ -810,10 +810,10 @@ router.post("/conversations/:id/messages", async (req, res) => {
   };
 
   const FREE_FALLBACK_MODELS = [
-    "meta-llama/llama-3.3-70b-instruct:free",
+    "meta-llama/llama-3.1-8b-instruct:free",
+    "google/gemma-3-12b-it:free",
     "mistralai/mistral-7b-instruct:free",
-    "qwen/qwen3-8b:free",
-    "deepseek/deepseek-r1-distill-llama-8b:free",
+    "deepseek/deepseek-r1:free",
   ];
   // Modèles OpenRouter gratuits ET compatibles vision — utilisés uniquement quand une image
   // est jointe. Les modèles de FREE_FALLBACK_MODELS ci-dessus ne comprennent pas les images.
