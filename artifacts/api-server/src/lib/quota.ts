@@ -17,10 +17,18 @@ export const VIDEO_MONTHLY_CAP: Record<string, number> = {
 };
 
 // Poids d'une création selon son type — une vidéo coûte 8 créations.
+// Seules les vraies créations comptent :
+//   - Un fichier HTML complet (```html ... <!DOCTYPE html)
+//   - Une génération d'image ([GRADO_IMAGE: ...])
+//   - Une génération de musique ([GRADO_MUSIC: ...])
+//   - Une génération de vidéo ([GRADO_VIDEO: ...])
+// Les simples extraits de code en markdown (```js, ```python, etc.) ne comptent PAS.
 export function creationWeight(content: string | null | undefined): number {
   const text = content ?? "";
   if (/\[GRADO_VIDEO/i.test(text)) return 8;
-  if (/```|\[GRADO_(MUSIC|IMAGE)/i.test(text)) return 1;
+  if (/\[GRADO_(MUSIC|IMAGE)/i.test(text)) return 1;
+  // Compter uniquement les fichiers HTML complets (avec <!DOCTYPE html>), pas les extraits de code quelconques
+  if (/```html[\s\S]*?<!DOCTYPE\s+html/i.test(text)) return 1;
   return 0;
 }
 
