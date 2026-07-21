@@ -419,15 +419,34 @@ export function ChatArea({
 
     // ── Import direct de code HTML ──────────────────────────────────────────
     // Si le message contient un document HTML complet (collé depuis l'extérieur),
-    // on le rend immédiatement dans l'aperçu sans appeler l'IA.
+    // on le rend immédiatement dans l'aperçu et on sauvegarde en base.
     const pastedHtml = extractHtml(content);
     if (pastedHtml) {
+      const assistantContent = `\`\`\`html\n${pastedHtml}\n\`\`\`\n\nCode importé ✅ — dis-moi ce que tu veux modifier.`;
+
+      // Créer la conversation si elle n'existe pas encore
+      let currentId = activeId;
+      if (!currentId) {
+        const title = content.length > 40 ? content.substring(0, 40) + "..." : "Code importé";
+        const newId = await onTitleCreate(title);
+        currentId = newId;
+        setActiveId(newId);
+        setConversationId(newId);
+      }
+
+      // Sauvegarder les deux messages en base (best-effort)
+      const tk = localStorage.getItem("grado_token");
+      const headers = { "Content-Type": "application/json", ...(tk ? { Authorization: `Bearer ${tk}` } : {}) };
+      const base = `/api/anthropic/conversations/${currentId}/messages/manual`;
+      fetch(base, { method: "POST", headers, body: JSON.stringify({ content, role: "user" }) }).catch(() => {});
+      fetch(base, { method: "POST", headers, body: JSON.stringify({ content: assistantContent, role: "assistant" }) }).catch(() => {});
+
       const assistantMsgId = Date.now() + 1;
       const assistantMsg: AnthropicMessage = {
         id: assistantMsgId,
-        conversationId: activeId ?? 0,
+        conversationId: currentId,
         role: "assistant",
-        content: `\`\`\`html\n${pastedHtml}\n\`\`\`\n\nCode importé ✅ — dis-moi ce que tu veux modifier.`,
+        content: assistantContent,
         createdAt: new Date().toISOString(),
       } as any;
       setLastCompletedHtml(pastedHtml);
