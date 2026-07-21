@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Plus, Trash2, MessageSquare, PanelLeftClose, Settings, Shield, Globe, Download, FolderInput, Check } from "lucide-react";
+import { Plus, Trash2, MessageSquare, PanelLeftClose, Settings, Shield, Globe, Download, FolderInput, Check, Search, Pencil, X } from "lucide-react";
 import { AnthropicConversation } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -76,10 +76,38 @@ export function Sidebar({
     setAssigningConvId(null);
   };
 
-  // Unassigned conversations (not in any project)
-  const unassigned = conversations.filter(
-    c => !c.projectId || !projects.some(p => p.id === c.projectId)
-  );
+  // Search & rename state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [renamingId, setRenamingId] = useState<number | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (renamingId && renameInputRef.current) renameInputRef.current.focus();
+  }, [renamingId]);
+
+  const startRename = (conv: AnthropicConversation, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRenamingId(conv.id);
+    setRenameValue(conv.title ?? "");
+  };
+
+  const commitRename = async (id: number) => {
+    const trimmed = renameValue.trim();
+    if (!trimmed || !token) { setRenamingId(null); return; }
+    await fetch(`/api/anthropic/conversations/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ title: trimmed }),
+    });
+    queryClient.invalidateQueries({ queryKey: getListAnthropicConversationsQueryKey() });
+    setRenamingId(null);
+  };
+
+  // Unassigned conversations (not in any project), filtered by search
+  const unassigned = conversations
+    .filter(c => !c.projectId || !projects.some(p => p.id === c.projectId))
+    .filter(c => !searchQuery || (c.title ?? "").toLowerCase().includes(searchQuery.toLowerCase()));
 
   if (!isOpen) return null;
 
@@ -112,6 +140,22 @@ export function Sidebar({
         </Button>
       </div>
 
+      {/* Search */}
+      {conversations.length > 2 && (
+        <div className="px-3 pb-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#5555A8] pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Rechercher…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-[#1a1a28] border border-[#2a2a38] rounded-lg text-[#E8E8F0] placeholder-[#5555A8] focus:outline-none focus:border-[#5B5BD6]/50 transition-colors"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Projects */}
       <div className="border-b border-[#1e1e2a] py-2">
         <ProjectsPanel
@@ -143,31 +187,56 @@ export function Sidebar({
                   )}
                   onClick={() => onSelect(conv.id)}
                 >
-                  <div className="flex items-center gap-2 overflow-hidden">
-                    <MessageSquare className={cn("w-3.5 h-3.5 flex-shrink-0", activeId === conv.id ? "text-[#7B7BFF]" : "")} />
-                    <span className="truncate text-xs">{conv.title}</span>
-                  </div>
-                  <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {/* Assign to project */}
-                    {projects.length > 0 && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setAssigningConvId(assigningConvId === conv.id ? null : conv.id);
-                        }}
-                        className="h-5 w-5 flex items-center justify-center rounded text-[#8888A8] hover:text-[#7B7BFF] hover:bg-[#5B5BD6]/10 transition-colors"
-                        title="Ajouter à un projet"
-                      >
-                        <FolderInput className="w-3 h-3" />
-                      </button>
-                    )}
-                    <button
-                      className="h-5 w-5 flex items-center justify-center rounded text-[#8888A8] hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                      onClick={(e) => { e.stopPropagation(); onDelete(conv.id); }}
+                  {renamingId === conv.id ? (
+                    <form
+                      className="flex-1 flex items-center gap-1"
+                      onSubmit={(e) => { e.preventDefault(); commitRename(conv.id); }}
                     >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
+                      <input
+                        ref={renameInputRef}
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onBlur={() => commitRename(conv.id)}
+                        onKeyDown={(e) => { if (e.key === "Escape") setRenamingId(null); }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex-1 min-w-0 text-xs bg-transparent border-b border-[#5B5BD6]/60 text-white outline-none py-0.5"
+                      />
+                      <button type="submit" onClick={(e) => e.stopPropagation()} className="h-4 w-4 flex items-center justify-center text-[#7B7BFF]">
+                        <Check className="w-3 h-3" />
+                      </button>
+                    </form>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <MessageSquare className={cn("w-3.5 h-3.5 flex-shrink-0", activeId === conv.id ? "text-[#7B7BFF]" : "")} />
+                        <span className="truncate text-xs">{conv.title}</span>
+                      </div>
+                      <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          className="h-5 w-5 flex items-center justify-center rounded text-[#8888A8] hover:text-[#7B7BFF] hover:bg-[#5B5BD6]/10 transition-colors"
+                          onClick={(e) => startRename(conv, e)}
+                          title="Renommer"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                        {projects.length > 0 && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setAssigningConvId(assigningConvId === conv.id ? null : conv.id); }}
+                            className="h-5 w-5 flex items-center justify-center rounded text-[#8888A8] hover:text-[#7B7BFF] hover:bg-[#5B5BD6]/10 transition-colors"
+                            title="Ajouter à un projet"
+                          >
+                            <FolderInput className="w-3 h-3" />
+                          </button>
+                        )}
+                        <button
+                          className="h-5 w-5 flex items-center justify-center rounded text-[#8888A8] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          onClick={(e) => { e.stopPropagation(); onDelete(conv.id); }}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Project picker dropdown */}

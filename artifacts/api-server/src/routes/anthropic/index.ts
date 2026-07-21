@@ -619,6 +619,21 @@ router.get("/conversations/:id", async (req, res) => {
   }
 });
 
+// PATCH /anthropic/conversations/:id — renommer une conversation
+router.patch("/conversations/:id", async (req, res) => {
+  const userId = getUserId(req);
+  const id = Number(req.params.id);
+  const title = (req.body?.title ?? "").toString().trim().slice(0, 200);
+  if (!id || !title) { res.status(400).json({ error: "Invalid id or title" }); return; }
+  try {
+    const [conv] = await db.select().from(conversations).where(eq(conversations.id, id));
+    if (!conv) { res.status(404).json({ error: "Not found" }); return; }
+    if (userId && conv.userId && conv.userId !== userId) { res.status(403).json({ error: "Interdit" }); return; }
+    await db.update(conversations).set({ title }).where(eq(conversations.id, id));
+    res.json({ id, title });
+  } catch { res.status(500).json({ error: "Failed to rename" }); }
+});
+
 // DELETE /anthropic/conversations/:id
 router.delete("/conversations/:id", async (req, res) => {
   const userId = getUserId(req);

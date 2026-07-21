@@ -746,6 +746,31 @@ export function ChatArea({
     setMobilePreviewOpen(false);
   }, [conversationId]);
 
+  // Notification navigateur quand une génération se termine en arrière-plan
+  const wasRunningRef = useRef(false);
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
+  useEffect(() => {
+    if (isRunning) {
+      wasRunningRef.current = true;
+    } else if (wasRunningRef.current) {
+      wasRunningRef.current = false;
+      if (
+        document.visibilityState === "hidden" &&
+        "Notification" in window &&
+        Notification.permission === "granted"
+      ) {
+        new Notification("Grado ✨", {
+          body: previewHtml ? "Ton site est prêt — clique pour voir !" : "Grado a terminé de répondre.",
+          icon: "/favicon.ico",
+        });
+      }
+    }
+  }, [isRunning]);
+
   const handleGithubImport = async (importedHtml: string, sourceLabel: string) => {
     let currentId = activeId;
     if (!currentId) {
@@ -992,6 +1017,39 @@ export function ChatArea({
                   );
                 })}
               </AnimatePresence>
+
+              {/* ── Suggestions de suite (style ChatGPT) ── */}
+              {!isRunning && localMessages.length > 0 && localMessages[localMessages.length - 1].role === "assistant" && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.22, delay: 0.25 }}
+                  className="flex flex-wrap gap-2 px-1 mt-2 mb-1"
+                >
+                  {(previewHtml
+                    ? [
+                        { label: "🎨 Changer le style", prompt: "Change complètement le design : nouvelles couleurs, nouvelle typographie, un effet visuel wow" },
+                        { label: "⚡ Ajouter une feature", prompt: "Ajoute une fonctionnalité supplémentaire intéressante et utile" },
+                        { label: "📱 Optimiser mobile", prompt: "Optimise l'affichage pour smartphone, rends-le parfait sur petit écran" },
+                        { label: "🌍 Version anglaise", prompt: "Traduis tout le contenu en anglais, garde le même design" },
+                      ]
+                    : [
+                        { label: "📋 Résumer", prompt: "Résume les points essentiels en bullet points courts" },
+                        { label: "💡 Exemples concrets", prompt: "Donne-moi des exemples concrets et pratiques" },
+                        { label: "🔍 Approfondir", prompt: "Explique plus en détail avec encore plus de précision" },
+                        { label: "⚡ Plan d'action", prompt: "Donne-moi un plan d'action concret étape par étape" },
+                      ]
+                  ).map((s) => (
+                    <button
+                      key={s.label}
+                      onClick={() => handleSend(s.prompt)}
+                      className="text-xs px-3 py-1.5 rounded-xl border border-[#2a2a38] bg-[#0e0e16] text-[#8888A8] hover:border-[#5B5BD6]/50 hover:text-[#9B9BFF] hover:bg-[#5B5BD6]/8 transition-all whitespace-nowrap"
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
 
               <AnimatePresence>
                 {isMultiAgent && (
