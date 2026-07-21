@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, Globe, Trash2, ExternalLink, Copy, CheckCheck, Loader2 } from "lucide-react";
+import { ArrowLeft, Globe, Trash2, ExternalLink, Copy, CheckCheck, Loader2, RotateCcw } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { GradoLogo } from "@/components/grado-logo";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,6 +20,7 @@ export default function MySitesPage() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [resuming, setResuming] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -44,6 +45,20 @@ export default function MySitesPage() {
       await fetch(`/api/sites/${slug}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
       setMySites(s => s.filter(x => x.slug !== slug));
     } finally { setDeleting(null); }
+  };
+
+  // Reprendre : charge le HTML du site dans le chat via localStorage puis redirige
+  const handleResume = async (slug: string, title: string) => {
+    setResuming(slug);
+    try {
+      const res = await fetch(`/api/sites/${slug}/html`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) return;
+      const { htmlContent } = await res.json();
+      // Stocke le HTML à reprendre dans sessionStorage pour que le chat le récupère
+      sessionStorage.setItem("grado_resume_html", htmlContent);
+      sessionStorage.setItem("grado_resume_title", title);
+      navigate("/chat");
+    } finally { setResuming(null); }
   };
 
   const fmt = (d: string) => new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
@@ -100,47 +115,72 @@ export default function MySitesPage() {
                 <motion.div key={site.slug}
                   initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.97 }} transition={{ delay: i * 0.04 }}
-                  className="group rounded-2xl border border-[#2a2a38] bg-[#050505] hover:border-[#5B5BD6]/30 transition-all p-5 flex items-center gap-4">
+                  className="group rounded-2xl border border-[#2a2a38] bg-[#050505] hover:border-[#5B5BD6]/30 transition-all overflow-hidden">
 
-                  {/* Icon */}
-                  <div className="w-10 h-10 rounded-xl bg-[#5B5BD6]/10 border border-[#5B5BD6]/20 flex items-center justify-center shrink-0">
-                    <Globe className="w-5 h-5 text-[#5B5BD6]" />
+                  {/* Mini aperçu iframe */}
+                  <div className="relative h-32 bg-[#0a0a12] border-b border-[#1e1e2a] overflow-hidden">
+                    <iframe
+                      src={`/api/sites/pub/${site.slug}`}
+                      title={site.title}
+                      className="absolute inset-0 w-full h-full pointer-events-none"
+                      style={{ transform: "scale(0.35)", transformOrigin: "top left", width: "286%", height: "286%" }}
+                      sandbox="allow-scripts allow-same-origin"
+                      loading="lazy"
+                    />
+                    {/* overlay pour empêcher les clics sur l'iframe */}
+                    <div className="absolute inset-0" />
                   </div>
 
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-white truncate">{site.title}</p>
-                    <p className="text-xs text-[#5B5BD6] truncate mt-0.5 font-mono">
-                      {window.location.origin}/s/{site.slug}
-                    </p>
-                    <div className="flex items-center gap-3 mt-1">
-                      <span className="text-[10px] text-[#8888A8]">{fmt(site.createdAt)}</span>
-                      <span className="text-[10px] text-[#8888A8]">·</span>
-                      <span className="text-[10px] text-[#8888A8]">{site.viewCount} vue{site.viewCount !== 1 ? "s" : ""}</span>
+                  <div className="p-5 flex items-center gap-4">
+                    {/* Icon */}
+                    <div className="w-9 h-9 rounded-xl bg-[#5B5BD6]/10 border border-[#5B5BD6]/20 flex items-center justify-center shrink-0">
+                      <Globe className="w-4 h-4 text-[#5B5BD6]" />
                     </div>
-                  </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <a href={`/s/${site.slug}`} target="_blank" rel="noopener noreferrer"
-                      className="h-8 w-8 flex items-center justify-center rounded-lg text-[#8888A8] hover:text-white hover:bg-[#1e1e2a] transition-colors"
-                      title="Ouvrir">
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </a>
-                    <button onClick={() => handleCopy(site.slug)}
-                      className="h-8 w-8 flex items-center justify-center rounded-lg text-[#8888A8] hover:text-white hover:bg-[#1e1e2a] transition-colors"
-                      title="Copier le lien">
-                      {copied === site.slug
-                        ? <CheckCheck className="w-3.5 h-3.5 text-green-400" />
-                        : <Copy className="w-3.5 h-3.5" />}
-                    </button>
-                    <button onClick={() => handleDelete(site.slug)} disabled={deleting === site.slug}
-                      className="h-8 w-8 flex items-center justify-center rounded-lg text-[#8888A8] hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                      title="Supprimer">
-                      {deleting === site.slug
-                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        : <Trash2 className="w-3.5 h-3.5" />}
-                    </button>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-white truncate">{site.title}</p>
+                      <p className="text-xs text-[#5B5BD6] truncate mt-0.5 font-mono">
+                        {window.location.origin}/s/{site.slug}
+                      </p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-[10px] text-[#8888A8]">{fmt(site.createdAt)}</span>
+                        <span className="text-[10px] text-[#8888A8]">·</span>
+                        <span className="text-[10px] text-[#8888A8]">{site.viewCount} vue{site.viewCount !== 1 ? "s" : ""}</span>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {/* Reprendre dans le chat */}
+                      <button onClick={() => handleResume(site.slug, site.title)} disabled={resuming === site.slug}
+                        className="h-8 px-2.5 flex items-center gap-1.5 rounded-lg text-[#8888A8] hover:text-[#5B5BD6] hover:bg-[#5B5BD6]/10 transition-colors text-xs font-medium"
+                        title="Reprendre dans le chat">
+                        {resuming === site.slug
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <RotateCcw className="w-3.5 h-3.5" />}
+                        <span className="hidden sm:inline">Reprendre</span>
+                      </button>
+                      <a href={`/s/${site.slug}`} target="_blank" rel="noopener noreferrer"
+                        className="h-8 w-8 flex items-center justify-center rounded-lg text-[#8888A8] hover:text-white hover:bg-[#1e1e2a] transition-colors"
+                        title="Ouvrir">
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                      <button onClick={() => handleCopy(site.slug)}
+                        className="h-8 w-8 flex items-center justify-center rounded-lg text-[#8888A8] hover:text-white hover:bg-[#1e1e2a] transition-colors"
+                        title="Copier le lien">
+                        {copied === site.slug
+                          ? <CheckCheck className="w-3.5 h-3.5 text-green-400" />
+                          : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                      <button onClick={() => handleDelete(site.slug)} disabled={deleting === site.slug}
+                        className="h-8 w-8 flex items-center justify-center rounded-lg text-[#8888A8] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        title="Supprimer">
+                        {deleting === site.slug
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <Trash2 className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               ))}

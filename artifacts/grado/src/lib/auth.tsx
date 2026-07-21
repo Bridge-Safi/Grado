@@ -8,6 +8,8 @@ export interface AuthUser {
   plan: string;
   trialEndsAt: string | null;
   isAdmin: boolean;
+  emailVerified: boolean;
+  referralCode?: string;
 }
 
 interface AuthContextType {
@@ -15,7 +17,8 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, referralCode?: string) => Promise<void>;
+
   logout: () => void;
   updatePlan: (plan: string) => Promise<void>;
 }
@@ -56,11 +59,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
   };
 
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (name: string, email: string, password: string, referralCode?: string) => {
     const res = await fetch(`${API_URL}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email, password, ...(referralCode ? { referralCode } : {}) }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Erreur d'inscription");

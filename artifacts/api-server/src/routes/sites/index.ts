@@ -1,6 +1,6 @@
 import { Router } from "express";
 import jwt from "jsonwebtoken";
-import { db, sites } from "@workspace/db";
+import { db, sites, siteVersions } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 
 const router = Router();
@@ -45,6 +45,9 @@ router.post("/", async (req, res) => {
     htmlContent,
   }).returning();
 
+  // Sauvegarde la version initiale dans l'historique
+  db.insert(siteVersions).values({ siteSlug: site.slug, htmlContent }).catch(() => {});
+
   res.status(201).json({
     id: site.id,
     slug: site.slug,
@@ -52,6 +55,33 @@ router.post("/", async (req, res) => {
     url: `/s/${site.slug}`,
     createdAt: site.createdAt,
   });
+});
+
+// GET /sites/:slug/html — récupère le HTML d'un site pour le recharger dans le chat
+router.get("/:slug/html", async (req, res) => {
+  const userId = requireAuth(req, res);
+  if (!userId) return;
+
+  const [site] = await db.select({ userId: sites.userId, htmlContent: sites.htmlContent, title: sites.title })
+    .from(sites).where(eq(sites.slug, req.params.slug)).limit(1);
+
+  if (!site || site.userId !== userId) { res.status(404).json({ error: "Site introuvable" }); return; }
+
+  res.json({ htmlContent: site.htmlContent, title: site.title });
+});
+
+// GET /sites/:slug/versions — historique des versions d'un site
+router.get("/:slug/versions", async (req, res) => {
+  const userId = requireAuth(req, res);
+  if (!userId) return;
+
+  const [site] = await db.select({ userId: sites.userId }).from(sites).where(eq(sites.slug, req.params.slug)).limit(1);
+  if (!site || site.userId !== userId) { res.status(404).json({ error: "Site introuvable" }); return; }
+
+  const versions = await db.select({ id: siteVersions.id, createdAt: siteVersions.createdAt })
+    .from(siteVersions).where(eq(siteVersions.siteSlug, req.params.slug)).orderBy(desc(siteVersions.createdAt));
+
+  res.json(versions);
 });
 
 // GET /sites — list my sites

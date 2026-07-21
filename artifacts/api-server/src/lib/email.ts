@@ -36,9 +36,9 @@ export async function sendWelcomeEmail(to: string, name: string): Promise<void> 
       <div style="background:#0d0d18;border:1px solid #1e1e2a;border-radius:12px;padding:20px;margin-bottom:24px">
         <p style="margin:0 0 12px;font-size:13px;font-weight:700;color:#C8C8E8">Ce que tu as sur le plan Gratuit :</p>
         <ul style="margin:0;padding:0 0 0 18px;color:#8888A8;font-size:13px;line-height:2">
-          <li>5 créations / mois (apps, sites, jeux…)</li>
-          <li>3 chansons IA / mois</li>
-          <li>Hébergement d'1 site</li>
+          <li>5 créations / jour (apps, sites, jeux…)</li>
+          <li>Images IA incluses</li>
+          <li>Hébergement de sites</li>
         </ul>
       </div>
 
@@ -51,12 +51,31 @@ export async function sendWelcomeEmail(to: string, name: string): Promise<void> 
   await send(to, "Bienvenue sur Grado 🚀", html);
 }
 
-// ── 2. Quota de créations atteint ─────────────────────────────────────────
+// ── 2. Vérification email ──────────────────────────────────────────────────
+export async function sendVerificationEmail(to: string, name: string, code: string): Promise<void> {
+  const html = `<div style="${BASE}">
+    ${LOGO}
+    <div style="padding:32px 28px">
+      <h1 style="font-size:22px;font-weight:800;margin:0 0 8px">Vérifie ton email, ${name} ✉️</h1>
+      <p style="color:#8888A8;margin:0 0 24px;font-size:14px;line-height:1.6">
+        Entre ce code dans Grado pour activer ton compte. Il expire dans 24h.
+      </p>
+      <div style="background:#111118;border:1px solid #5B5BD6;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px">
+        <span style="font-size:38px;font-weight:bold;letter-spacing:14px;color:#fff;font-family:monospace">${code}</span>
+      </div>
+      <p style="color:#4a4a5a;font-size:12px">Si tu n'as pas créé de compte Grado, ignore cet email.</p>
+    </div>
+    ${FOOTER}
+  </div>`;
+  await send(to, "Grado — Vérifie ton adresse email", html);
+}
+
+// ── 3. Quota de créations atteint ─────────────────────────────────────────
 export async function sendQuotaReachedEmail(to: string, name: string, quotaType: "creations" | "videos" | "music"): Promise<void> {
   const labels: Record<string, { emoji: string; what: string; limit: string }> = {
-    creations: { emoji: "⚡", what: "créations",       limit: "5 créations/mois" },
-    videos:    { emoji: "🎬", what: "vidéos IA",       limit: "2 vidéos/mois"    },
-    music:     { emoji: "🎵", what: "chansons IA",     limit: "3 chansons/mois"  },
+    creations: { emoji: "⚡", what: "créations",   limit: "5 créations/jour" },
+    videos:    { emoji: "🎬", what: "vidéos IA",   limit: "quota vidéos"     },
+    music:     { emoji: "🎵", what: "chansons IA", limit: "quota musique"    },
   };
   const { emoji, what, limit } = labels[quotaType];
 
@@ -67,7 +86,7 @@ export async function sendQuotaReachedEmail(to: string, name: string, quotaType:
       <h1 style="font-size:20px;font-weight:800;margin:0 0 8px">Tu as utilisé tes ${what} gratuites</h1>
       <p style="color:#8888A8;font-size:14px;line-height:1.6;margin:0 0 24px">
         ${name}, tu as atteint la limite de <strong style="color:#fff">${limit}</strong> sur le plan Gratuit.
-        Pour continuer à créer sans interruption, passe à un plan supérieur.
+        Tes créations se remettent à zéro <strong style="color:#fff">chaque jour à minuit</strong> — ou passe à un plan supérieur pour créer sans interruption.
       </p>
 
       <div style="background:#0d0d18;border:1px solid #5B5BD633;border-radius:12px;padding:20px;margin-bottom:24px">
@@ -85,7 +104,7 @@ export async function sendQuotaReachedEmail(to: string, name: string, quotaType:
           </tr>
           <tr>
             <td style="padding:8px 4px;color:#C8C8E8;font-weight:600">Fusion</td>
-            <td style="padding:8px 4px;color:#8888A8">500 créations · vidéos illimitées</td>
+            <td style="padding:8px 4px;color:#8888A8">300 créations · vidéos</td>
             <td style="padding:8px 4px;color:#5B5BD6;font-weight:700;text-align:right">189 Dh/mois</td>
           </tr>
         </table>
@@ -100,7 +119,7 @@ export async function sendQuotaReachedEmail(to: string, name: string, quotaType:
   await send(to, `${emoji} Tu as atteint ta limite de ${what} — Grado`, html);
 }
 
-// ── 3. Plan activé (après approbation admin) ───────────────────────────────
+// ── 4. Plan activé (après approbation admin) ───────────────────────────────
 export async function sendPlanActivatedEmail(to: string, name: string, plan: string): Promise<void> {
   const planLabels: Record<string, string> = {
     essentiel: "Essentiel",
@@ -132,4 +151,23 @@ export async function sendPlanActivatedEmail(to: string, name: string, plan: str
     ${FOOTER}
   </div>`;
   await send(to, `✅ Plan ${planName} activé — Grado`, html);
+}
+
+// ── 5. Email de parrainage accepté ────────────────────────────────────────
+export async function sendReferralRewardEmail(to: string, name: string, referredName: string): Promise<void> {
+  const html = `<div style="${BASE}">
+    ${LOGO}
+    <div style="padding:32px 28px">
+      <div style="font-size:36px;margin-bottom:12px">🎁</div>
+      <h1 style="font-size:20px;font-weight:800;margin:0 0 8px">Quelqu'un a rejoint via ton lien !</h1>
+      <p style="color:#8888A8;font-size:14px;line-height:1.6;margin:0 0 24px">
+        ${name}, <strong style="color:#fff">${referredName}</strong> vient de créer un compte Grado grâce à ton lien de parrainage. Tu as gagné <strong style="color:#5B5BD6">+5 créations bonus</strong> ajoutées à ton quota du jour 🚀
+      </p>
+      <a href="https://grado.app/chat" style="display:inline-block;background:#5B5BD6;color:#fff;text-decoration:none;padding:12px 28px;border-radius:10px;font-weight:700;font-size:14px">
+        Créer maintenant →
+      </a>
+    </div>
+    ${FOOTER}
+  </div>`;
+  await send(to, "🎁 Tu as gagné +5 créations — Grado", html);
 }

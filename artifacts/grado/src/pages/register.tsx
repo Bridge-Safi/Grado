@@ -18,12 +18,15 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Récupère le code de parrainage depuis l'URL (?ref=CODE)
+  const refCode = new URLSearchParams(window.location.search).get("ref") ?? "";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
-      await register(name, email, password);
+      await register(name, email, password, refCode || undefined);
       navigate("/pricing?onboard=1");
     } catch (err: any) {
       setError(err.message);

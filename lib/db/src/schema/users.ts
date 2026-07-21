@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, boolean, integer } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -12,6 +12,14 @@ export const users = pgTable("users", {
   resetTokenExpires: timestamp("reset_token_expires"),
   githubAccessToken: text("github_access_token"),
   githubUsername: text("github_username"),
+  // Vérification email
+  emailVerified: boolean("email_verified").notNull().default(false),
+  verificationCode: text("verification_code"),
+  verificationCodeExpires: timestamp("verification_code_expires"),
+  // Parrainage
+  referralCode: text("referral_code").unique(),
+  referredBy: integer("referred_by"),
+  referralCount: integer("referral_count").notNull().default(0),
 });
 
 export type User = typeof users.$inferSelect;

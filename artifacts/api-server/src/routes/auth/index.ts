@@ -4,20 +4,26 @@ import jwt from "jsonwebtoken";
 import { db } from "@workspace/db";
 import { users } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { sendWelcomeEmail } from "../../lib/email.js";
+import { sendWelcomeEmail, sendVerificationEmail, sendReferralRewardEmail } from "../../lib/email.js";
 
 const router = Router();
+
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET === "fallback-secret-change-me") {
+  console.warn("⚠️  JWT_SECRET non défini ou insécurisé — configure JWT_SECRET dans les variables d'environnement !");
+}
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-change-me";
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
 const RESEND_FROM = process.env.RESEND_FROM_EMAIL || "noreply@grado.safi-bridge.ma";
 const isAdmin = (email: string) => !!ADMIN_EMAIL && email.toLowerCase() === ADMIN_EMAIL;
-// Mode hors ligne : le site reste visible mais inscriptions/connexions bloquées (sauf admin).
-// Pour fermer l'accès au public : ajouter la variable GRADO_OFFLINE=1 sur Railway.
 const GRADO_OFFLINE = (process.env.GRADO_OFFLINE ?? "0") !== "0";
 
 function generateCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+function generateReferralCode(): string {
+  return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
 async function sendResetEmail(to: string, code: string): Promise<void> {
@@ -58,7 +64,7 @@ router.post("/register", async (req, res) => {
     res.status(403).json({ error: "🚀 Grado arrive très bientôt ! Les inscriptions ne sont pas encore ouvertes." });
     return;
   }
-  const { name, email, password } = req.body;
+  const { name, email, password, referralCode: refCode } = req.body;
   if (!name || !email || !password) {
     res.status(400).json({ error: "Nom, email et mot de passe requis" });
     return;
@@ -74,8 +80,27 @@ router.post("/register", async (req, res) => {
     return;
   }
 
+  // Vérifie le code de parrainage si fourni
+  let referrerId: number | undefined;
+  if (refCode) {
+    const [referrer] = await db.select({ id: users.id, name: users.name, email: users.email })
+      .from(users).where(eq(users.referralCode, refCode.toUpperCase())).limit(1);
+    if (referrer) referrerId = referrer.id;
+  }
+
   const passwordHash = await bcrypt.hash(password, 10);
   const trialEndsAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+
+  // Génère un code unique de vérification email (6 chiffres, valide 24h)
+  const verifCode = generateCode();
+  const verifExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  const verifHash = await bcrypt.hash(verifCode, 8);
+
+  // Génère un code de parrainage unique
+  let referralCode = generateReferralCode();
+  // S'assurer de l'unicité (rare mais possible)
+  const codeExists = await db.select({ id: users.id }).from(users).where(eq(users.referralCode, referralCode)).limit(1);
+  if (codeExists.length > 0) referralCode = generateReferralCode() + Math.random().toString(36).slice(2, 4).toUpperCase();
 
   const [user] = await db.insert(users).values({
     name,
@@ -83,17 +108,90 @@ router.post("/register", async (req, res) => {
     passwordHash,
     plan: "gratuit",
     trialEndsAt,
+    emailVerified: false,
+    verificationCode: verifHash,
+    verificationCodeExpires: verifExpires,
+    referralCode,
+    referredBy: referrerId,
   }).returning();
 
   const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: "30d" });
 
-  // Email de bienvenue — fire-and-forget
+  // Emails fire-and-forget
   sendWelcomeEmail(user.email, user.name).catch(() => {});
+  sendVerificationEmail(user.email, user.name, verifCode).catch(() => {});
+
+  // Récompense le parrain : incrémente referralCount + email de félicitations
+  if (referrerId) {
+    const [referrer] = await db.select({ referralCount: users.referralCount, name: users.name, email: users.email })
+      .from(users).where(eq(users.id, referrerId)).limit(1);
+    if (referrer) {
+      await db.update(users)
+        .set({ referralCount: (referrer.referralCount ?? 0) + 1 })
+        .where(eq(users.id, referrerId));
+      sendReferralRewardEmail(referrer.email, referrer.name, user.name).catch(() => {});
+    }
+  }
 
   res.status(201).json({
     token,
-    user: { id: user.id, name: user.name, email: user.email, plan: user.plan, trialEndsAt: user.trialEndsAt, isAdmin: isAdmin(user.email) },
+    user: { id: user.id, name: user.name, email: user.email, plan: user.plan, trialEndsAt: user.trialEndsAt, isAdmin: isAdmin(user.email), emailVerified: false, referralCode: user.referralCode },
   });
+});
+
+// POST /auth/verify-email
+router.post("/verify-email", async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith("Bearer ")) { res.status(401).json({ error: "Non authentifié" }); return; }
+  let userId: number;
+  try {
+    const decoded = jwt.verify(auth.slice(7), JWT_SECRET) as { userId: number };
+    userId = decoded.userId;
+  } catch { res.status(401).json({ error: "Token invalide" }); return; }
+
+  const { code } = req.body;
+  if (!code) { res.status(400).json({ error: "Code requis" }); return; }
+
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) { res.status(404).json({ error: "Utilisateur introuvable" }); return; }
+  if (user.emailVerified) { res.json({ ok: true, alreadyVerified: true }); return; }
+  if (!user.verificationCode || !user.verificationCodeExpires) {
+    res.status(400).json({ error: "Aucun code en attente. Renvoie le code." }); return;
+  }
+  if (new Date() > user.verificationCodeExpires) {
+    res.status(400).json({ error: "Code expiré. Demande un nouveau code." }); return;
+  }
+
+  const valid = await bcrypt.compare(code.toString(), user.verificationCode);
+  if (!valid) { res.status(400).json({ error: "Code incorrect" }); return; }
+
+  await db.update(users)
+    .set({ emailVerified: true, verificationCode: null, verificationCodeExpires: null })
+    .where(eq(users.id, userId));
+
+  res.json({ ok: true });
+});
+
+// POST /auth/resend-verification
+router.post("/resend-verification", async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith("Bearer ")) { res.status(401).json({ error: "Non authentifié" }); return; }
+  let userId: number;
+  try {
+    const decoded = jwt.verify(auth.slice(7), JWT_SECRET) as { userId: number };
+    userId = decoded.userId;
+  } catch { res.status(401).json({ error: "Token invalide" }); return; }
+
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) { res.status(404).json({ error: "Introuvable" }); return; }
+  if (user.emailVerified) { res.json({ ok: true }); return; }
+
+  const code = generateCode();
+  const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  const codeHash = await bcrypt.hash(code, 8);
+  await db.update(users).set({ verificationCode: codeHash, verificationCodeExpires: expires }).where(eq(users.id, userId));
+  sendVerificationEmail(user.email, user.name, code).catch(() => {});
+  res.json({ ok: true });
 });
 
 // POST /auth/login
@@ -125,7 +223,7 @@ router.post("/login", async (req, res) => {
 
   res.json({
     token,
-    user: { id: user.id, name: user.name, email: user.email, plan: user.plan, trialEndsAt: user.trialEndsAt, isAdmin: isAdmin(user.email) },
+    user: { id: user.id, name: user.name, email: user.email, plan: user.plan, trialEndsAt: user.trialEndsAt, isAdmin: isAdmin(user.email), emailVerified: user.emailVerified ?? false, referralCode: user.referralCode },
   });
 });
 
@@ -236,6 +334,32 @@ router.post("/change-password", async (req, res) => {
   res.json({ ok: true });
 });
 
+// DELETE /auth/me — suppression de compte (authentifié)
+router.delete("/me", async (req, res) => {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith("Bearer ")) { res.status(401).json({ error: "Non authentifié" }); return; }
+  let userId: number;
+  try {
+    const decoded = jwt.verify(auth.slice(7), JWT_SECRET) as { userId: number };
+    userId = decoded.userId;
+  } catch { res.status(401).json({ error: "Token invalide" }); return; }
+
+  const { password } = req.body;
+  if (!password) { res.status(400).json({ error: "Mot de passe requis pour confirmer la suppression" }); return; }
+
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) { res.status(404).json({ error: "Utilisateur introuvable" }); return; }
+
+  // L'admin ne peut pas se supprimer lui-même via cette route
+  if (isAdmin(user.email)) { res.status(403).json({ error: "Le compte administrateur ne peut pas être supprimé via cette route." }); return; }
+
+  const valid = await bcrypt.compare(password, user.passwordHash);
+  if (!valid) { res.status(401).json({ error: "Mot de passe incorrect" }); return; }
+
+  await db.delete(users).where(eq(users.id, userId));
+  res.json({ ok: true });
+});
+
 // PUT /api/auth/plan
 router.put("/plan", async (req, res) => {
   const auth = req.headers.authorization;
@@ -267,8 +391,7 @@ router.put("/plan", async (req, res) => {
   res.json({ id: updated.id, name: updated.name, email: updated.email, plan: updated.plan, trialEndsAt: updated.trialEndsAt, isAdmin: isAdmin(updated.email) });
 });
 
-// GET /auth/me
-// GET /auth/usage — retourne le nombre de créations du mois en cours
+// GET /auth/usage — retourne le nombre de créations du jour en cours
 router.get("/usage", async (req, res) => {
   const auth = req.headers.authorization;
   if (!auth?.startsWith("Bearer ")) { res.status(401).json({ error: "Non authentifié" }); return; }
@@ -290,6 +413,7 @@ router.get("/usage", async (req, res) => {
   }
 });
 
+// GET /auth/me
 router.get("/me", async (req, res) => {
   const auth = req.headers.authorization;
   if (!auth?.startsWith("Bearer ")) {
@@ -300,7 +424,7 @@ router.get("/me", async (req, res) => {
     const decoded = jwt.verify(auth.slice(7), JWT_SECRET) as { userId: number };
     const [user] = await db.select().from(users).where(eq(users.id, decoded.userId)).limit(1);
     if (!user) { res.status(404).json({ error: "Utilisateur introuvable" }); return; }
-    res.json({ id: user.id, name: user.name, email: user.email, plan: user.plan, trialEndsAt: user.trialEndsAt, isAdmin: isAdmin(user.email) });
+    res.json({ id: user.id, name: user.name, email: user.email, plan: user.plan, trialEndsAt: user.trialEndsAt, isAdmin: isAdmin(user.email), emailVerified: user.emailVerified ?? false, referralCode: user.referralCode });
   } catch {
     res.status(401).json({ error: "Token invalide" });
   }
