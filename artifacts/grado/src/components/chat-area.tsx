@@ -1741,7 +1741,7 @@ export function ChatArea({
       <button
         onClick={() => setMobilePreviewOpen(true)}
         className={cn(
-          "lg:hidden fixed bottom-24 right-4 z-40 flex items-center gap-2 pl-3 pr-4 py-3 rounded-full shadow-[0_4px_24px_rgba(91,91,214,0.5)] text-white text-xs font-semibold transition-transform active:scale-95",
+          "lg:hidden fixed bottom-36 right-4 z-40 flex items-center gap-2 pl-3 pr-4 py-3 rounded-full shadow-[0_4px_24px_rgba(91,91,214,0.5)] text-white text-xs font-semibold transition-transform active:scale-95",
           isRunning ? "bg-gradient-to-r from-[#5B5BD6] to-[#8B5CF6]" : "bg-[#5B5BD6]"
         )}
         data-testid="button-open-mobile-preview"
