@@ -1047,7 +1047,7 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
         try { res.end(); } catch {}
         return;
       }
-      const MAX_CONTINUATIONS = 12;
+      const MAX_CONTINUATIONS = 6;
       // Format OpenAI-compatible : convertit les blocs "image" (format Anthropic) en "image_url"
       // (format attendu par Gemini/OpenRouter). Sans cette conversion, l'image était sérialisée
       // en JSON brut dans le texte et jamais réellement "vue" par le modèle.
@@ -1080,11 +1080,11 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
         for (const candidate of candidates) {
           // Transient overload (503/429) is common on free-tier models — retry the same
           // candidate a couple of times with a short backoff before moving to the next one.
-          const RETRIES = 3;
+          const RETRIES = 2;
           for (let attemptNum = 0; attemptNum < RETRIES; attemptNum++) {
             try {
               const fetchAbort = new AbortController();
-              const fetchTimeout = setTimeout(() => fetchAbort.abort(), 28_000); // 28s max par tentative
+              const fetchTimeout = setTimeout(() => fetchAbort.abort(), 10_000); // 10s max par tentative
               let attempt: Response;
               try {
                 attempt = await fetch(candidate.url, {
@@ -1118,7 +1118,7 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
             } catch (fetchErr) {
               lastErrText = String(fetchErr);
             }
-            await new Promise((r) => setTimeout(r, 600 * (attemptNum + 1)));
+            await new Promise((r) => setTimeout(r, 300 * (attemptNum + 1)));
           }
           if (orRes) break;
         }
@@ -1189,7 +1189,7 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
     } else {
       // Anthropic (direct key or Replit proxy)
       try {
-        const MAX_CONTINUATIONS = 12;
+        const MAX_CONTINUATIONS = 6;
         const runningAnthropicMessages: Array<{ role: "user" | "assistant"; content: any }> = [...chatMessages];
         let round = 0;
         let hitContinuationCap = false;
