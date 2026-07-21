@@ -833,20 +833,23 @@ router.post("/conversations/:id/messages", async (req, res) => {
   );
 
   const isOpenRouterModel = modelChoice in OPENROUTER_MODELS;
-  // Free users get a free OpenRouter model for now (premium models arrive soon); vision requires sonnet (multimodal)
-  // Lecture de photos : Sonnet (Anthropic) uniquement pour les plans payants.
-  // Les comptes gratuits passent par la chaine vision gratuite Gemini/OpenRouter
-  // (voir FREE_VISION_FALLBACK_MODELS) — la lecture d'images reste donc
-  // GRATUITE pour l'utilisateur et sans cout Anthropic.
-  const selectedModel = imageData && isPaidUser && hasAnthropicKey
+
+  // Les utilisateurs gratuits avec du quota restant peuvent utiliser Claude Haiku.
+  // Seuls ceux qui ont dépassé leur quota (ou sans clé Anthropic) tombent sur OpenRouter.
+  // Les images des comptes gratuits restent sur les modèles vision gratuits (pas de coût Anthropic).
+  const canUseAnthropic = hasAnthropicKey && (isPaidUser || !freeQuotaReached);
+
+  const selectedModel = (imageData && isPaidUser && hasAnthropicKey)
     ? "claude-sonnet-4-5"
-    : !isPaidUser || !hasAnthropicKey
+    : (!canUseAnthropic || (imageData && !isPaidUser))
       ? OPENROUTER_MODELS["mistral"]
-      : isOpenRouterModel
-        ? OPENROUTER_MODELS[modelChoice]
-        : (modelChoice === "sonnet" && !canUseSonnet
-            ? "claude-haiku-4-5"
-            : ANTHROPIC_MODELS[modelChoice] ?? "claude-haiku-4-5");
+      : (!isPaidUser)
+        ? "claude-haiku-4-5"
+        : isOpenRouterModel
+          ? OPENROUTER_MODELS[modelChoice]
+          : (modelChoice === "sonnet" && !canUseSonnet
+              ? "claude-haiku-4-5"
+              : ANTHROPIC_MODELS[modelChoice] ?? "claude-haiku-4-5");
 
   const AGENT_PREFIXES: Record<string, string> = {
     dev: "Tu es un agent de développement expert. Priorité absolue: générer du code complet, fonctionnel et optimisé.\n\n",
@@ -1002,7 +1005,7 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
     // Les comptes gratuits passent TOUJOURS par Gemini/OpenRouter, image jointe ou
     // pas (les candidats vision gratuits gerent les photos). Anthropic est reserve
     // aux plans payants.
-    const useOpenRouter = !hasAnthropicKey || !isPaidUser || (!imageData && isOpenRouterModel);
+    const useOpenRouter = !canUseAnthropic || (imageData && !isPaidUser) || (!imageData && isOpenRouterModel && isPaidUser);
 
     if (useOpenRouter) {
       // OpenRouter uses OpenAI-compatible API
@@ -1021,8 +1024,8 @@ IMPORTANT : Tu restes un assistant IA complet. Tu réponds à tout — tu bloque
       const OR_HEADERS: Record<string, string> = { "HTTP-Referer": "https://grado.app", "X-Title": "Grado AI" };
       type ChatCandidate = { url: string; key: string; model: string; extraHeaders?: Record<string, string> };
       const candidates: ChatCandidate[] = [];
-      // Free users, or any user when no Anthropic key is configured, use the free Gemini/OpenRouter fallback chain
-      if (!isPaidUser || !hasAnthropicKey) {
+      // Free users sans quota restant, ou sans clé Anthropic, utilisent la chaîne Gemini/OpenRouter gratuite
+      if (!canUseAnthropic || (imageData && !isPaidUser)) {
         if (geminiKey) {
           candidates.push({ url: GEMINI_CHAT_URL, key: geminiKey, model: process.env.GEMINI_MODEL || "gemini-flash-latest" });
         }
