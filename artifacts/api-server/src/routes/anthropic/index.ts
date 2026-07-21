@@ -1025,8 +1025,8 @@ Si le message de l'utilisateur contient ou sous-entend : "site", "app", "applica
       const OR_HEADERS: Record<string, string> = { "HTTP-Referer": "https://grado.app", "X-Title": "Grado AI" };
       type ChatCandidate = { url: string; key: string; model: string; extraHeaders?: Record<string, string> };
       const candidates: ChatCandidate[] = [];
-      // Free users sans quota restant, ou sans clé Anthropic, utilisent la chaîne Gemini/OpenRouter gratuite
-      if (!canUseAnthropic || (imageData && !isPaidUser)) {
+      // Free users or no Anthropic key → chaîne Gemini/OpenRouter gratuite
+      if (!isPaidUser || !hasAnthropicKey) {
         if (geminiKey) {
           candidates.push({ url: GEMINI_CHAT_URL, key: geminiKey, model: process.env.GEMINI_MODEL || "gemini-flash-latest" });
         }
