@@ -205,9 +205,11 @@ export function ChatArea({
     return saved && saved > 0 ? saved : 550;
   });
   const resizingRef = useRef(false);
+  const [isResizing, setIsResizing] = useState(false);
   const handlePreviewResizeStart = (e: React.MouseEvent) => {
     e.preventDefault();
     resizingRef.current = true;
+    setIsResizing(true);
     const startX = e.clientX;
     const startWidth = previewWidth;
     document.body.style.cursor = "col-resize";
@@ -221,6 +223,7 @@ export function ChatArea({
     };
     const onUp = () => {
       resizingRef.current = false;
+      setIsResizing(false);
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
       window.removeEventListener("mousemove", onMove);
@@ -1683,7 +1686,7 @@ export function ChatArea({
           </div>
         )}
 
-        <div className="flex-1 p-3 min-h-0">
+        <div className="flex-1 p-3 min-h-0 relative">
           {previewTab === "code" ? (
             isMultiAgent && isRunning && liveAgentCode ? (
               <pre ref={liveCodeRef} className="w-full h-full rounded-xl border border-[#1e1e2a] bg-[#0A0A0C] text-[#9ecbff] text-[11px] leading-relaxed p-4 overflow-auto font-mono whitespace-pre-wrap">
@@ -1703,13 +1706,19 @@ export function ChatArea({
           ) : isRunning ? (
             <PreviewLoadingScreen />
           ) : previewHtml ? (
-            <iframe
-              key={`${activeId ?? 0}-${previewKey}`}
-              srcDoc={previewHtml}
-              sandbox="allow-scripts allow-forms allow-modals allow-popups"
-              className="w-full h-full rounded-xl border border-[#1e1e2a] bg-white shadow-[0_0_40px_rgba(91,91,214,0.08)]"
-              title="Aperçu en direct"
-            />
+            <>
+              <iframe
+                key={`${activeId ?? 0}-${previewKey}`}
+                srcDoc={previewHtml}
+                sandbox="allow-scripts allow-forms allow-modals allow-popups"
+                className="w-full h-full rounded-xl border border-[#1e1e2a] bg-white shadow-[0_0_40px_rgba(91,91,214,0.08)]"
+                title="Aperçu en direct"
+              />
+              {/* Overlay transparent pendant le resize pour empêcher l'iframe de capturer les événements souris */}
+              {isResizing && (
+                <div className="absolute inset-0 z-10" style={{ cursor: "col-resize" }} />
+              )}
+            </>
           ) : (
             <PreviewLoadingScreen />
           )}
