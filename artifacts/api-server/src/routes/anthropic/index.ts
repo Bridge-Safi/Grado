@@ -805,14 +805,15 @@ router.post("/conversations/:id/messages", async (req, res) => {
   };
   const OPENROUTER_MODELS: Record<string, string> = {
     gemini: "google/gemini-2.0-flash-001",
-    mistral: "liquid/lfm-2.5-1.2b-instruct:free",
+    mistral: "mistralai/mistral-7b-instruct:free",
     llama: "meta-llama/llama-3.3-70b-instruct:free",
   };
 
   const FREE_FALLBACK_MODELS = [
     "meta-llama/llama-3.3-70b-instruct:free",
-    "openai/gpt-oss-20b:free",
-    "liquid/lfm-2.5-1.2b-instruct:free",
+    "mistralai/mistral-7b-instruct:free",
+    "qwen/qwen3-8b:free",
+    "deepseek/deepseek-r1-distill-llama-8b:free",
   ];
   // Modèles OpenRouter gratuits ET compatibles vision — utilisés uniquement quand une image
   // est jointe. Les modèles de FREE_FALLBACK_MODELS ci-dessus ne comprennent pas les images.
