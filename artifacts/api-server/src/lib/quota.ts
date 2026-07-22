@@ -40,22 +40,14 @@ export type QuotaStatus = {
   reached: boolean;
 };
 
-// Plans dont le quota se remet à zéro chaque JOUR (minuit).
-const DAILY_PLANS = new Set(["gratuit"]);
-
-// Calcule l'usage pondéré de la période en cours pour un utilisateur.
-// - Plans gratuits : fenêtre = aujourd'hui 00h00 (quota journalier)
-// - Plans payants  : fenêtre = 1er du mois en cours (quota mensuel)
+// Calcule l'usage pondéré du mois en cours pour un utilisateur.
+// Tous les plans utilisent une fenêtre mensuelle (1er du mois en cours).
 export async function getMonthlyQuotaStatus(userId: number, plan: string): Promise<QuotaStatus> {
   const limit = PLAN_LIMITS[plan] ?? null;
 
   const periodStart = new Date();
-  if (DAILY_PLANS.has(plan)) {
-    periodStart.setHours(0, 0, 0, 0);
-  } else {
-    periodStart.setDate(1);
-    periodStart.setHours(0, 0, 0, 0);
-  }
+  periodStart.setDate(1);
+  periodStart.setHours(0, 0, 0, 0);
 
   const userConvs = await db.select({ id: conversations.id }).from(conversations).where(eq(conversations.userId, userId));
   const convIds = userConvs.map((c: { id: number }) => c.id);

@@ -116,7 +116,7 @@ export function UsageWidget({ token }: { token: string | null }) {
                     <TrendingUp className="w-3.5 h-3.5 text-[#7B7BFF]" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-white">{plan === "gratuit" ? "Créations aujourd'hui" : "Créations ce mois"}</p>
+                    <p className="text-xs font-semibold text-white">Créations ce mois</p>
                     <p className="text-[10px] text-[#5555A8]">Apps, sites, jeux, images, vidéos…</p>
                   </div>
                 </div>
@@ -147,7 +147,7 @@ export function UsageWidget({ token }: { token: string | null }) {
               )}
               {isWarning && !isDanger && (
                 <p className="text-[10px] text-orange-400 mt-1.5">
-                  {plan === "gratuit" ? "Tu approches de ta limite du jour." : "Tu approches de ta limite mensuelle."}
+                  {"Tu approches de ta limite mensuelle."}
                 </p>
               )}
             </div>

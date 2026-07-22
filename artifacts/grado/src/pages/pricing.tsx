@@ -49,7 +49,7 @@ const PLANS = [
     name: "Gratuit",
     tagline: "Pour explorer",
     features: [
-      "5 créations / jour",
+      "5 créations / mois",
       "Aperçu en direct",
       "App web, jeux, dashboards",
       "Hébergement 1 site",
