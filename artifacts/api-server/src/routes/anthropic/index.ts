@@ -1121,7 +1121,7 @@ Si le message de l'utilisateur contient ou sous-entend : "site", "app", "applica
                     max_tokens: candidate.url === GEMINI_CHAT_URL ? 32768 : 8192,
                     stream: true,
                     messages: [
-                      { role: "system", content: finalSystem },
+                      { role: "system", content: candidate.url === GROQ_CHAT_URL ? finalSystem.slice(0, 6000) : finalSystem },
                       ...runningMessages,
                     ],
                   }),
@@ -1325,10 +1325,12 @@ Si le message de l'utilisateur contient ou sous-entend : "site", "app", "applica
         // Si Gemini n'a pas donné de réponse, on tente Groq (gratuit, rapide, texte seulement)
         const groqKeyFallback = process.env.GROQ_API_KEY;
         if (!fullResponse && groqKeyFallback && !imageData) {
+          // Groq free tier: 6000 TPM — tronquer le prompt système pour ne pas dépasser
+          const groqSystem = (typeof finalSystem === "string" ? finalSystem : JSON.stringify(finalSystem)).slice(0, 6000);
           for (const groqModel of ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]) {
             try {
               const groqMessages = [
-                { role: "system", content: typeof finalSystem === "string" ? finalSystem : JSON.stringify(finalSystem) },
+                { role: "system", content: groqSystem },
                 ...chatMessages.map((m: any) => ({
                   role: m.role,
                   content: Array.isArray(m.content)
