@@ -1327,18 +1327,19 @@ Si le message de l'utilisateur contient ou sous-entend : "site", "app", "applica
         if (!fullResponse && groqKeyFallback && !imageData) {
           for (const groqModel of ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]) {
             try {
+              const groqMessages = [
+                { role: "system", content: typeof finalSystem === "string" ? finalSystem : JSON.stringify(finalSystem) },
+                ...chatMessages.map((m: any) => ({
+                  role: m.role,
+                  content: Array.isArray(m.content)
+                    ? m.content.filter((b: any) => b?.type === "text").map((b: any) => b.text).join("\n")
+                    : typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+                })),
+              ];
               const attempt = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                 method: "POST",
                 headers: { "Authorization": `Bearer ${groqKeyFallback}`, "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  model: groqModel,
-                  max_tokens: 8192,
-                  stream: true,
-                  messages: [
-                    { role: "system", content: finalSystem },
-                    ...chatMessages.map((m: any) => ({ role: m.role, content: typeof m.content === "string" ? m.content : JSON.stringify(m.content) })),
-                  ],
-                }),
+                body: JSON.stringify({ model: groqModel, max_tokens: 8192, stream: true, messages: groqMessages }),
               });
               if (attempt.ok && attempt.body) {
                 const readerG = attempt.body.getReader();
