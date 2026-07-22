@@ -813,7 +813,6 @@ router.post("/conversations/:id/messages", async (req, res) => {
     "meta-llama/llama-3.1-8b-instruct:free",
     "google/gemma-3-12b-it:free",
     "mistralai/mistral-7b-instruct:free",
-    "deepseek/deepseek-r1:free",
   ];
   // Modèles OpenRouter gratuits ET compatibles vision — utilisés uniquement quand une image
   // est jointe. Les modèles de FREE_FALLBACK_MODELS ci-dessus ne comprennent pas les images.
@@ -1149,7 +1148,7 @@ Si le message de l'utilisateur contient ou sous-entend : "site", "app", "applica
 
         if (!orRes || !orRes.body) {
           if (!gotAnyContent) {
-            safeWrite(`data: ${JSON.stringify({ error: isCreditOrQuotaError(lastErrText) ? CREDIT_ERROR_MESSAGE : `OpenRouter error: ${lastErrText}` })}\n\n`);
+            safeWrite(`data: ${JSON.stringify({ error: isCreditOrQuotaError(lastErrText) ? CREDIT_ERROR_MESSAGE : "Le service IA est temporairement indisponible. Réessaie dans un instant." })}\n\n`);
             try { res.end(); } catch {}
             return;
           }
