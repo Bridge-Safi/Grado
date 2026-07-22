@@ -1031,7 +1031,7 @@ Si le message de l'utilisateur contient ou sous-entend : "site", "app", "applica
       const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
       const GROQ_CHAT_URL = "https://api.groq.com/openai/v1/chat/completions";
       const OR_HEADERS: Record<string, string> = { "HTTP-Referer": "https://grado.app", "X-Title": "Grado AI" };
-      const GROQ_MODELS = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile"];
+      const GROQ_MODELS = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"];
       type ChatCandidate = { url: string; key: string; model: string; extraHeaders?: Record<string, string> };
       const candidates: ChatCandidate[] = [];
       // Free users or no Anthropic key → Gemini → Groq → OpenRouter
@@ -1327,7 +1327,7 @@ Si le message de l'utilisateur contient ou sous-entend : "site", "app", "applica
         if (!fullResponse && groqKeyFallback && !imageData) {
           // Groq free tier: 6000 TPM — tronquer le prompt système pour ne pas dépasser
           const groqSystem = (typeof finalSystem === "string" ? finalSystem : JSON.stringify(finalSystem)).slice(0, 6000);
-          for (const groqModel of ["llama-3.1-8b-instant", "llama-3.3-70b-versatile"]) {
+          for (const groqModel of ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]) {
             try {
               const groqMessages = [
                 { role: "system", content: groqSystem },
